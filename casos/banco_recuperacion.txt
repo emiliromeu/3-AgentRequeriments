@@ -1,0 +1,92 @@
+# BANCO · BLOQUE 1 — RECUPERACION
+#
+#     consulta | norma | articulos aceptables | puesto maximo
+#
+# - "norma": OBLIGATORIA. Desde que hay dos normas cargadas, un numero de
+#   articulo por si solo no identifica nada: el "articulo 75" es "Devengo del
+#   impuesto" en la Ley y "Supuestos de aplicacion" en el Reglamento. Se
+#   admite cualquier nombre que el sistema sepa resolver: "Ley 37/1992",
+#   "Ley del IVA", "Reglamento del IVA", "Reglamento del Impuesto".
+# - "articulos aceptables": basta con que salga UNO. Sin la palabra "Articulo".
+# - "puesto maximo": en que posicion como muy tarde tiene que aparecer.
+#
+# Anadir casos NO requiere tocar codigo: se anade una linea.
+#
+# COMO SE ESCRIBE UN CASO (importante, y en este orden):
+#   1. se elige un ARTICULO del corpus y se lee su rubrica;
+#   2. se escribe la consulta que haria un gestor para llegar a el.
+# Nunca al reves. Una consulta copiada de la rubrica se aprueba sola y no
+# prueba nada.
+#
+# REGLA PERMANENTE SOBRE LAS EXPECTATIVAS
+#   Una expectativa solo se cambia con EVIDENCIA INDEPENDIENTE de la salida
+#   del sistema (la rubrica del articulo, su texto). NUNCA porque el buscador
+#   devolvio otra cosa. Cada cambio va con su motivo al lado.
+#
+# Este bloque NO gasta llamadas al modelo.
+
+
+# ---------------------------------------------------------------- LEY 37/1992
+
+deducción cuotas soportadas vehículos turismo | Ley 37/1992 | 95 | 3
+# art. 95: "Limitaciones del derecho a deducir"
+
+prorrata general | Ley 37/1992 | 104, 105 | 3
+# art. 104 "La prorrata general" · art. 105 "Procedimiento de la prorrata general"
+
+caducidad del derecho a deducir | Ley 37/1992 | 100 | 3
+# art. 100: "Caducidad del derecho a la deduccion"
+
+devengo del impuesto en las entregas de bienes | Ley 37/1992 | 75 | 3
+# art. 75 de la LEY: "Devengo del impuesto". OJO: el Reglamento tiene otro
+# art. 75 ("Supuestos de aplicacion"), que es justo por lo que hace falta la
+# columna de norma.
+
+un cliente no me paga la factura, puedo recuperar el IVA | Ley 37/1992 | 80 | 3
+# art. 80: "Modificacion de la base imponible"
+
+he repercutido IVA de mas en una factura, como lo corrijo | Ley 37/1992 | 89 | 3
+# art. 89: "Rectificacion de las cuotas impositivas repercutidas"
+
+que tipo reducido se aplica | Ley 37/1992 | 91 | 3
+# art. 91: "Tipos impositivos reducidos"
+
+vender una furgoneta antes de los cinco anos y ajustar la deducción | Ley 37/1992 | 107, 110 | 3
+# art. 107 "Regularizacion de deducciones por bienes de inversion"
+# art. 110 "Entregas de bienes de inversion durante el periodo de regularizacion"
+
+requisitos de la factura para poder deducir la cuota | Ley 37/1992 | 97 | 3
+# art. 97: "Requisitos formales de la deduccion"
+
+devolución del IVA a un empresario no establecido en el territorio | Ley 37/1992 | 119 | 3
+# art. 119: "Regimen especial de devoluciones a determinados empresarios o
+# profesionales no establecidos en el territorio de aplicacion del Impuesto"
+
+
+# ------------------------------------------------- REGLAMENTO (RD 1624/1992)
+
+plazo de declaración recapitulativa | Reglamento del IVA | 78, 79, 80, 81 | 3
+# CORREGIDO EN LA FASE 7. Antes decia "164, 165, 166, 167 de la Ley", y era
+# incorrecto. Evidencia del corpus, no del buscador: en la LEY el art. 164 se
+# titula "Obligaciones de los sujetos pasivos" y solo MENCIONA la
+# recapitulativa entre otras obligaciones; el 165 es "Reglas especiales en
+# materia de facturacion", el 166 "Obligaciones contables" y el 167
+# "Liquidacion del impuesto". Ninguno regula el plazo. Quien lo regula es el
+# REGLAMENTO: art. 78 "Declaracion recapitulativa", 79 "Obligacion de
+# presentar la declaracion recapitulativa", 80 "Contenido de la declaracion
+# recapitulativa" y 81 "Lugar, forma y PLAZOS de presentacion de la
+# declaracion recapitulativa".
+
+en que libro registro anoto las facturas que recibo | Reglamento del IVA | 64 | 3
+# art. 64: "Libro registro de facturas recibidas"
+
+plazo para anotar las facturas en los libros registro | Reglamento del IVA | 69, 69 bis | 3
+# art. 69 "Plazos para las anotaciones registrales"
+# art. 69 bis "Plazos para la remision electronica de los registros de facturacion"
+
+como renunciar al régimen simplificado | Reglamento del IVA | 33, 35 | 3
+# art. 33 "Opcion y renuncia a la aplicacion de los regimenes especiales"
+# art. 35 "Renuncia al regimen simplificado"
+
+solicitar la devolución al final de cada periodo de liquidación | Reglamento del IVA | 30 | 3
+# art. 30: "Devoluciones al termino de cada periodo de liquidacion"

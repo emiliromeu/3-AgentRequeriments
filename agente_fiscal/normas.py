@@ -1,0 +1,280 @@
+"""IDENTIDAD DE UN PRECEPTO: (norma, cuerpo, articulo).
+
+Este modulo es el centro de la fase 6. Antes, un precepto se identificaba por
+su numero de articulo, y eso basto mientras hubo una sola ley. Con dos normas
+deja de bastar, y de tres maneras a la vez:
+
+  - dentro de UNA norma puede haber dos articulados. El Real Decreto 1624/1992
+    tiene los suyos (arts. 1-6: aprobar el Reglamento, modificar otros reales
+    decretos) y ademas lleva como anexo el REGLAMENTO del IVA, que empieza otra
+    vez por el articulo 1. Son dos "cuerpos".
+  - entre normas, "articulo 8" es ambiguo: hay uno en la Ley y otro en el
+    Reglamento, y no tienen nada que ver.
+  - una norma cita a la otra con nombres que hay que reconocer ("de la Ley del
+    Impuesto") sin confundirlos con los suyos propios ("de este Reglamento").
+
+EL CUERPO SE DETECTA DE LA ESTRUCTURA, no de una lista de excepciones: se abre
+un cuerpo nuevo cuando la numeracion de articulos REINICIA. Comprobado: la Ley
+37/1992 tiene 0 reinicios en 215 articulos; el Real Decreto 1624/1992 tiene 1,
+justo donde empieza el anexo. Cualquier real decreto aprobatorio o texto
+refundido se trocea solo con la misma regla.
+
+LOS NOMBRES Y ALIAS TAMBIEN SALEN DE LOS DATOS: del titulo oficial de la norma
+("...por el que se aprueba el Reglamento del Impuesto sobre el Valor Anadido")
+y de su rango y numero. No hay ningun diccionario escrito a mano.
+"""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass, field
+
+from . import bloques as B
+
+# Rangos que encabezan el nombre de un cuerpo normativo.
+_TIPOS = (
+    "Reglamento", "Ley Organica", "Ley", "Real Decreto-ley",
+    "Real Decreto Legislativo", "Real Decreto", "Texto Refundido",
+    "Decreto-ley", "Decreto", "Orden", "Estatuto", "Codigo",
+)
+
+_RE_APRUEBA = re.compile(
+    r"por el que se aprueban?\s+(?:el|la)\s+(?P<nombre>.+?)"
+    r"(?:\s+y se modifica|\s*[,\.]|$)",
+    re.IGNORECASE,
+)
+_RE_NUMERO = re.compile(r"\b(\d+/\d{4})\b")
+# "Ley 37/1992, de 28 de diciembre, del Impuesto sobre el Valor Anadido."
+_RE_MATERIA = re.compile(
+    r"\b(?:de|del|de la|sobre)\s+(?P<materia>[A-ZÁÉÍÓÚ][^,.;]{4,90})\s*$"
+)
+
+PALABRAS_VACIAS_MATERIA = {"de", "del", "la", "el", "los", "las", "sobre", "y", "a"}
+
+
+def _acronimo(materia: str) -> str:
+    """'Impuesto sobre el Valor Anadido' -> 'IVA'."""
+    iniciales = [
+        p[0].upper()
+        for p in re.findall(r"[\wÁÉÍÓÚáéíóúñÑ]+", materia)
+        if p.lower() not in PALABRAS_VACIAS_MATERIA
+    ]
+    return "".join(iniciales)
+
+
+@dataclass
+class Cuerpo:
+    """Un articulado con numeracion propia."""
+
+    norma_id: str
+    indice: int                       # 0 = el articulado de la propia norma
+    nombre: str = ""                  # "Reglamento del Impuesto sobre el Valor Anadido"
+    tipo: str = ""                    # "Reglamento" / "Ley" / "Real Decreto"
+    numero: str = ""                  # "37/1992"
+    materia: str = ""                 # "Impuesto sobre el Valor Anadido"
+    norma_titulo: str = ""
+    alias: set = field(default_factory=set)   # todo en minusculas y sin tildes
+
+    @property
+    def clave(self) -> str:
+        return f"{self.norma_id}#{self.indice}"
+
+    @property
+    def etiqueta(self) -> str:
+        """Como se nombra en una cita. Es lo que lee el fiscalista."""
+        return self.nombre or f"{self.norma_id} (cuerpo {self.indice})"
+
+    def referencia_de(self, referencia_local: str) -> str:
+        """'Articulo 8' -> 'Articulo 8 del Reglamento del IVA'."""
+        return f"{referencia_local} de {'la ' if self.tipo in ('Ley', 'Orden') else 'el '}{self.etiqueta}".replace(
+            "de el ", "del "
+        )
+
+
+def _analizar_nombre(nombre: str) -> tuple[str, str, str]:
+    """Nombre de un cuerpo -> (tipo, numero, materia)."""
+    plano = re.sub(r"\s+", " ", nombre).strip()
+    # Los titulos oficiales encadenan clausulas ("..., por el que se aprueba
+    # ..., y se modifica ..."). La materia esta en la PRIMERA; sin cortar, la
+    # expresion regular se lleva la cola de la ultima.
+    plano = re.split(r",?\s+(?:por el que|por la que|y se modifica)\b", plano, 1)[0]
+    tipo = ""
+    for t in _TIPOS:
+        if B.sin_tildes(plano).startswith(B.sin_tildes(t).lower()):
+            tipo = t
+            break
+    m = _RE_NUMERO.search(plano)
+    numero = m.group(1) if m else ""
+    materia = ""
+    mm = _RE_MATERIA.search(plano.rstrip("."))
+    if mm:
+        materia = mm.group("materia").strip()
+    elif tipo:
+        resto = plano[len(tipo):].lstrip(" ,")
+        resto = re.sub(r"^(?:de[l]?\s+|la\s+|el\s+)", "", resto, flags=re.I)
+        materia = resto.strip(" .,")
+    return tipo, numero, materia
+
+
+def _generar_alias(tipo: str, numero: str, materia: str) -> set:
+    """Formas con las que el BOE puede nombrar a este cuerpo.
+
+    Se generan del propio nombre, no de una lista. De "Ley 37/1992 ... del
+    Impuesto sobre el Valor Anadido" salen "ley 37/1992", "ley del impuesto
+    sobre el valor anadido", "ley del impuesto", "ley del iva" y "liva".
+    """
+    alias: set[str] = set()
+    if not tipo:
+        return alias
+    t = B.sin_tildes(tipo)
+    alias.add(t)
+    if numero:
+        alias.add(f"{t} {numero}")
+    if materia:
+        m = B.sin_tildes(materia)
+        alias.add(f"{t} de {m}")
+        alias.add(f"{t} del {m}")
+        # Prefijos cada vez mas cortos: "impuesto sobre el valor anadido",
+        # "impuesto sobre el valor", ..., "impuesto". Asi encaja el
+        # "de la Ley del Impuesto" que usa el Reglamento 113 veces.
+        palabras = m.split()
+        for n in range(1, len(palabras)):
+            corto = " ".join(palabras[:n])
+            if corto and corto not in PALABRAS_VACIAS_MATERIA:
+                alias.add(f"{t} de {corto}")
+                alias.add(f"{t} del {corto}")
+        sigla = _acronimo(materia)
+        if len(sigla) >= 2:
+            s = sigla.lower()
+            alias.add(f"{t} de {s}")
+            alias.add(f"{t} del {s}")
+            alias.add(f"{t[0]}{s}")           # "liva", "riva"
+    return alias
+
+
+def cuerpos_de_norma(norma_titulo: str, norma_id: str, n_cuerpos: int) -> list:
+    """Construye los cuerpos de una norma a partir de su titulo oficial."""
+    tipo0, numero0, materia0 = _analizar_nombre(norma_titulo)
+    nombre0 = f"{tipo0} {numero0}".strip() if numero0 else (tipo0 or norma_id)
+    if materia0 and tipo0:
+        nombre0 = f"{tipo0} {numero0}".strip()
+
+    cuerpos = [
+        Cuerpo(norma_id, 0, nombre0, tipo0, numero0, materia0, norma_titulo,
+               _generar_alias(tipo0, numero0, materia0))
+    ]
+
+    # Los cuerpos siguientes son lo que la norma APRUEBA, y su nombre esta en
+    # el propio titulo oficial: "por el que se aprueba el Reglamento del ...".
+    aprobado = _RE_APRUEBA.search(norma_titulo)
+    for i in range(1, n_cuerpos):
+        if aprobado and i == 1:
+            nombre = re.sub(r"\s+", " ", aprobado.group("nombre")).strip()
+        else:
+            nombre = f"Anexo {i} de {nombre0}"
+        t, n, mat = _analizar_nombre(nombre)
+        cuerpos.append(
+            Cuerpo(norma_id, i, nombre, t, n or numero0, mat, norma_titulo,
+                   _generar_alias(t, n, mat))
+        )
+    return cuerpos
+
+
+# --------------------------------------------------------------- registro
+
+
+# Lo que, tras un alias, delata que se habla de OTRA norma: un numero de
+# norma, un parentesis de rango comunitario, un "n.º", o un nombre propio
+# ("Concursal", "Civil", "General Tributaria").
+_RE_DISCRIMINANTE = re.compile(
+    r"^\s*(?:\(|n[.º°]|\d+\s*/\s*\d{4}|[A-ZÁÉÍÓÚ][a-záéíóúñ]{2,})"
+)
+
+_RE_DEMOSTRATIVO = re.compile(
+    r"\b(est[ae]|el\s+presente|la\s+presente|presente)\s+$", re.IGNORECASE
+)
+
+
+class Registro:
+    """Todos los cuerpos cargados. Resuelve un nombre a un cuerpo concreto."""
+
+    def __init__(self, docs):
+        self.cuerpos: dict[str, Cuerpo] = {}
+        vistos: dict[str, int] = {}
+        for d in docs:
+            r = d.registro
+            vistos[r["norma_id"]] = max(
+                vistos.get(r["norma_id"], 0), r.get("cuerpo_indice", 0)
+            )
+        titulos = {}
+        for d in docs:
+            titulos.setdefault(d.registro["norma_id"], d.registro["norma_titulo"])
+        for norma_id, maximo in vistos.items():
+            for c in cuerpos_de_norma(titulos[norma_id], norma_id, maximo + 1):
+                self.cuerpos[c.clave] = c
+
+    def __len__(self) -> int:
+        return len(self.cuerpos)
+
+    def por_clave(self, clave: str):
+        return self.cuerpos.get(clave)
+
+    def resolver(self, designacion: str, cuerpo_actual: str = "",
+                 cola: str = "") -> tuple:
+        """Nombre de norma -> (clave_de_cuerpo, motivo).
+
+        Devuelve (None, motivo) si no se puede decidir. ANTE LA DUDA, NADA:
+        una remision sin resolver es un aviso visible; una remision resuelta a
+        la norma equivocada es un articulo real, con texto real, que no es el
+        que toca, y el verificador la daria por buena.
+        """
+        if not designacion:
+            return None, "sin designacion"
+        d = B.sin_tildes(re.sub(r"\s+", " ", designacion)).strip(" .,;:")
+        d = re.sub(r"^(?:de[l]?\s+|en\s+)?(?:la|el|los|las)\s+", "", d).strip()
+        d = re.sub(r"^(?:est[ae]|presente)\s+", "", d).strip()
+        if not d:
+            return None, "designacion vacia"
+
+        # La designacion viene recortada de un texto corrido y suele arrastrar
+        # cola ("Ley del Impuesto se considerara..."). Se busca el alias MAS
+        # LARGO que sea prefijo suyo.
+        palabras = d.split()
+        candidatos: list = []
+        consumidas = 0
+        for n in range(len(palabras), 0, -1):
+            prefijo = " ".join(palabras[:n])
+            candidatos = [c for c in self.cuerpos.values() if prefijo in c.alias]
+            if candidatos:
+                consumidas = n
+                break
+
+        if candidatos:
+            # Y AQUI ESTA LA REGLA DE ORO. Lo que queda sin consumir decide:
+            # si empieza por un numero de norma, un parentesis o un nombre
+            # propio, la designacion es de OTRA norma y acortar seria
+            # inventarse la coincidencia. "Ley 58/2003" no es "la Ley";
+            # "Reglamento (UE) 282/2011" no es el Reglamento del IVA.
+            resto_original = " ".join(
+                re.sub(r"\s+", " ", designacion).strip(" .,;:").split()[consumidas:]
+            )
+            sobra = (resto_original + " " + (cola or "")).strip(" ,;:.")
+            if _RE_DISCRIMINANTE.match(sobra):
+                return None, (
+                    f"«{designacion.strip()}» sigue con «{sobra[:34]}»: es otra "
+                    f"norma, no se resuelve"
+                )
+
+        if len(candidatos) == 1:
+            return candidatos[0].clave, f"designa a {candidatos[0].etiqueta}"
+        if len(candidatos) > 1:
+            # Un demostrativo desempata a favor del cuerpo en que estamos.
+            propio = [c for c in candidatos if c.clave == cuerpo_actual]
+            if propio:
+                return propio[0].clave, f"designa al propio {propio[0].etiqueta}"
+            return None, (
+                f"«{designacion.strip()}» encaja con "
+                f"{len(candidatos)} cuerpos ({', '.join(c.etiqueta for c in candidatos)}): "
+                f"no se resuelve"
+            )
+        return None, f"«{designacion.strip()}» no corresponde a ninguna norma cargada"

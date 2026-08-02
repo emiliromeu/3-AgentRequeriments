@@ -1,0 +1,25 @@
+# ---- credenciales -------------------------------------------------------
+# Nunca al repositorio. El .env.ejemplo si se versiona (va sin valor).
+.env
+.env.*
+!.env.ejemplo
+
+# ---- entorno de Python --------------------------------------------------
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# ---- datos: se regeneran ingiriendo del BOE -----------------------------
+# Son megas de texto que no aportan nada a la revision del codigo y que se
+# vuelven a bajar con `python3 fase1.py ingerir <ID>`.
+datos/
+bruto/
+corpus/
+crudo/
+
+# ---- herramientas -------------------------------------------------------
+# settings.local.json guarda los comandos que se han autorizado, y un comando
+# escrito con la clave en linea acabaria dentro.
+.claude/settings.local.json
+.DS_Store

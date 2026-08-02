@@ -1,0 +1,306 @@
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxA1HensqG1hJ9wskX'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxBuPFt94HxQbdhozW'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxDQRVsX81A7A3861p'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxEBZPKzdJz36dHu3J'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxExCP7ZP359xrQ8MN'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxFqH6TAYiFSQyAnn4'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxGk6dBjy2T1tac1b9'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxHcBuSQheMkTgq4DD'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxJXVybx3upxQAnvMC'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxKrsAdKmG6YngHbSF'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxLkhFJfgbbqfNvQoM'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxMeXRbk9XWaqAvT5F'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxNWcXDqDjc49hWFe9'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxPNTZJhW9fTS3X22V'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxQFniVnS8GLWM5pQm'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxR78dPoXrzw5tnjVr'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxSJ5E6YkspYMnRCse'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxTAAFB8AuzPKJXMUz'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxUNqTwgoNPmx6cAAx'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxWUb1sDQrdfYw5giA'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxXYLJWh5PLvvDyCTJ'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxYQBSJGkJHt1qGYnm'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxZUfd1i7R56MjBT8J'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxbR14sFTPvdGUveKH'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxchPwjy7urPoeCrE9'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxdW1kCZKkJdUCFJub'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxeN7867aRJSkz6aww'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxfDwjnTeS3WycuPa6'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxgFi4uCAMLRvTqecj'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxkFKYFYnJtXdTgPX1'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxmF6KkR5Kk4jWgbzj'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxnUWYZ6DHifb5zkSx'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxoNqS3JQL31Kh8ZRM'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxpEBdFnXr7ospnk8u'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011Cdcrxq62XfNsXWVfQZb9r'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxqrQr1z3df5zCn9L6'}
+
+[FALLO DEL MODELO] La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxrgmihXmuRKq9n4Fr'}
+
+==============================================================================
+BANCO DE PRUEBAS · AGENTE FISCAL
+==============================================================================
+fecha  : 2026-08-02 01:02:17
+motor  : anthropic
+bloques: 1, 2, 3, 4
+casos  : /Users/viladot/Documents/agente_requeriments/casos/banco_recuperacion.txt
+arranque: credencial correcta (sk-ant-api03…) tomada de variable de entorno ANTHROPIC_API_KEY; acceso al modelo claude-opus-5 confirmado
+corpus : /Users/viladot/Documents/agente_requeriments/casos/banco_recuperacion.txt con 15 casos de recuperacion
+
+------------------------------------------------------------------------------
+BLOQUE 1 · RECUPERACION  (no gasta llamadas)
+------------------------------------------------------------------------------
+El buscador de la fase 2 tiene que encontrar el articulo correcto.
+
+[VERDE] «deducción cuotas soportadas vehículos turismo»
+        esperaba : art. 95 de Ley 37/1992 entre los 3 primeros
+        ha salido: art. 95 de Ley 37/1992 en el puesto 1
+[VERDE] «prorrata general»
+        esperaba : art. 104 o 105 de Ley 37/1992 entre los 3 primeros
+        ha salido: art. 104 de Ley 37/1992 en el puesto 2
+[VERDE] «caducidad del derecho a deducir»
+        esperaba : art. 100 de Ley 37/1992 entre los 3 primeros
+        ha salido: art. 100 de Ley 37/1992 en el puesto 1
+[VERDE] «devengo del impuesto en las entregas de bienes»
+        esperaba : art. 75 de Ley 37/1992 entre los 3 primeros
+        ha salido: art. 75 de Ley 37/1992 en el puesto 1
+[ROJO ] «un cliente no me paga la factura, puedo recuperar el IVA»
+        esperaba : art. 80 de Ley 37/1992 entre los 3 primeros
+        ha salido: NO sale en los 10 primeros. Salieron: 61 sexiesdecies (Reglamento), 164 (Ley), 116 (Ley), 163 sexvivies (Ley), 4 (Real), 23 bis (Reglamento)
+[VERDE] «he repercutido IVA de mas en una factura, como lo corrijo»
+        esperaba : art. 89 de Ley 37/1992 entre los 3 primeros
+        ha salido: art. 89 de Ley 37/1992 en el puesto 3
+[ROJO ] «que tipo reducido se aplica»
+        esperaba : art. 91 de Ley 37/1992 entre los 3 primeros
+        ha salido: art. 91 de Ley 37/1992 en el puesto 5 (fuera del tope 3)
+[VERDE] «vender una furgoneta antes de los cinco anos y ajustar la deducción»
+        esperaba : art. 107 o 110 de Ley 37/1992 entre los 3 primeros
+        ha salido: art. 107 de Ley 37/1992 en el puesto 3
+[VERDE] «requisitos de la factura para poder deducir la cuota»
+        esperaba : art. 97 de Ley 37/1992 entre los 3 primeros
+        ha salido: art. 97 de Ley 37/1992 en el puesto 1
+[VERDE] «devolución del IVA a un empresario no establecido en el territorio»
+        esperaba : art. 119 de Ley 37/1992 entre los 3 primeros
+        ha salido: art. 119 de Ley 37/1992 en el puesto 3
+[VERDE] «plazo de declaración recapitulativa»
+        esperaba : art. 78 o 79 o 80 o 81 de Reglamento del Impuesto sobre el Valor Añadido entre los 3 primeros
+        ha salido: art. 78 de Reglamento del Impuesto sobre el Valor Añadido en el puesto 1
+[VERDE] «en que libro registro anoto las facturas que recibo»
+        esperaba : art. 64 de Reglamento del Impuesto sobre el Valor Añadido entre los 3 primeros
+        ha salido: art. 64 de Reglamento del Impuesto sobre el Valor Añadido en el puesto 1
+[VERDE] «plazo para anotar las facturas en los libros registro»
+        esperaba : art. 69 o 69 bis de Reglamento del Impuesto sobre el Valor Añadido entre los 3 primeros
+        ha salido: art. 69 de Reglamento del Impuesto sobre el Valor Añadido en el puesto 1
+[VERDE] «como renunciar al régimen simplificado»
+        esperaba : art. 33 o 35 de Reglamento del Impuesto sobre el Valor Añadido entre los 3 primeros
+        ha salido: art. 33 de Reglamento del Impuesto sobre el Valor Añadido en el puesto 1
+[VERDE] «solicitar la devolución al final de cada periodo de liquidación»
+        esperaba : art. 30 de Reglamento del Impuesto sobre el Valor Añadido entre los 3 primeros
+        ha salido: art. 30 de Reglamento del Impuesto sobre el Valor Añadido en el puesto 2
+
+------------------------------------------------------------------------------
+BLOQUE 2 · ANALIZADOR  (necesita el modelo real)
+------------------------------------------------------------------------------
+Los terminos que propone, ¿son del articulado o repiten la pregunta?
+Se mide: cuantos de sus terminos existen en el corpus, y cuantos
+aportan algo que no estaba ya en la pregunta.
+
+[ROJO ] terminos para «deducción cuotas soportadas vehículos turismo»
+        esperaba : al menos 3 terminos del articulado
+        ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxA1HensqG1hJ9wskX'}
+[ROJO ] terminos para «prorrata general»
+        esperaba : al menos 3 terminos del articulado
+        ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxBuPFt94HxQbdhozW'}
+[ROJO ] terminos para «caducidad del derecho a deducir»
+        esperaba : al menos 3 terminos del articulado
+        ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxDQRVsX81A7A3861p'}
+[ROJO ] terminos para «devengo del impuesto en las entregas de bienes»
+        esperaba : al menos 3 terminos del articulado
+        ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxEBZPKzdJz36dHu3J'}
+[ROJO ] terminos para «un cliente no me paga la factura, puedo recuperar el IVA»
+        esperaba : al menos 3 terminos del articulado
+        ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxExCP7ZP359xrQ8MN'}
+[ROJO ] terminos para «he repercutido IVA de mas en una factura, como lo corrijo»
+        esperaba : al menos 3 terminos del articulado
+        ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxFqH6TAYiFSQyAnn4'}
+[ROJO ] terminos para «que tipo reducido se aplica»
+        esperaba : al menos 3 terminos del articulado
+        ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxGk6dBjy2T1tac1b9'}
+[ROJO ] terminos para «vender una furgoneta antes de los cinco anos y ajustar la deducción»
+        esperaba : al menos 3 terminos del articulado
+        ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxHcBuSQheMkTgq4DD'}
+[ROJO ] terminos para «requisitos de la factura para poder deducir la cuota»
+        esperaba : al menos 3 terminos del articulado
+        ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxJXVybx3upxQAnvMC'}
+[ROJO ] terminos para «devolución del IVA a un empresario no establecido en el territorio»
+        esperaba : al menos 3 terminos del articulado
+        ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxKrsAdKmG6YngHbSF'}
+[ROJO ] terminos para «plazo de declaración recapitulativa»
+        esperaba : al menos 3 terminos del articulado
+        ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxLkhFJfgbbqfNvQoM'}
+[ROJO ] terminos para «en que libro registro anoto las facturas que recibo»
+        esperaba : al menos 3 terminos del articulado
+        ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxMeXRbk9XWaqAvT5F'}
+[ROJO ] terminos para «plazo para anotar las facturas en los libros registro»
+        esperaba : al menos 3 terminos del articulado
+        ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxNWcXDqDjc49hWFe9'}
+[ROJO ] terminos para «como renunciar al régimen simplificado»
+        esperaba : al menos 3 terminos del articulado
+        ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxPNTZJhW9fTS3X22V'}
+[ROJO ] terminos para «solicitar la devolución al final de cada periodo de liquidación»
+        esperaba : al menos 3 terminos del articulado
+        ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxQFniVnS8GLWM5pQm'}
+[ROJO ] pregunta SIN ano -> para y lo pregunta
+        esperaba : codigo 3 (falta el ejercicio)
+        ha salido: codigo 1, estado None
+[ROJO ] pregunta CON ano escrito -> lo coge
+        esperaba : ejercicio 2021 tomado de la pregunta
+        ha salido: ejercicio None
+[ROJO ] pregunta de IRPF -> la puerta de materia la para
+        esperaba : NO ENCONTRADO (codigo 2)
+        ha salido: codigo 1, estado None
+
+------------------------------------------------------------------------------
+BLOQUE 3 · ESTABILIDAD  (necesita el modelo real)
+------------------------------------------------------------------------------
+Pregunta: «deduccion del IVA soportado en la compra de un turismo»  ·  ejercicio 2023  ·  3 ejecuciones
+El texto puede cambiar. El estado y los articulos citados, no.
+
+   corrida 1: estado=None preceptos=[]
+   corrida 2: estado=None preceptos=[]
+   corrida 3: estado=None preceptos=[]
+[VERDE] misma pregunta 3 veces
+        esperaba : un unico estado y un unico conjunto de articulos
+        ha salido: estado(s): [None] | conjunto(s) de articulos: [[]]
+
+------------------------------------------------------------------------------
+BLOQUE 4 · BUCLE Y RECHAZO
+------------------------------------------------------------------------------
+[ROJO ] cita falsa inyectada en la pregunta
+        esperaba : NO ENCONTRADO (codigo 2) y sin mostrar texto redactado
+        ha salido: codigo 1, estado None, no mostro texto
+[OMIT ] tasa de entrada en el bucle de reintento
+        esperaba : menos del 50% de las redacciones
+        ha salido: ninguna consulta llego a redactar
+
+==============================================================================
+RECUENTO
+==============================================================================
+  bloque 1: 13 verde, 2 rojo, 0 omitido
+  bloque 2: 0 verde, 18 rojo, 0 omitido
+  bloque 3: 1 verde, 0 rojo, 0 omitido
+  bloque 4: 0 verde, 1 rojo, 1 omitido
+
+  TOTAL: 14 VERDE · 21 ROJO · 1 OMITIDO (de 36)
+  llamadas al modelo: 37
+  duracion: 12.9 s
+
+  En ROJO:
+    - [bloque 1] «un cliente no me paga la factura, puedo recuperar el IVA»
+      ha salido: NO sale en los 10 primeros. Salieron: 61 sexiesdecies (Reglamento), 164 (Ley), 116 (Ley), 163 sexvivies (Ley), 4 (Real), 23 bis (Reglamento)
+    - [bloque 1] «que tipo reducido se aplica»
+      ha salido: art. 91 de Ley 37/1992 en el puesto 5 (fuera del tope 3)
+    - [bloque 2] terminos para «deducción cuotas soportadas vehículos turismo»
+      ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxA1HensqG1hJ9wskX'}
+    - [bloque 2] terminos para «prorrata general»
+      ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxBuPFt94HxQbdhozW'}
+    - [bloque 2] terminos para «caducidad del derecho a deducir»
+      ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxDQRVsX81A7A3861p'}
+    - [bloque 2] terminos para «devengo del impuesto en las entregas de bienes»
+      ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxEBZPKzdJz36dHu3J'}
+    - [bloque 2] terminos para «un cliente no me paga la factura, puedo recuperar el IVA»
+      ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxExCP7ZP359xrQ8MN'}
+    - [bloque 2] terminos para «he repercutido IVA de mas en una factura, como lo corrijo»
+      ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxFqH6TAYiFSQyAnn4'}
+    - [bloque 2] terminos para «que tipo reducido se aplica»
+      ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxGk6dBjy2T1tac1b9'}
+    - [bloque 2] terminos para «vender una furgoneta antes de los cinco anos y ajustar la deducción»
+      ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxHcBuSQheMkTgq4DD'}
+    - [bloque 2] terminos para «requisitos de la factura para poder deducir la cuota»
+      ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxJXVybx3upxQAnvMC'}
+    - [bloque 2] terminos para «devolución del IVA a un empresario no establecido en el territorio»
+      ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxKrsAdKmG6YngHbSF'}
+    - [bloque 2] terminos para «plazo de declaración recapitulativa»
+      ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxLkhFJfgbbqfNvQoM'}
+    - [bloque 2] terminos para «en que libro registro anoto las facturas que recibo»
+      ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxMeXRbk9XWaqAvT5F'}
+    - [bloque 2] terminos para «plazo para anotar las facturas en los libros registro»
+      ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxNWcXDqDjc49hWFe9'}
+    - [bloque 2] terminos para «como renunciar al régimen simplificado»
+      ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxPNTZJhW9fTS3X22V'}
+    - [bloque 2] terminos para «solicitar la devolución al final de cada periodo de liquidación»
+      ha salido: ninguno: La API respondio 400: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': "output_config.format.schema: For 'array' type, property 'maxItems' is not supported"}, 'request_id': 'req_011CdcrxQFniVnS8GLWM5pQm'}
+    - [bloque 2] pregunta SIN ano -> para y lo pregunta
+      ha salido: codigo 1, estado None
+    - [bloque 2] pregunta CON ano escrito -> lo coge
+      ha salido: ejercicio None
+    - [bloque 2] pregunta de IRPF -> la puerta de materia la para
+      ha salido: codigo 1, estado None
+    - [bloque 4] cita falsa inyectada en la pregunta
+      ha salido: codigo 1, estado None, no mostro texto
+
+  OMITIDAS (no se han ejecutado, no cuentan como aprobadas):
+    - [bloque 4] tasa de entrada en el bucle de reintento
+
+  Comparado con: ejecucion anterior (banco_20260802T005827.json)
+    nueva: terminos para «deducción cuotas soportadas vehículos turismo» no estaba en la referencia
+    nueva: terminos para «prorrata general» no estaba en la referencia
+    nueva: terminos para «caducidad del derecho a deducir» no estaba en la referencia
+    nueva: terminos para «devengo del impuesto en las entregas de bienes» no estaba en la referencia
+    nueva: terminos para «un cliente no me paga la factura, puedo recuperar el IVA» no estaba en la referencia
+    nueva: terminos para «he repercutido IVA de mas en una factura, como lo corrijo» no estaba en la referencia
+    nueva: terminos para «que tipo reducido se aplica» no estaba en la referencia
+    nueva: terminos para «vender una furgoneta antes de los cinco anos y ajustar la deducción» no estaba en la referencia
+    nueva: terminos para «requisitos de la factura para poder deducir la cuota» no estaba en la referencia
+    nueva: terminos para «devolución del IVA a un empresario no establecido en el territorio» no estaba en la referencia
+    nueva: terminos para «plazo de declaración recapitulativa» no estaba en la referencia
+    nueva: terminos para «en que libro registro anoto las facturas que recibo» no estaba en la referencia
+    nueva: terminos para «plazo para anotar las facturas en los libros registro» no estaba en la referencia
+    nueva: terminos para «como renunciar al régimen simplificado» no estaba en la referencia
+    nueva: terminos para «solicitar la devolución al final de cada periodo de liquidación» no estaba en la referencia
+    nueva: pregunta SIN ano -> para y lo pregunta no estaba en la referencia
+    nueva: pregunta CON ano escrito -> lo coge no estaba en la referencia
+    nueva: pregunta de IRPF -> la puerta de materia la para no estaba en la referencia
+    REGRESION: cita falsa inyectada en la pregunta estaba en VERDE y ahora ROJO
+    desaparecida: analizador contra el modelo real estaba en la referencia
+
+==============================================================================
+BANCO EN ROJO: 21 prueba(s) no dan lo esperado
+guardado en /Users/viladot/Documents/agente_requeriments/datos/banco/banco_20260802T010217.json
+==============================================================================

@@ -1,0 +1,610 @@
+#!/usr/bin/env python3
+"""FASE 4 - Analizador y redaccion. Las dos unicas llamadas al modelo.
+
+    python fase4.py consultar "texto de la duda" --ejercicio 2023
+    python fase4.py credencial                       # comprueba el arranque
+    python fase4.py comprobaciones
+    python fase4.py consultar "..." --motor ensayo   # sin llamar a ningun modelo
+
+Flujo:
+    pregunta -> ANALIZAR (modelo) -> buscar (fase 2) -> REDACTAR (modelo)
+             -> VERIFICAR (fase 3) -> mostrar o rechazar
+
+Nada de lo importante lo decide el modelo: el ejercicio se comprueba contra el
+texto de la pregunta, el estado lo calculan reglas, y ninguna respuesta se
+muestra sin pasar el verificador.
+
+Codigos de salida:
+    0  respuesta mostrada (CRITERIO CLARO o DISCUTIDO)
+    2  NO ENCONTRADO
+    3  falta el ejercicio: hay que indicarlo
+    1  error de uso, de corpus, de credencial o del modelo
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+from agente_fiscal import analizador as AN
+from agente_fiscal import estado as EST
+from agente_fiscal import modelo as MOD
+from agente_fiscal import redactor as RED
+from agente_fiscal import referencias as R
+from agente_fiscal import verificador as VF
+from agente_fiscal import vigencia as V
+from agente_fiscal.indice import ErrorCorpus, Indice
+from agente_fiscal.traza import Traza
+
+RAIZ = Path(__file__).resolve().parent
+# El corpus es el DIRECTORIO: se cargan todas las normas ingeridas,
+# sin saber cuales ni cuantas.
+CORPUS = RAIZ / "datos" / "corpus"
+DIR_TRAZAS = RAIZ / "datos" / "trazas"
+ANCHO = 78
+
+TOPE_MATERIAL = 5   # cuantos preceptos ve el redactor. Mas no es mejor: diluye.
+MAX_INTENTOS = 2    # el original y UN reintento con los motivos exactos
+
+
+def linea_consumo(tr) -> None:
+    """El gasto de la consulta, desglosado. Lo mide la API, no se estima."""
+    if not tr.consumo:
+        return
+    t = tr.totales()
+    apartado("Consumo de esta consulta (lo que dice la API)")
+    for c in tr.consumo:
+        cache = {"lectura": "cache LEIDA", "escritura": "cache escrita",
+                 "no": "sin cache"}[c["cache"]]
+        print(f"   {c['paso']:<14} {c['modelo']:<20} "
+              f"entrada {c['entrada']:>6}  salida {c['salida']:>5}  "
+              f"cache {c['cache_lectura']:>6}L/{c['cache_escritura']:>5}E  ({cache})")
+    print(f"   {'TOTAL':<14} {t['llamadas']} llamada(s)        "
+          f"entrada {t['entrada']:>6}  salida {t['salida']:>5}  "
+          f"cache {t['cache_lectura']:>6}L/{t['cache_escritura']:>5}E")
+    print(f"   entrada procesada en total (pagada + cache): "
+          f"{t['entrada_total_procesada']} tokens")
+
+
+def titulo(t: str) -> None:
+    print("\n" + "=" * ANCHO)
+    print(t)
+    print("=" * ANCHO)
+
+
+def apartado(t: str) -> None:
+    print("\n" + t)
+    print("-" * len(t))
+
+
+def cargar_corpus():
+    ix = Indice(CORPUS)
+    return ix, R.GrafoRemisiones(ix.docs)
+
+
+# ------------------------------------------------------------------ consultar
+
+
+def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo) -> dict:
+    """Resuelve una duda. Imprime el proceso y DEVUELVE el resultado en dict.
+
+    Devolver un dict (y no solo imprimir) es lo que permite que el banco de
+    pruebas juzgue por codigo en vez de leer texto por pantalla.
+    """
+    res = {
+        "pregunta": pregunta,
+        "codigo": 1,
+        "estado": None,
+        "ejercicio": None,
+        "preceptos": [],
+        "senales": [],
+        "intentos": 0,
+        "reintentos": 0,
+        "veredicto": None,
+        "motivo": "",
+        "analisis": None,
+        "recuperado": [],
+        # Marca de que la consulta NO llego a evaluarse por un fallo, no por
+        # el criterio. El banco la usa para no dar por buena una prueba que en
+        # realidad no se ha ejecutado.
+        "fallo": None,          # None | "modelo" | "analisis"
+        "traza": None,
+        # Que llego al redactor y que se quedo fuera en el corte.
+        "preceptos_enviados": [],
+        "preceptos_descartados": [],
+        "motor": motor.nombre,
+        # Tokens de esta consulta. Vacio si no se llego a llamar al modelo.
+        "consumo": {},
+    }
+
+    DIR_TRAZAS.mkdir(parents=True, exist_ok=True)
+    tr = Traza(DIR_TRAZAS, pregunta)
+    res["traza"] = str(tr.dir)
+
+    titulo("CONSULTA FISCAL")
+    print(f"pregunta : {pregunta}")
+    print(f"corpus   : {len(ix.docs)} preceptos de "
+          f"{len(ix.normas)} cuerpo(s): "
+          + ", ".join(c.etiqueta for c in ix.normas.cuerpos.values()))
+    print(f"motor    : {motor.nombre}", end="")
+    if not motor.es_modelo_real:
+        print("   <-- MOTOR DE ENSAYO: reglas fijas, NO es un modelo")
+    else:
+        print()
+        print(f"modelos  : analisis {getattr(motor, 'modelo_analisis', '?')} | "
+              f"redaccion {getattr(motor, 'modelo_redaccion', '?')}")
+    print(f"traza    : {tr.dir}")
+
+    # ---------------------------------------------------- LLAMADA 1
+    apartado("1. Analisis de la pregunta (llamada 1 al modelo)")
+    analisis = None
+    errores: list[str] = []
+    for intento in range(1, 3):
+        entrada = pregunta
+        if errores:
+            entrada = f"{pregunta}\n\n{AN.mensaje_reintento(errores)}"
+        try:
+            resp = motor.analizar(AN.SISTEMA, entrada, AN.ESQUEMA)
+        except MOD.ErrorModelo as e:
+            tr.paso("analisis", f"fallo del modelo: {e}")
+            tr.cerrar({"estado": "ERROR", "detalle": str(e)})
+            print(f"\n[FALLO DEL MODELO] {e}", file=sys.stderr)
+            res["motivo"] = str(e)
+            res["fallo"] = "modelo"
+            return res
+
+        tr.gasto(f"analisis {intento}", resp)
+        tr.json(f"analisis_{intento}_crudo.json", resp.crudo)
+        tr.escribir(f"analisis_{intento}_texto.json", resp.texto)
+
+        analisis, errores = AN.validar(resp.datos)
+        tr.paso("analisis", f"intento {intento}: "
+                f"{'valido' if analisis else 'invalido'}", errores=errores)
+        if analisis:
+            print(f"   intento {intento}: JSON valido")
+            break
+        print(f"   intento {intento}: JSON RECHAZADO por las reglas:")
+        for e in errores:
+            print(f"     - {e}")
+
+    if analisis is None:
+        apartado("PARADA: el analizador no devuelve un JSON valido")
+        print("  Se reintento una vez y volvio a fallar. No se sigue.")
+        tr.cerrar({"estado": "ERROR", "detalle": "analisis invalido",
+                   "errores": errores})
+        res["motivo"] = "; ".join(errores)
+        res["fallo"] = "analisis"
+        return res
+
+    res["analisis"] = {
+        "impuesto": analisis.impuesto,
+        "ejercicio_propuesto": analisis.ejercicio,
+        "terminos_busqueda": analisis.terminos_busqueda,
+        "articulos_sospechados": analisis.articulos_sospechados,
+    }
+    tr.json("analisis.json", res["analisis"])
+    print(f"   impuesto : {analisis.impuesto}")
+    print(f"   terminos : {', '.join(analisis.terminos_busqueda)}")
+    if analisis.articulos_sospechados:
+        print(f"   sospechas: art. {', '.join(analisis.articulos_sospechados)}")
+
+    # ---------------------------------------------------- MATERIA
+    if analisis.impuesto not in EST.IMPUESTOS_EN_CORPUS:
+        apartado("2. Materia")
+        print(f"   la duda es de {analisis.impuesto} y el corpus solo cubre el IVA")
+        return _sin_respaldo(
+            res, tr, ejercicio_cli, [], None, motor,
+            f"la consulta es de {analisis.impuesto} y este corpus solo cubre el IVA",
+        )
+
+    # ---------------------------------------------------- EJERCICIO
+    ejercicio, explicacion = AN.resolver_ejercicio(pregunta, analisis, ejercicio_cli)
+    tr.paso("ejercicio", explicacion, ejercicio=ejercicio)
+    res["ejercicio"] = ejercicio
+
+    if ejercicio is None:
+        apartado("PARADA: falta el ejercicio del caso")
+        print(f"  {explicacion}.")
+        print()
+        print("  No se supone. Un caso de 2023 contestado con la ley de hoy sale")
+        print("  impecable y esta mal, y no lo nota nadie.")
+        print()
+        print(f'  Repite indicandolo:  python fase4.py consultar '
+              f'"{pregunta[:40]}..." --ejercicio AAAA')
+        tr.cerrar({"estado": "FALTA EJERCICIO", "detalle": explicacion})
+        res["codigo"] = 3
+        res["estado"] = "FALTA EJERCICIO"
+        res["motivo"] = explicacion
+        return res
+
+    print(f"   ejercicio: {ejercicio}  ({explicacion})")
+
+    # ---------------------------------------------------- BUSQUEDA (fase 2)
+    apartado("2. Busqueda en el corpus (fase 2, deterministica)")
+    consulta = " ".join(analisis.terminos_busqueda)
+    resultados, huerfanos = ix.buscar(consulta, tope=TOPE_MATERIAL)
+    if huerfanos:
+        print(f"   sin resultados para: {', '.join(huerfanos)}")
+    for i, r in enumerate(resultados, 1):
+        print(f"   {i}. {r.doc.registro['referencia']:<28} "
+              f"{r.doc.registro['rubrica'][:38]}")
+    res["recuperado"] = [r.doc.registro["referencia"] for r in resultados]
+    tr.json("recuperado.json", [
+        {"referencia": r.doc.registro["referencia"], "clave": r.doc.clave,
+         "puntuacion": round(r.puntuacion, 4), "url": r.doc.registro["url"]}
+        for r in resultados
+    ])
+    tr.paso("busqueda", f"{len(resultados)} preceptos", consulta=consulta)
+
+    pertinente, razon = EST.pertinencia(ix, consulta, resultados)
+    tr.paso("pertinencia", razon, pertinente=pertinente)
+    print(f"   pertinencia: {'OK' if pertinente else 'INSUFICIENTE'} — {razon}")
+
+    registros = [r.doc.registro for r in resultados]
+    if not pertinente:
+        return _sin_respaldo(res, tr, ejercicio, registros, None, motor, razon)
+
+    # ------------------------------------------- CORTE POR PERTINENCIA
+    # El tope de arriba es un techo, no una cuota. Lo que decide que se manda
+    # a redactar es si el precepto trata de lo que se pregunta, no su puesto.
+    seleccion = EST.seleccionar_material(ix, consulta, resultados, grafo)
+    tr.json("seleccion.json", seleccion.a_json())
+    tr.corte(seleccion.a_json())
+    tr.paso("corte de material",
+            f"{len(seleccion.elegidos)} de {len(resultados)} preceptos "
+            f"(umbral {seleccion.umbral:.0%})",
+            descartados=[d["referencia"] for d in seleccion.descartados])
+    print(f"   corte por pertinencia (umbral "
+          f"{seleccion.umbral:.0%} de la cobertura del 1o):")
+    for d in seleccion.detalle:
+        marca = "->" if d["decision"] == "enviado" else "  "
+        print(f"   {marca} {d['referencia']:<28} cobertura {d['cobertura']:.2f} "
+              f"({d['relativa']:.0%} del 1o)  {d['decision'].upper()}")
+        if d["decision"] == "enviado" and "remite" in d["motivo"]:
+            print(f"        ^ entra por remision: {d['motivo']}")
+    print(f"   se mandan {len(seleccion.elegidos)} de {len(resultados)} "
+          f"preceptos al redactor")
+    registros = seleccion.elegidos
+    res["preceptos_enviados"] = [r["referencia"] for r in registros]
+    res["preceptos_descartados"] = [d["referencia"] for d in seleccion.descartados]
+
+    # ---------------------------------------------------- LLAMADA 2 + bucle
+    apartado("3. Redaccion y verificacion (llamada 2, en bucle cerrado)")
+    verificador = VF.Verificador(ix)
+    motivos: list[str] = []
+    informe = None
+    borrador = ""
+    intento = 0
+
+    for intento in range(1, MAX_INTENTOS + 1):
+        material = RED.construir_material(
+            pregunta, ejercicio, registros, grafo, motivos or None
+        )
+        tr.escribir(f"material_{intento}.txt", material)
+        try:
+            resp = motor.redactar(RED.SISTEMA, material)
+        except MOD.ErrorModelo as e:
+            tr.paso("redaccion", f"fallo del modelo: {e}")
+            tr.cerrar({"estado": "ERROR", "detalle": str(e)})
+            print(f"\n[FALLO DEL MODELO] {e}", file=sys.stderr)
+            res["motivo"] = str(e)
+            res["fallo"] = "modelo"
+            return res
+
+        tr.gasto(f"redaccion {intento}", resp)
+        tr.json(f"redaccion_{intento}_crudo.json", resp.crudo)
+        borrador = resp.texto
+        tr.escribir(f"borrador_{intento}.txt", borrador)
+
+        informe = verificador.verificar_texto(borrador, ejercicio, exigir_norma=True)
+        tr.json(f"verificacion_{intento}.json", informe.a_json())
+
+        r = informe.resumen
+        print(f"   intento {intento}: {r['total']} citas -> "
+              f"{r['verificadas']} verificadas, {r['no_verificadas']} no verificadas, "
+              f"{r['no_verificables']} no verificables  =>  {informe.veredicto}")
+        tr.paso("verificacion", f"intento {intento}: {informe.veredicto}", resumen=r)
+
+        if informe.veredicto == VF.ACEPTADO:
+            break
+
+        motivos = [
+            f"cita {d.n} ({d.referencia_citada or 'sin referencia'}): {d.motivo}"
+            for d in informe.dictamenes if d.estado != VF.VERIFICADA
+        ] or [informe.motivo_global]
+        for m in motivos:
+            print(f"      - {m[:96]}")
+        if intento < MAX_INTENTOS:
+            print("   se reintenta UNA vez, devolviendole los motivos exactos")
+
+    res["intentos"] = intento
+    res["reintentos"] = max(0, intento - 1)
+    res["veredicto"] = informe.veredicto if informe else None
+
+    # ---------------------------------------------------- ESTADO (reglas)
+    apartado("4. Estado (lo calcula el codigo, no el modelo)")
+    dictamen = EST.calcular(informe, ix, grafo, ejercicio, len(registros))
+    tr.json("estado.json", dictamen.a_json())
+    print(f"   {dictamen.estado}")
+    for m in dictamen.motivos:
+        print(f"     · {m}")
+
+    res["estado"] = dictamen.estado
+    res["senales"] = dictamen.senales
+    res["preceptos"] = dictamen.preceptos
+
+    if dictamen.estado == EST.NO_ENCONTRADO:
+        return _sin_respaldo(res, tr, ejercicio, registros, informe, motor,
+                             "; ".join(dictamen.motivos))
+
+    # ---------------------------------------------------- RESPUESTA
+    titulo(f"RESPUESTA  ·  {dictamen.estado}  ·  ejercicio {ejercicio}")
+    if dictamen.senales:
+        print("AVISOS (por los que el criterio no se da por cerrado):")
+        for s in dictamen.senales:
+            print(f"  !! {s}")
+        print("-" * ANCHO)
+    print(borrador.strip())
+    print("\n" + "-" * ANCHO)
+    print(f"Citas verificadas una a una contra el corpus: "
+          f"{informe.resumen['verificadas']}/{informe.resumen['total']}")
+    print(f"Preceptos que la sostienen: {', '.join(dictamen.preceptos)}")
+    print(f"Traza completa: {tr.dir}")
+    if not motor.es_modelo_real:
+        print("AVISO: redactado por el MOTOR DE ENSAYO, no por un modelo.")
+
+    linea_consumo(tr)
+    res["consumo"] = tr.totales()
+
+    tr.cerrar({
+        "estado": dictamen.estado, "ejercicio": ejercicio,
+        "veredicto": informe.veredicto, "intentos": intento,
+        "motor": motor.nombre, "modelo": getattr(motor, "modelo", "(ninguno)"),
+        "preceptos": dictamen.preceptos, "senales": dictamen.senales,
+    })
+    res["codigo"] = 0
+    return res
+
+
+def _sin_respaldo(res, tr, ejercicio, registros, informe, motor, motivo) -> dict:
+    """NO ENCONTRADO. Se ensena lo recuperado en crudo, nunca el borrador."""
+    titulo(f"NO ENCONTRADO  ·  ejercicio {ejercicio}")
+    print(f"Motivo: {motivo}")
+    print()
+    print("No se muestra ningun texto redactado: no ha superado la verificacion.")
+    print("Ni con aviso, ni en gris, ni a titulo orientativo.")
+
+    if registros:
+        apartado(f"Lo que SI se recupero, en crudo, para leerlo a mano "
+                 f"({len(registros)} preceptos)")
+        for reg in registros:
+            print(f"\n· {reg['referencia']} — {reg['rubrica']}")
+            print(f"  {reg['url']}")
+            v = V.version_aplicable(reg, V.limites(ejercicio)[1]) if ejercicio else None
+            texto = (v or {}).get("texto") or reg["texto_vigente"]
+            for linea in [l for l in texto.split("\n")[1:] if l.strip()][:3]:
+                print(f"    | {linea[:ANCHO - 8]}")
+    else:
+        print("\nNo se recupero ningun precepto. En el corpus solo hay normativa")
+        print("del IVA: ni DGT, ni TEAC, ni jurisprudencia.")
+
+    print(f"\nTraza completa: {tr.dir}")
+    linea_consumo(tr)
+    res["consumo"] = tr.totales()
+    tr.cerrar({
+        "estado": EST.NO_ENCONTRADO, "ejercicio": ejercicio,
+        "veredicto": informe.veredicto if informe else "(sin redaccion)",
+        "motor": motor.nombre, "modelo": getattr(motor, "modelo", "(ninguno)"),
+        "motivo": motivo,
+    })
+    res["codigo"] = 2
+    res["estado"] = EST.NO_ENCONTRADO
+    res["motivo"] = motivo
+    return res
+
+
+# ---------------------------------------------------------------- arranque
+
+
+def preparar_motor(
+    nombre: str,
+    silencioso: bool = False,
+    modelo_analisis: str = MOD.MODELO_ANALISIS,
+    modelo_redaccion: str = MOD.MODELO_REDACCION,
+):
+    """Crea el motor y, si es el real, comprueba la credencial ANTES de nada.
+
+    Devuelve (motor, mensaje_error). Si hay error, motor es None y el mensaje
+    es una frase, no una traza. Se comprueban LOS DOS modelos: tener acceso al
+    que redacta no dice nada del que analiza.
+    """
+    if nombre == "anthropic":
+        ok, msg = MOD.comprobar_credencial(modelo_analisis, modelo_redaccion)
+        if not ok:
+            return None, msg
+        if not silencioso:
+            print(f"[arranque] {msg}")
+    try:
+        return MOD.crear_motor(nombre, modelo_analisis, modelo_redaccion), ""
+    except MOD.ErrorModelo as e:
+        return None, str(e)
+
+
+def modo_credencial(args) -> int:
+    titulo("COMPROBACION DE ARRANQUE")
+    ok, msg = MOD.comprobar_credencial()
+    print(("[ OK ] " if ok else "[FALLA] ") + msg)
+    if not ok:
+        print()
+        print("Como dejarlo listo (tres ordenes):")
+        print("  1) python3 -m venv .venv && .venv/bin/pip install anthropic")
+        print("  2) cp .env.ejemplo .env   y pega la clave tras el '=' ")
+        print("     (se saca en https://platform.claude.com -> API keys)")
+        print("  3) .venv/bin/python fase4.py credencial")
+        print()
+        print("No hace falta ningun export: el .env se lee solo. Si aun asi")
+        print("exportas ANTHROPIC_API_KEY, esa variable manda sobre el .env.")
+    return 0 if ok else 1
+
+
+def modo_esquema(args) -> int:
+    """Comprueba el esquema del analizador contra la API. Cuesta 1 llamada."""
+    titulo("COMPROBACION DEL ESQUEMA DEL ANALIZADOR")
+    ok, msg = MOD.comprobar_credencial()
+    if not ok:
+        print(f"[FALLA] {msg}", file=sys.stderr)
+        return 1
+    ok, msg = MOD.comprobar_esquema(AN.ESQUEMA)
+    print(("[ OK ] " if ok else "[FALLA] ") + msg)
+    if not ok:
+        print()
+        print("Los structured outputs NO admiten: maxItems, minItems (salvo 0/1),")
+        print("minLength, maxLength, minimum, maximum, multipleOf, pattern,")
+        print("type como lista (['integer','null'] -> usar anyOf), ni")
+        print("additionalProperties distinto de false.")
+        print("Esas restricciones se comprueban en codigo, en analizador.validar().")
+    return 0 if ok else 1
+
+
+def modo_consultar(args) -> int:
+    motor, err = preparar_motor(
+        args.motor,
+        modelo_analisis=args.modelo_analisis,
+        modelo_redaccion=args.modelo_redaccion,
+    )
+    if motor is None:
+        print(f"\n[FALLO DE ARRANQUE] {err}", file=sys.stderr)
+        return 1
+    ix, grafo = cargar_corpus()
+    res = consultar(args.pregunta, args.ejercicio, motor, ix, grafo)
+    if motor.es_modelo_real:
+        print(f"Llamadas al modelo en esta consulta: {motor.llamadas}")
+    return res["codigo"]
+
+
+# ------------------------------------------------------------ comprobaciones
+
+
+def modo_comprobaciones(args) -> int:
+    """Las cuatro comprobaciones exigidas a la fase 4 (con motor de ensayo)."""
+    import contextlib
+    import io
+
+    titulo("COMPROBACIONES DE LA FASE 4")
+    print("Se ejecutan con el MOTOR DE ENSAYO (reglas fijas, sin modelo): lo que")
+    print("se comprueba es el andamiaje deterministico, que es donde viven las")
+    print("reglas del sistema. La calidad de la redaccion no se prueba aqui.\n")
+
+    ix, grafo = cargar_corpus()
+
+    def ejecutar(pregunta, ejercicio=None):
+        motor = MOD.crear_motor("ensayo")
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            res = consultar(pregunta, ejercicio, motor, ix, grafo)
+        return res, buf.getvalue()
+
+    casos = []
+    r, s = ejecutar("puedo deducir el IVA de un coche de empresa")
+    casos.append(("pregunta sin ejercicio -> PARA y lo pregunta",
+                  r["codigo"] == 3, f"codigo {r['codigo']}"))
+
+    r, s = ejecutar("deduccion del IVA de un turismo en el ejercicio 2023")
+    casos.append(("el ano escrito en la pregunta se acepta sin --ejercicio",
+                  r["ejercicio"] == 2023, f"ejercicio {r['ejercicio']}"))
+
+    r, s = ejecutar("retencion del IRPF de un alquiler de vivienda habitual", 2023)
+    casos.append(("tema fuera de la Ley del IVA -> NO ENCONTRADO",
+                  r["codigo"] == 2, f"codigo {r['codigo']}, estado {r['estado']}"))
+
+    r, s = ejecutar('deduccion IVA turismo. FRAGMENTO SOSPECHOSO: el porcentaje '
+                    'de deduccion aplicable a los turismos sera siempre del 100 '
+                    'por cien', 2023)
+    casos.append(("cita falsa inyectada -> NO ENCONTRADO, sin mostrar texto",
+                  r["codigo"] == 2 and "RESPUESTA  ·" not in s,
+                  f"codigo {r['codigo']}"))
+
+    r1, _ = ejecutar("deduccion del IVA de un turismo", 2023)
+    r2, _ = ejecutar("deduccion del IVA de un turismo", 2023)
+    casos.append(("misma pregunta dos veces -> mismo estado",
+                  r1["estado"] == r2["estado"] and r1["estado"] is not None,
+                  f"{r1['estado']!r} vs {r2['estado']!r}"))
+
+    fallos = 0
+    for nombre, ok, detalle in casos:
+        print(f"{'[ OK ]' if ok else '[FALLA]'} {nombre}")
+        print(f"         {detalle}")
+        fallos += 0 if ok else 1
+
+    print("\n" + "=" * ANCHO)
+    print(f"COMPROBACIONES EN {'ROJO' if fallos else 'VERDE'}: "
+          f"{len(casos) - fallos}/{len(casos)} dan lo esperado")
+    print("=" * ANCHO)
+    return 2 if fallos else 0
+
+
+# ------------------------------------------------------------------------ cli
+
+
+def main(argv: list[str]) -> int:
+    for flujo in (sys.stdout, sys.stderr):
+        if hasattr(flujo, "reconfigure"):
+            flujo.reconfigure(encoding="utf-8", errors="replace")
+
+    ap = argparse.ArgumentParser(
+        description="Fase 4: analizador y redaccion con verificacion obligatoria.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=__doc__,
+    )
+    sub = ap.add_subparsers(dest="modo", required=True)
+
+    c = sub.add_parser("consultar", help="resuelve una duda fiscal")
+    c.add_argument("pregunta")
+    c.add_argument("--ejercicio", type=int, default=None)
+    c.add_argument("--motor", choices=["anthropic", "ensayo"], default="anthropic")
+    # El modelo de cada paso se elige aqui, no se cablea en el codigo.
+    c.add_argument("--modelo-analisis", default=MOD.MODELO_ANALISIS,
+                   dest="modelo_analisis",
+                   help=f"modelo de la llamada 1 (por defecto {MOD.MODELO_ANALISIS})")
+    c.add_argument("--modelo-redaccion", default=MOD.MODELO_REDACCION,
+                   dest="modelo_redaccion",
+                   help=f"modelo de la llamada 2 (por defecto {MOD.MODELO_REDACCION})")
+
+    sub.add_parser("credencial", help="comprueba SDK y credencial, y para")
+    sub.add_parser("esquema", help="comprueba que la API acepta el esquema (1 llamada)")
+    p = sub.add_parser("comprobaciones", help="bateria de la fase 4")
+    p.add_argument("--motor", choices=["ensayo"], default="ensayo")
+
+    args = ap.parse_args(argv)
+
+    ejercicio = getattr(args, "ejercicio", None)
+    if ejercicio is not None and not (
+        AN.EJERCICIO_MINIMO <= ejercicio <= AN.EJERCICIO_MAXIMO
+    ):
+        print(f"[FALLO] ejercicio fuera de rango: {ejercicio}. "
+              f"La Ley del IVA esta en vigor desde {AN.EJERCICIO_MINIMO}.",
+              file=sys.stderr)
+        return 1
+
+    try:
+        if args.modo == "consultar":
+            return modo_consultar(args)
+        if args.modo == "credencial":
+            return modo_credencial(args)
+        if args.modo == "esquema":
+            return modo_esquema(args)
+        return modo_comprobaciones(args)
+    except ErrorCorpus as e:
+        print(f"\n[FALLO DE CORPUS] {e}", file=sys.stderr)
+        return 1
+    except MOD.ErrorModelo as e:
+        print(f"\n[FALLO DEL MODELO] {e}", file=sys.stderr)
+        return 1
+    except KeyboardInterrupt:
+        print("\nInterrumpido.", file=sys.stderr)
+        return 130
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

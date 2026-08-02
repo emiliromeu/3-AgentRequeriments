@@ -1,0 +1,224 @@
+# BATERIA DE CASOS ADVERSARIOS DEL VERIFICADOR
+#
+# Cada caso lleva escrito el veredicto que DEBE dar. Si el verificador deja de
+# darlo, la bateria se pone en rojo. Los fragmentos estan copiados literalmente
+# del corpus para que un fallo sea del verificador y no una errata mia.
+#
+#   esperado:  VERIFICADA | NO_VERIFICADA | NO_VERIFICABLE   (estado de la cita)
+#              ACEPTADO | RECHAZADO                          (veredicto global)
+#
+# Se ejecuta con:  python fase3.py probar casos/bateria.txt
+
+
+--- CASO: a-articulo-que-no-existe
+esperado: NO_VERIFICADA
+ejercicio: 2023
+motivo: la LIVA no tiene articulo 999; citar algo inexistente no puede colar
+texto:
+Conforme al criterio legal, «Uno. Los empresarios o profesionales no podrán deducir las cuotas soportadas» (art. 999 LIVA, https://www.boe.es/buscar/act.php?id=BOE-A-1992-28740#a999).
+--- FIN
+
+
+--- CASO: b-articulo-real-frase-inventada
+esperado: NO_VERIFICADA
+ejercicio: 2023
+motivo: el articulo existe pero la frase no esta en el; es el caso tipico de cita alucinada
+texto:
+El articulo 95 LIVA establece que «las cuotas soportadas por la adquisicion de vehiculos turismo seran deducibles en un 75 por ciento cuando se acredite su afectacion preferente».
+--- FIN
+
+
+--- CASO: c-literal-pero-de-otra-version
+esperado: NO_VERIFICADA
+ejercicio: 2023
+motivo: la frase es literal, pero de la redaccion de 1993; en 2023 regia la de 1998
+texto:
+Segun el articulo 95 LIVA, «En ningún caso serán susceptibles de afectación parcial los elementos patrimoniales indivisibles».
+--- FIN
+
+
+--- CASO: d-texto-sacado-de-nota-al-pie
+esperado: NO_VERIFICADA
+ejercicio: 2023
+motivo: EL CASO QUE MAS IMPORTA. El texto esta ahi, pero es historial de reformas, no articulado
+texto:
+El propio precepto reconoce que «Se modifican los apartado 3 y 4 por el art. 6.12 de la Ley 66/1997, de 30 de diciembre» (art. 95 LIVA).
+--- FIN
+
+
+--- CASO: d2-texto-del-aparato-editorial
+esperado: NO_VERIFICADA
+ejercicio: 2023
+motivo: igual que el anterior pero con el aparato editorial del BOE, que tampoco es norma
+texto:
+La norma advierte que «Atención: esta última actualización del apartado 2.1º surte efectos desde el 1 de septiembre de 2012» (art. 8 LIVA).
+--- FIN
+
+
+--- CASO: e-remision-al-reglamento
+esperado: NO_VERIFICABLE
+ejercicio: 2023
+motivo: el Reglamento del IVA no esta en el corpus; no se puede comprobar y NO se da por bueno
+texto:
+El desarrollo reglamentario exige que «el sujeto pasivo presente la declaracion en el plazo establecido» (art. 5 del Reglamento del IVA, Real Decreto 1624/1992).
+--- FIN
+
+
+--- CASO: f-cita-correcta-comillas-y-espacios-distintos
+esperado: VERIFICADA
+ejercicio: 2023
+motivo: mismas palabras con comillas rectas, saltos de linea y espacios de mas: debe validar
+texto:
+El articulo 95 LIVA dispone que "Uno. Los empresarios o profesionales no podrán deducir
+las cuotas soportadas o satisfechas por las adquisiciones o importaciones de bienes o
+servicios   que no se afecten,  directa y exclusivamente, a su actividad empresarial o profesional."
+--- FIN
+
+
+--- CASO: g-puntos-suspensivos-une-trozos
+esperado: NO_VERIFICADA
+ejercicio: 2023
+motivo: unir con puntos suspensivos dos trozos no contiguos no es citar literalmente
+texto:
+Segun el articulo 95 LIVA, «Uno. Los empresarios o profesionales no podrán deducir las cuotas soportadas ... a su actividad empresarial o profesional».
+--- FIN
+
+
+--- CASO: h-cita-al-163-con-texto-del-163-bis
+esperado: NO_VERIFICADA
+ejercicio: 2013
+motivo: el 163 y el 163 bis coexisten y son distintos; el sufijo no se puede ignorar
+texto:
+El articulo 163 LIVA senala que «Uno. Los empresarios o profesionales no establecidos en la Comunidad que presten servicios electrónicos a personas que no tengan la condición de empresario o profesional» quedan sujetos al regimen especial.
+--- FIN
+
+
+--- CASO: i-articulo-caducado-en-el-ejercicio
+esperado: NO_VERIFICADA
+ejercicio: 2020
+motivo: el 163 bis caduco el 28-11-2014, asi que en 2020 ya no se aplicaba
+texto:
+Resulta aplicable el articulo 163 bis LIVA, que dispone: «Uno. Los empresarios o profesionales no establecidos en la Comunidad que presten servicios electrónicos a personas que no tengan la condición de empresario o profesional».
+--- FIN
+
+
+--- CASO: i2-el-mismo-articulo-cuando-si-estaba-vigente
+esperado: VERIFICADA
+ejercicio: 2013
+motivo: control positivo de la caducidad: en 2013 el 163 bis si se aplicaba
+texto:
+El articulo 163 bis LIVA disponia que «Uno. Los empresarios o profesionales no establecidos en la Comunidad que presten servicios electrónicos a personas que no tengan la condición de empresario o profesional».
+--- FIN
+
+
+--- CASO: j-cinco-buenas-y-una-mala
+esperado: RECHAZADO
+ejercicio: 2023
+motivo: NO EXISTE EL APROBADO PARCIAL. Cinco citas correctas no salvan a una falsa
+texto:
+Primero, el articulo 95 LIVA dispone que «Uno. Los empresarios o profesionales no podrán deducir las cuotas soportadas o satisfechas por las adquisiciones o importaciones de bienes o servicios que no se afecten, directa y exclusivamente, a su actividad empresarial o profesional».
+Segundo, el articulo 90 LIVA fija que «Uno. El Impuesto se exigirá al tipo del 21 por ciento, salvo lo dispuesto en el artículo siguiente».
+Tercero, la disposicion transitoria quinta LIVA se refiere a «Las cuotas soportadas por la adquisición de bienes o servicios que se destinen a la realización de los autoconsumos».
+Cuarto, el articulo 95 LIVA anade que «Dos. No se entenderán afectos directa y exclusivamente a la actividad empresarial o profesional, entre otros:».
+Quinto, el articulo 90 LIVA precisa que «Dos. El tipo impositivo aplicable a cada operación será el vigente en el momento del devengo».
+Y sexto, el articulo 95 LIVA concluye que «el porcentaje de deduccion aplicable a los turismos sera siempre del 100 por cien».
+--- FIN
+
+
+--- CASO: k-todas-buenas-veredicto-global
+esperado: ACEPTADO
+ejercicio: 2023
+motivo: control positivo del veredicto global: si todo cuadra, tiene que aceptar
+texto:
+El articulo 95 LIVA dispone que «Uno. Los empresarios o profesionales no podrán deducir las cuotas soportadas o satisfechas por las adquisiciones o importaciones de bienes o servicios que no se afecten, directa y exclusivamente, a su actividad empresarial o profesional» (https://www.boe.es/buscar/act.php?id=BOE-A-1992-28740#a95).
+Y el articulo 90 LIVA fija que «Uno. El Impuesto se exigirá al tipo del 21 por ciento, salvo lo dispuesto en el artículo siguiente» (https://www.boe.es/buscar/act.php?id=BOE-A-1992-28740#a90).
+--- FIN
+
+
+--- CASO: l-enlace-que-apunta-a-otro-articulo
+esperado: NO_VERIFICADA
+ejercicio: 2023
+motivo: el fragmento es bueno pero el enlace lleva al articulo 94; el enlace es parte de la cita
+texto:
+El articulo 95 LIVA dispone que «Uno. Los empresarios o profesionales no podrán deducir las cuotas soportadas o satisfechas por las adquisiciones o importaciones de bienes o servicios que no se afecten, directa y exclusivamente, a su actividad empresarial o profesional» (https://www.boe.es/buscar/act.php?id=BOE-A-1992-28740#a94).
+--- FIN
+
+
+--- CASO: m-fragmento-sin-ninguna-referencia
+esperado: NO_VERIFICADA
+ejercicio: 2023
+motivo: un entrecomillado suelto no es una cita: no hay contra que comprobarlo
+texto:
+La norma es tajante: «Uno. Los empresarios o profesionales no podrán deducir las cuotas soportadas o satisfechas por las adquisiciones o importaciones de bienes o servicios que no se afecten, directa y exclusivamente, a su actividad empresarial o profesional».
+--- FIN
+
+
+--- CASO: n-tilde-cambiada
+esperado: NO_VERIFICADA
+ejercicio: 2023
+motivo: las tildes no se normalizan; en un texto juridico forman parte de la cita
+texto:
+El articulo 95 LIVA dispone que «Uno. Los empresarios o profesionales no podran deducir las cuotas soportadas o satisfechas por las adquisiciones o importaciones de bienes o servicios» (art. 95 LIVA).
+--- FIN
+
+
+--- CASO: o-disposicion-transitoria-correcta
+esperado: VERIFICADA
+ejercicio: 2023
+motivo: las disposiciones se citan y se verifican igual que los articulos
+texto:
+La disposicion transitoria quinta LIVA se refiere a «Las cuotas soportadas por la adquisición de bienes o servicios que se destinen a la realización de los autoconsumos».
+--- FIN
+
+
+--- CASO: p-articulo-que-aun-no-existia
+esperado: NO_VERIFICADA
+ejercicio: 2015
+motivo: el articulo 8 bis se anadio en 2021; en 2015 no existia todavia
+texto:
+Ya en aquel ejercicio, el articulo 8 bis LIVA disponia que «Cuando un empresario o profesional, utilizando una interfaz digital como un mercado en línea, una plataforma, un portal u otros medios similares, facilite:».
+--- FIN
+
+
+--- CASO: q-texto-sin-ninguna-cita
+esperado: RECHAZADO
+ejercicio: 2023
+motivo: sin fragmento literal no hay respuesta: no se puede aceptar una afirmacion sin fuente
+texto:
+El IVA soportado en la adquisicion de un turismo es deducible al 50 por ciento salvo prueba en contrario, segun el criterio administrativo consolidado.
+--- FIN
+
+--- CASO: r-cita-sin-norma-con-dos-normas-en-juego
+esperado: NO_VERIFICABLE
+ejercicio: 2023
+motivo: FASE 6 (expectativa corregida). Con las dos normas CARGADAS, "articulo 71" a secas designa dos preceptos distintos y el verificador ya no supone cual: NO VERIFICABLE. Antes daba NO_VERIFICADA, que era el veredicto correcto por el motivo equivocado (suponia la Ley y fallaba el literal)
+texto:
+Segun el articulo 71, «2. Las declaraciones-liquidaciones deberán presentarse directamente o, a través de las Entidades colaboradoras, ante el órgano competente de la Administración tributaria».
+--- FIN
+
+
+--- CASO: r-cita-al-reglamento-por-su-nombre
+esperado: VERIFICADA
+ejercicio: 2023
+motivo: FASE 6 (expectativa corregida). El Reglamento YA esta cargado, la cita lo nombra y el fragmento es literal: se verifica. Antes salia NO_VERIFICABLE porque la norma no estaba en el corpus; esa premisa ya no es cierta
+texto:
+El articulo 71 del Reglamento del IVA establece que «2. Las declaraciones-liquidaciones deberán presentarse directamente o, a través de las Entidades colaboradoras, ante el órgano competente de la Administración tributaria».
+--- FIN
+
+
+--- CASO: s-remision-cruzada-lleva-a-la-LEY
+esperado: VERIFICADA
+ejercicio: 2023
+motivo: FASE 6, EL CASO QUE MANDA. "articulo 8 de la Ley del Impuesto" tiene que llevar al 8 de la LEY. El fragmento es del articulo 8 de la Ley 37/1992; si el sistema lo resolviera contra el articulo 8 del REGLAMENTO, el literal no estaria y esto saldria en rojo
+texto:
+El articulo 8 de la Ley del Impuesto dispone que «Uno. Se considerará entrega de bienes la transmisión del poder de disposición sobre bienes corporales, incluso si se efectúa mediante cesión de títulos representativos de dichos bienes.».
+--- FIN
+
+
+--- CASO: s2-el-mismo-nombre-pero-el-texto-del-reglamento
+esperado: NO_VERIFICADA
+ejercicio: 2023
+motivo: FASE 6, la cara B del anterior. Mismo nombre de norma, pero el fragmento es del articulo 8 del REGLAMENTO. Como la cita dice "de la Ley del Impuesto", debe comprobarse contra la LEY, no encontrarlo, y salir NO VERIFICADA
+texto:
+El articulo 8 de la Ley del Impuesto establece que «1. La renuncia a las exenciones reguladas en los números 20.º y 22.º del apartado uno del artículo 20 de la Ley del Impuesto sobre el Valor Añadido, deberá comunicarse fehacientemente al adquirente con carácter previo o simultáneo a la entrega de los correspondientes bienes.».
+--- FIN

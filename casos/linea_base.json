@@ -1,0 +1,154 @@
+{
+  "_que_es_esto": "Ultimo resultado bueno CONOCIDO del banco. Se versiona a proposito: en una maquina recien clonada datos/banco/ no existe y esto es lo unico contra lo que comparar.",
+  "_como_se_actualiza": "python banco.py --actualizar-linea-base",
+  "_cuidado": "Actualizarla congela lo que haya AHORA, rojos incluidos. Revisa la lista de abajo antes de dar por buena una actualizacion.",
+  "fecha": "2026-08-02T00:56:28",
+  "motor": "ensayo",
+  "bloques": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "resumen": {
+    "total": 19,
+    "verde": 14,
+    "rojo": 2,
+    "omitido": 3
+  },
+  "pruebas": [
+    {
+      "bloque": "1",
+      "nombre": "«deducción cuotas soportadas vehículos turismo»",
+      "veredicto": "VERDE",
+      "esperado": "art. 95 de Ley 37/1992 entre los 3 primeros",
+      "obtenido": "art. 95 de Ley 37/1992 en el puesto 1"
+    },
+    {
+      "bloque": "1",
+      "nombre": "«prorrata general»",
+      "veredicto": "VERDE",
+      "esperado": "art. 104 o 105 de Ley 37/1992 entre los 3 primeros",
+      "obtenido": "art. 104 de Ley 37/1992 en el puesto 2"
+    },
+    {
+      "bloque": "1",
+      "nombre": "«caducidad del derecho a deducir»",
+      "veredicto": "VERDE",
+      "esperado": "art. 100 de Ley 37/1992 entre los 3 primeros",
+      "obtenido": "art. 100 de Ley 37/1992 en el puesto 1"
+    },
+    {
+      "bloque": "1",
+      "nombre": "«devengo del impuesto en las entregas de bienes»",
+      "veredicto": "VERDE",
+      "esperado": "art. 75 de Ley 37/1992 entre los 3 primeros",
+      "obtenido": "art. 75 de Ley 37/1992 en el puesto 1"
+    },
+    {
+      "bloque": "1",
+      "nombre": "«un cliente no me paga la factura, puedo recuperar el IVA»",
+      "veredicto": "ROJO",
+      "esperado": "art. 80 de Ley 37/1992 entre los 3 primeros",
+      "obtenido": "NO sale en los 10 primeros. Salieron: 61 sexiesdecies (Reglamento), 164 (Ley), 116 (Ley), 163 sexvivies (Ley), 4 (Real), 23 bis (Reglamento)"
+    },
+    {
+      "bloque": "1",
+      "nombre": "«he repercutido IVA de mas en una factura, como lo corrijo»",
+      "veredicto": "VERDE",
+      "esperado": "art. 89 de Ley 37/1992 entre los 3 primeros",
+      "obtenido": "art. 89 de Ley 37/1992 en el puesto 3"
+    },
+    {
+      "bloque": "1",
+      "nombre": "«que tipo reducido se aplica»",
+      "veredicto": "ROJO",
+      "esperado": "art. 91 de Ley 37/1992 entre los 3 primeros",
+      "obtenido": "art. 91 de Ley 37/1992 en el puesto 5 (fuera del tope 3)"
+    },
+    {
+      "bloque": "1",
+      "nombre": "«vender una furgoneta antes de los cinco anos y ajustar la deducción»",
+      "veredicto": "VERDE",
+      "esperado": "art. 107 o 110 de Ley 37/1992 entre los 3 primeros",
+      "obtenido": "art. 107 de Ley 37/1992 en el puesto 3"
+    },
+    {
+      "bloque": "1",
+      "nombre": "«requisitos de la factura para poder deducir la cuota»",
+      "veredicto": "VERDE",
+      "esperado": "art. 97 de Ley 37/1992 entre los 3 primeros",
+      "obtenido": "art. 97 de Ley 37/1992 en el puesto 1"
+    },
+    {
+      "bloque": "1",
+      "nombre": "«devolución del IVA a un empresario no establecido en el territorio»",
+      "veredicto": "VERDE",
+      "esperado": "art. 119 de Ley 37/1992 entre los 3 primeros",
+      "obtenido": "art. 119 de Ley 37/1992 en el puesto 3"
+    },
+    {
+      "bloque": "1",
+      "nombre": "«plazo de declaración recapitulativa»",
+      "veredicto": "VERDE",
+      "esperado": "art. 78 o 79 o 80 o 81 de Reglamento del Impuesto sobre el Valor Añadido entre los 3 primeros",
+      "obtenido": "art. 78 de Reglamento del Impuesto sobre el Valor Añadido en el puesto 1"
+    },
+    {
+      "bloque": "1",
+      "nombre": "«en que libro registro anoto las facturas que recibo»",
+      "veredicto": "VERDE",
+      "esperado": "art. 64 de Reglamento del Impuesto sobre el Valor Añadido entre los 3 primeros",
+      "obtenido": "art. 64 de Reglamento del Impuesto sobre el Valor Añadido en el puesto 1"
+    },
+    {
+      "bloque": "1",
+      "nombre": "«plazo para anotar las facturas en los libros registro»",
+      "veredicto": "VERDE",
+      "esperado": "art. 69 o 69 bis de Reglamento del Impuesto sobre el Valor Añadido entre los 3 primeros",
+      "obtenido": "art. 69 de Reglamento del Impuesto sobre el Valor Añadido en el puesto 1"
+    },
+    {
+      "bloque": "1",
+      "nombre": "«como renunciar al régimen simplificado»",
+      "veredicto": "VERDE",
+      "esperado": "art. 33 o 35 de Reglamento del Impuesto sobre el Valor Añadido entre los 3 primeros",
+      "obtenido": "art. 33 de Reglamento del Impuesto sobre el Valor Añadido en el puesto 1"
+    },
+    {
+      "bloque": "1",
+      "nombre": "«solicitar la devolución al final de cada periodo de liquidación»",
+      "veredicto": "VERDE",
+      "esperado": "art. 30 de Reglamento del Impuesto sobre el Valor Añadido entre los 3 primeros",
+      "obtenido": "art. 30 de Reglamento del Impuesto sobre el Valor Añadido en el puesto 2"
+    },
+    {
+      "bloque": "2",
+      "nombre": "analizador contra el modelo real",
+      "veredicto": "OMITIDO",
+      "esperado": "terminos del articulado y puertas de entrada",
+      "obtenido": "OMITIDO: se ha ejecutado con --motor ensayo, que no es un modelo"
+    },
+    {
+      "bloque": "3",
+      "nombre": "misma pregunta 3 veces",
+      "veredicto": "OMITIDO",
+      "esperado": "mismo estado y mismos articulos en las 3",
+      "obtenido": "OMITIDO: con --motor ensayo la respuesta es fija por construccion y no prueba nada"
+    },
+    {
+      "bloque": "4",
+      "nombre": "cita falsa inyectada en la pregunta",
+      "veredicto": "VERDE",
+      "esperado": "NO ENCONTRADO (codigo 2) y sin mostrar texto redactado",
+      "obtenido": "codigo 2, estado NO ENCONTRADO, no mostro texto"
+    },
+    {
+      "bloque": "4",
+      "nombre": "tasa de entrada en el bucle de reintento",
+      "veredicto": "OMITIDO",
+      "esperado": "como mucho 50% de las redacciones",
+      "obtenido": "OMITIDO: mide la calidad del prompt de redaccion, y con --motor ensayo no hay prompt que medir"
+    }
+  ]
+}
