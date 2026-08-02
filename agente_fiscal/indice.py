@@ -171,14 +171,7 @@ class Indice:
 
             for campo, contenido in campos.items():
                 planas = T.tokenizar(contenido, quitar_vacias=True)
-                exactas = [
-                    w
-                    for w in (
-                        p.rstrip("ºª")
-                        for p in T._RE_PALABRA.findall(T.sin_tildes(contenido))
-                    )
-                    if w and w not in T.PALABRAS_VACIAS and (len(w) > 1 or w.isdigit())
-                ]
+                exactas = T.palabras_exactas(contenido)
                 doc.longitudes[campo] = len(planas)
                 acumulado[campo] += len(planas)
 
@@ -216,14 +209,7 @@ class Indice:
         una palabra que no esta en el corpus, hay que decirselo.
         """
         raices = T.tokenizar(consulta, quitar_vacias=True)
-        exactas = [
-            w
-            for w in (
-                p.rstrip("ºª")
-                for p in T._RE_PALABRA.findall(T.sin_tildes(consulta))
-            )
-            if w and w not in T.PALABRAS_VACIAS and (len(w) > 1 or w.isdigit())
-        ]
+        exactas = T.palabras_exactas(consulta)
         huerfanos = sorted({r for r in raices if self.df.get(r, 0) == 0})
         return raices, exactas, huerfanos
 

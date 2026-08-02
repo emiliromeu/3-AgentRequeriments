@@ -260,9 +260,19 @@ class Registro:
             )
             sobra = (resto_original + " " + (cola or "")).strip(" ,;:.")
             if _RE_DISCRIMINANTE.match(sobra):
+                # Se dice QUE alias caso y QUE sobro: sin las dos mitades el
+                # mensaje parece repetir el nombre y no se entiende por que se
+                # rechaza algo que a simple vista encajaba.
+                # Del texto ORIGINAL, no de la version normalizada: el motivo
+                # lo lee una persona, y «reglamento del iva» en minusculas
+                # parece un error de otra cosa.
+                alias = " ".join(
+                    re.sub(r"\s+", " ", designacion).strip(" .,;:").split()[:consumidas]
+                )
                 return None, (
-                    f"«{designacion.strip()}» sigue con «{sobra[:34]}»: es otra "
-                    f"norma, no se resuelve"
+                    f"«{alias}» es alias de una norma cargada, pero la "
+                    f"designacion sigue con «{sobra[:34]}»: es OTRA norma, "
+                    f"no se resuelve"
                 )
 
         if len(candidatos) == 1:

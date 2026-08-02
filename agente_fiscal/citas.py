@@ -134,6 +134,11 @@ class Referencia:
     detalle: str = ""         # "apartado uno", si se cito
     norma: str = ""           # 'cargada' | 'externa' | 'asumida' | 'sin_referencia'
     norma_bruta: str = ""     # como se nombro la norma, tal cual
+    # Por que el registro de normas no la resolvio. Se guarda porque "externa"
+    # tiene DOS causas muy distintas -la norma no esta cargada, o el nombre es
+    # ambiguo- y un motivo que no las distinga hace creer que falta del corpus
+    # algo que si esta. No decide nada: solo explica.
+    motivo_norma: str = ""
     cuerpo: str = ""          # clave del cuerpo, si se pudo determinar
     posicion: int = -1
 
@@ -200,11 +205,12 @@ def _leer_referencia(
     m_nombre = _RE_NOMBRE_NORMA.search(fragmento)
     if m_nombre and registro is not None:
         bruto = re.sub(r"\s+", " ", m_nombre.group(0)).strip(" .,;:")
-        clave, _ = registro.resolver(bruto, cola=fragmento[m_nombre.end():])
+        clave, porque = registro.resolver(bruto, cola=fragmento[m_nombre.end():])
         if clave:
             ref.norma, ref.norma_bruta, ref.cuerpo = "cargada", bruto, clave
         else:
             ref.norma, ref.norma_bruta = "externa", bruto
+            ref.motivo_norma = porque or ""
     elif m_nombre:
         ref.norma, ref.norma_bruta = "externa", m_nombre.group(0)
     else:

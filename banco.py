@@ -2,8 +2,8 @@
 """BANCO DE PRUEBAS del agente fiscal.
 
     python banco.py                  # SOLO el bloque 1: cero llamadas, cero gasto
-    python banco.py --con-modelo     # ademas los bloques 2-4, contra el modelo
-    python banco.py --bloques 1,4    # los que se pidan (2-4 exigen --con-modelo)
+    python banco.py --con-modelo     # ademas los bloques 2-5, contra el modelo
+    python banco.py --bloques 1,5    # los que se pidan (2-5 exigen --con-modelo)
 
 Por defecto el banco NO gasta: corre el bloque 1, que es deterministico y caza
 la mayoria de las regresiones (si el buscador deja de encontrar el articulo,
@@ -24,6 +24,11 @@ Bloques:
                      y los MISMOS articulos, aunque cambie el texto
   4 · Bucle          la cita falsa acaba en NO ENCONTRADO, y cuantas veces se
                      entra en el bucle de reintento
+  5 · Rojos de extremo a extremo: los casos que el bloque 1 no recupera se
+                     repiten dejando que el analizador proponga los terminos.
+                     El bloque 1 puentea el analizador a proposito, asi que sus
+                     rojos dicen "el buscador SOLO no llega", no "el sistema
+                     falla". Esto mide lo segundo. Cuesta 1 llamada por rojo.
 
 Los bloques 2 y 3 necesitan el modelo real. Con --motor ensayo salen como
 OMITIDO, nunca como VERDE: dar por buena una prueba que no se ha ejecutado es
@@ -94,11 +99,12 @@ COBERTURA_TERMINOS_MINIMA = 0.6
 TASA_REINTENTO_MAXIMA = 0.5
 
 # Bloques que llaman al modelo. Solo se ejecutan con --con-modelo.
-BLOQUES_CON_MODELO = {"2", "3", "4"}
+BLOQUES_CON_MODELO = {"2", "3", "4", "5"}
 BLOQUES_GRATIS = {"1"}
 
 
-def llamadas_previstas(bloques: set[str], n_casos: int) -> tuple[int, int]:
+def llamadas_previstas(bloques: set[str], n_casos: int,
+                       n_rojos: int = 0) -> tuple[int, int]:
     """(minimo, maximo) de llamadas al modelo, para avisar ANTES de gastar.
 
     Se cuenta lo que hace cada consulta: 1 analisis (2 si el JSON sale mal) y
@@ -115,6 +121,10 @@ def llamadas_previstas(bloques: set[str], n_casos: int) -> tuple[int, int]:
     if "4" in bloques:
         minimo += (n_casos + 1) * 2
         maximo += (n_casos + 1) * 4
+    if "5" in bloques:
+        # Una llamada por caso en rojo (dos si el JSON sale mal). No redacta.
+        minimo += n_rojos
+        maximo += n_rojos * 2
     return minimo, maximo
 
 
@@ -624,6 +634,113 @@ def comparar_analizador(ix, casos, modelos: list[str]) -> int:
     return 0
 
 
+# ------------------------------------------------------------------ bloque 5
+
+
+def casos_en_rojo(ix, casos) -> list[dict]:
+    """Los casos que el bloque 1 no recupera dentro de su tope.
+
+    Se recalcula aqui, sin depender de que el bloque 1 se haya ejecutado: es
+    deterministico y no cuesta nada. Asi el bloque 5 sigue a los rojos solos,
+    sin una lista escrita a mano que se quede vieja.
+    """
+    rojos = []
+    for caso in casos:
+        cuerpo, _ = ix.normas.resolver(caso["norma"])
+        if cuerpo is None:
+            continue
+        resultados, _ = ix.buscar(caso["consulta"], tope=max(caso["tope"], 10))
+        puesto = None
+        for i, r in enumerate(resultados, 1):
+            rg = r.doc.registro
+            if (rg["referencia"].replace("Articulo ", "") in caso["aceptables"]
+                    and rg["cuerpo_clave"] == cuerpo):
+                puesto = i
+                break
+        if puesto is None or puesto > caso["tope"]:
+            rojos.append({**caso, "puesto_directo": puesto, "cuerpo": cuerpo})
+    return rojos
+
+
+def bloque_5(reg: Registro, ix, motor, casos) -> None:
+    """Los rojos del bloque 1, PERO pasando por el analizador.
+
+    Por que existe: el bloque 1 busca con la consulta tal cual, puenteando el
+    analizador a proposito, porque asi mide el buscador solo. Eso esta bien
+    para localizar un fallo, y es enganoso para juzgar el sistema: en una
+    consulta real nadie busca con las palabras del usuario, se busca con los
+    terminos que propone la llamada 1.
+
+    Un rojo del bloque 1 dice "el buscador solo no llega". Este bloque dice si
+    el SISTEMA llega. Son dos preguntas distintas y hasta ahora solo se medía
+    la primera.
+
+    Cuesta una llamada por caso en rojo (dos, si el JSON sale mal a la
+    primera): hoy son 2 casos, o sea 2-4 llamadas.
+    """
+    bloque("BLOQUE 5 · LOS ROJOS, DE EXTREMO A EXTREMO  (necesita el modelo)")
+    rojos = casos_en_rojo(ix, casos)
+    if not rojos:
+        print("No hay ningun caso en rojo en el bloque 1: nada que reintentar.\n")
+        return
+    print(f"{len(rojos)} caso(s) que el buscador solo no recupera. Se repiten "
+          f"dejando que el analizador proponga los terminos.\n")
+
+    if not motor.es_modelo_real:
+        for caso in rojos:
+            reg.anota("5", f"de extremo a extremo: «{caso['consulta']}»",
+                      f"art. {' o '.join(caso['aceptables'])} entre los "
+                      f"{caso['tope']} primeros con los terminos del analizador",
+                      "OMITIDO: hace falta el modelo real; con --motor ensayo "
+                      "los terminos son fijos y no prueban nada", OMITIDO,
+                      ident=f"b5:{caso['cuerpo']}:{','.join(caso['aceptables'])}")
+        return
+
+    for caso in rojos:
+        ident = f"b5:{caso['cuerpo']}:{','.join(caso['aceptables'])}"
+        esperado = (f"art. {' o '.join(caso['aceptables'])} entre los "
+                    f"{caso['tope']} primeros con los terminos del analizador")
+        try:
+            resp = motor.analizar(AN.SISTEMA, caso["consulta"] + " (ejercicio 2023)",
+                                  AN.ESQUEMA)
+        except MOD.ErrorModelo as e:
+            reg.anota("5", f"de extremo a extremo: «{caso['consulta']}»",
+                      esperado, f"fallo de llamada al modelo: {e}", FALLO,
+                      ident=ident)
+            continue
+
+        analisis, errores = AN.validar(resp.datos)
+        if analisis is None:
+            reg.anota("5", f"de extremo a extremo: «{caso['consulta']}»",
+                      esperado,
+                      f"el analizador no devolvio un JSON valido: "
+                      f"{'; '.join(errores)[:80]}", FALLO, ident=ident)
+            continue
+
+        consulta = " ".join(analisis.terminos_busqueda)
+        resultados, _ = ix.buscar(consulta, tope=max(caso["tope"], 10))
+        puesto, salieron = None, []
+        for i, r in enumerate(resultados, 1):
+            rg = r.doc.registro
+            salieron.append(rg["referencia"].replace("Articulo ", ""))
+            if (puesto is None
+                    and rg["referencia"].replace("Articulo ", "") in caso["aceptables"]
+                    and rg["cuerpo_clave"] == caso["cuerpo"]):
+                puesto = i
+        ok = puesto is not None and puesto <= caso["tope"]
+        directo = caso["puesto_directo"]
+        obtenido = (
+            f"puesto {puesto if puesto else 'fuera de los 10'} "
+            f"(con la consulta cruda era {directo if directo else 'fuera'}); "
+            f"terminos: {', '.join(analisis.terminos_busqueda)}"
+        )
+        reg.anota("5", f"de extremo a extremo: «{caso['consulta']}»",
+                  esperado, obtenido, VERDE if ok else ROJO,
+                  {"terminos": analisis.terminos_busqueda, "puesto": puesto,
+                   "puesto_con_consulta_cruda": directo, "top": salieron[:6]},
+                  ident=ident)
+
+
 # --------------------------------------------------------------- historico
 
 
@@ -802,7 +919,8 @@ def main(argv: list[str]) -> int:
     if args.bloques:
         pedidos = {b.strip() for b in args.bloques.split(",") if b.strip()}
     else:
-        pedidos = ({"1", "2", "3", "4"} if args.con_modelo else set(BLOQUES_GRATIS))
+        pedidos = ({"1", "2", "3", "4", "5"} if args.con_modelo
+                   else set(BLOQUES_GRATIS))
 
     # Un bloque de pago pedido a mano sin --con-modelo NO se ejecuta a
     # escondidas: se dice que se descarta y por que. Gastar por descuido es
@@ -859,7 +977,9 @@ def main(argv: list[str]) -> int:
 
     # AVISO DE GASTO, antes de la primera llamada. Cuantas van a ser y de que.
     if necesita_modelo and motor.es_modelo_real:
-        minimo, maximo = llamadas_previstas(pedidos, len(casos))
+        minimo, maximo = llamadas_previstas(
+            pedidos, len(casos), len(casos_en_rojo(ix, casos))
+        )
         print()
         print("-" * ANCHO)
         print(f"ESTA PASADA VA A HACER ENTRE {minimo} Y {maximo} LLAMADAS AL MODELO.")
@@ -880,6 +1000,8 @@ def main(argv: list[str]) -> int:
         bloque_3(reg, ix, grafo, motor)
     if "4" in pedidos:
         bloque_4(reg, ix, grafo, motor, casos)
+    if "5" in pedidos:
+        bloque_5(reg, ix, motor, casos)
 
     # ------------------------------------------------------------ recuento
     verdes, rojos, omitidos, fallos = (

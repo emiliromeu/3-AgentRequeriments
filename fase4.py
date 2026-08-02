@@ -86,12 +86,22 @@ def cargar_corpus():
 # ------------------------------------------------------------------ consultar
 
 
-def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo) -> dict:
+def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
+              progreso=None) -> dict:
     """Resuelve una duda. Imprime el proceso y DEVUELVE el resultado en dict.
 
     Devolver un dict (y no solo imprimir) es lo que permite que el banco de
     pruebas juzgue por codigo en vez de leer texto por pantalla.
+
+    `progreso` es un aviso opcional de por que paso va (una funcion que recibe
+    una frase). Lo usa la ventana de escritorio, que tarda decenas de segundos
+    en contestar y necesita ensenar que sigue viva. No decide nada: si nadie lo
+    pasa, aqui no cambia absolutamente nada.
     """
+    def paso(texto: str) -> None:
+        if progreso is not None:
+            progreso(texto)
+
     res = {
         "pregunta": pregunta,
         "codigo": 1,
@@ -113,6 +123,10 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo) -> dict:
         # Que llego al redactor y que se quedo fuera en el corte.
         "preceptos_enviados": [],
         "preceptos_descartados": [],
+        # El texto redactado. Se rellena SOLO si supera la verificacion: si
+        # aqui hay algo, es porque se puede ensenar. Quien lo lea no tiene que
+        # acordarse de mirar antes el codigo.
+        "respuesta": "",
         "motor": motor.nombre,
         # Tokens de esta consulta. Vacio si no se llego a llamar al modelo.
         "consumo": {},
@@ -137,6 +151,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo) -> dict:
     print(f"traza    : {tr.dir}")
 
     # ---------------------------------------------------- LLAMADA 1
+    paso("Analizando la pregunta...")
     apartado("1. Analisis de la pregunta (llamada 1 al modelo)")
     analisis = None
     errores: list[str] = []
@@ -221,6 +236,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo) -> dict:
     print(f"   ejercicio: {ejercicio}  ({explicacion})")
 
     # ---------------------------------------------------- BUSQUEDA (fase 2)
+    paso("Buscando en la ley y el reglamento...")
     apartado("2. Busqueda en el corpus (fase 2, deterministica)")
     consulta = " ".join(analisis.terminos_busqueda)
     resultados, huerfanos = ix.buscar(consulta, tope=TOPE_MATERIAL)
@@ -282,6 +298,8 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo) -> dict:
             pregunta, ejercicio, registros, grafo, motivos or None
         )
         tr.escribir(f"material_{intento}.txt", material)
+        paso(f"Redactando con los articulos encontrados"
+             f"{f' (intento {intento})' if intento > 1 else ''}...")
         try:
             resp = motor.redactar(RED.SISTEMA, material)
         except MOD.ErrorModelo as e:
@@ -297,6 +315,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo) -> dict:
         borrador = resp.texto
         tr.escribir(f"borrador_{intento}.txt", borrador)
 
+        paso("Comprobando cada cita contra el texto oficial...")
         informe = verificador.verificar_texto(borrador, ejercicio, exigir_norma=True)
         tr.json(f"verificacion_{intento}.json", informe.a_json())
 
@@ -323,6 +342,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo) -> dict:
     res["veredicto"] = informe.veredicto if informe else None
 
     # ---------------------------------------------------- ESTADO (reglas)
+    paso("Calculando el estado de la respuesta...")
     apartado("4. Estado (lo calcula el codigo, no el modelo)")
     dictamen = EST.calcular(informe, ix, grafo, ejercicio, len(registros))
     tr.json("estado.json", dictamen.a_json())
@@ -345,6 +365,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo) -> dict:
         for s in dictamen.senales:
             print(f"  !! {s}")
         print("-" * ANCHO)
+    res["respuesta"] = borrador.strip()
     print(borrador.strip())
     print("\n" + "-" * ANCHO)
     print(f"Citas verificadas una a una contra el corpus: "

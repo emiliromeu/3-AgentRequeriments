@@ -191,6 +191,18 @@ def lematizar(p: str) -> str:
     return p if len(p) >= 3 else original
 
 
+def palabras_exactas(texto: str) -> list[str]:
+    """Las palabras tal cual, sin lematizar: solo minusculas y sin tildes."""
+    salida = []
+    for bruto in _RE_PALABRA.findall(sin_tildes(texto)):
+        palabra = bruto.rstrip("ºª")
+        if palabra and palabra not in PALABRAS_VACIAS and (
+            len(palabra) > 1 or palabra.isdigit()
+        ):
+            salida.append(palabra)
+    return salida
+
+
 def tokenizar(texto: str, quitar_vacias: bool = True) -> list[str]:
     """Texto -> lista de raices, sin tildes, sin mayusculas, sin palabras vacias."""
     plano = sin_tildes(texto)

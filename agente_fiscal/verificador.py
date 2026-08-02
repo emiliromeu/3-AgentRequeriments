@@ -43,15 +43,26 @@ ETIQUETA_ORIGEN = {
 }
 
 
+# Nombres de norma que en castellano piden "del" y no "de la". Es cosmetica,
+# pero un motivo que se lee mal se lee poco, y este se escribe para auditarlo.
+_MASCULINOS = ("Reglamento", "Real Decreto", "Decreto", "Codigo", "Código",
+               "Texto Refundido", "Estatuto", "Convenio", "Tratado")
+
+
+def _articulo_de(etiqueta: str) -> str:
+    return "del" if etiqueta.startswith(_MASCULINOS) else "de la"
+
+
 @dataclass
 class Hallazgo:
     """Donde aparece un fragmento dentro del corpus."""
 
     clave: str
-    referencia: str
+    referencia: str        # "Articulo 8", que con dos normas NO identifica nada
     origen: str
     orden_version: int | None = None
     fecha_version: str = ""
+    nombre: str = ""       # "Articulo 8 de la Ley 37/1992": esto si identifica
 
 
 @dataclass
@@ -88,7 +99,7 @@ class Dictamen:
             "comprobaciones": self.comprobaciones,
             "hallazgos": [
                 {
-                    "referencia": h.referencia,
+                    "referencia": h.nombre or h.referencia,
                     "origen": h.origen,
                     "orden_version": h.orden_version,
                     "fecha_version": h.fecha_version,
@@ -162,6 +173,42 @@ class Verificador:
                     (d.clave, NOTA_EDITORIAL, C.normalizar_literal(nota))
                 )
 
+    # ------------------------------------------------------------- nombres
+
+    def nombrar(self, clave: str = "", registro: dict | None = None) -> str:
+        """«Articulo 8 de la Ley 37/1992». NUNCA «Articulo 8» a secas.
+
+        Desde que hay dos normas cargadas, un numero de articulo no identifica
+        nada: el 8 existe en la Ley y en el Reglamento, y son cosas distintas.
+        Un motivo que diga solo «Articulo 8» se puede leer de dos maneras, y un
+        motivo que se puede leer de dos maneras no sirve para auditar: el
+        verificador solo vale si un humano puede reconstruir el porque.
+
+        Todo mensaje que nombre un precepto pasa por aqui. Sin excepciones: la
+        que se deje hoy es la que manana vuelve a decir «no esta en el Articulo
+        8; el texto es del Articulo 8».
+        """
+        if registro is None:
+            doc = self.ix.por_clave.get(clave)
+            if doc is None:
+                return clave or "(precepto desconocido)"
+            registro = doc.registro
+        referencia = registro.get("referencia", "(sin referencia)")
+        cuerpo = self.ix.normas.por_clave(registro.get("cuerpo_clave", ""))
+        if not cuerpo:
+            return referencia
+        return f"{referencia} {_articulo_de(cuerpo.etiqueta)} {cuerpo.etiqueta}"
+
+    def nombrar_varios(self, claves) -> str:
+        """Lista de preceptos, cada uno con su norma y sin repetir."""
+        vistos, salida = set(), []
+        for c in claves:
+            nombre = self.nombrar(c)
+            if nombre not in vistos:
+                vistos.add(nombre)
+                salida.append(nombre)
+        return ", ".join(sorted(salida))
+
     # ------------------------------------------------------------ localizar
 
     def localizar(self, literal: str) -> list[Hallazgo]:
@@ -182,6 +229,7 @@ class Verificador:
                         ARTICULADO,
                         orden,
                         fecha,
+                        self.nombrar(clave),
                     )
                 )
         for clave, origen, texto in self._notas:
@@ -191,6 +239,7 @@ class Verificador:
                         clave,
                         self.ix.por_clave[clave].registro["referencia"],
                         origen,
+                        nombre=self.nombrar(clave),
                     )
                 )
         return salida
@@ -262,11 +311,20 @@ class Verificador:
         # -- 1. norma fuera del corpus -> NO VERIFICABLE, nunca verificada --
         if ref.norma == "externa":
             d.estado = NO_VERIFICABLE
+            # "Externa" NO significa siempre lo mismo: puede ser que la norma
+            # no este en el corpus, que el nombre designe otra norma distinta
+            # de las cargadas, o que encaje con varias. Decir en los tres casos
+            # "no esta cargada" seria afirmar algo que a veces es falso —el
+            # Reglamento SI esta— y quien audite el expediente se lo creeria.
+            # Por eso el motivo lleva siempre el porque exacto del resolutor.
             d.motivo = (
-                f"la cita remite a {ref.norma_bruta}, que no esta entre las normas "
-                f"cargadas. No se puede comprobar, asi que no se da por buena"
+                f"la cita remite a «{ref.norma_bruta}» y no se ha podido "
+                f"resolver contra ninguna de las normas cargadas"
+                + (f": {ref.motivo_norma}" if ref.motivo_norma else "")
+                + ". Sin saber de que norma es, no hay contra que comprobarla, "
+                  "asi que no se da por buena"
             )
-            d.comprobaciones.append("norma citada: fuera del corpus")
+            d.comprobaciones.append("norma citada: no resuelta contra el corpus")
             return d
 
         # -- 1 bis. norma no indicada --
@@ -318,7 +376,7 @@ class Verificador:
                 d.hallazgos = otros[:5]
                 d.motivo += (
                     f"; el fragmento si aparece en: "
-                    f"{', '.join(sorted({h.referencia for h in otros[:5]}))}"
+                    f"{self.nombrar_varios(h.clave for h in otros[:5])}"
                 )
             return d
 
@@ -326,7 +384,7 @@ class Verificador:
         d.clave = clave
         d.referencia_corpus = reg["referencia"]
         d.enlace_correcto = reg["url"]
-        d.comprobaciones.append(f"precepto localizado: {reg['referencia']}")
+        d.comprobaciones.append(f"precepto localizado: {self.nombrar(clave)}")
 
         # -- 3. vigencia en el ejercicio del caso --
         avisos_fecha = V.avisos(reg, ejercicio)
@@ -336,7 +394,7 @@ class Verificador:
         ]
         if bloqueantes:
             d.estado = NO_VERIFICADA
-            d.motivo = f"{reg['referencia']}: {bloqueantes[0].texto}"
+            d.motivo = f"{self.nombrar(clave)}: {bloqueantes[0].texto}"
             d.comprobaciones.append("vigencia: NO aplicable en el ejercicio")
             return d
 
@@ -348,7 +406,8 @@ class Verificador:
             version = V.version_aplicable(reg, V.limites(ejercicio)[1])
         if version is None:
             d.estado = NO_VERIFICADA
-            d.motivo = f"{reg['referencia']} no tenia texto en vigor en {ejercicio}"
+            d.motivo = (f"{self.nombrar(clave)} no tenia texto en vigor "
+                        f"en {ejercicio}")
             return d
         d.version_usada = {
             "orden": version.get("orden"),
@@ -382,8 +441,9 @@ class Verificador:
             if cita.enlace and not self._enlace_ok(cita.enlace, reg):
                 d.estado = NO_VERIFICADA
                 d.motivo = (
-                    f"el fragmento es correcto pero el enlace apunta a otro sitio: "
-                    f"citado {cita.enlace} , correcto {reg['url']}"
+                    f"el fragmento es correcto y esta en {self.nombrar(clave)}, "
+                    f"pero el enlace apunta a otro sitio: citado {cita.enlace} , "
+                    f"correcto {reg['url']}"
                 )
                 return d
             d.comprobaciones.append(
@@ -432,7 +492,7 @@ class Verificador:
             fuente = (notas_propias or notas_ajenas)[0]
             d.motivo = (
                 f"el texto existe pero NO ES ARTICULADO: sale de "
-                f"{ETIQUETA_ORIGEN[fuente.origen]} de {fuente.referencia}. "
+                f"{ETIQUETA_ORIGEN[fuente.origen]} de {self.nombrar(fuente.clave)}. "
                 f"Ese material no es texto promulgado y no puede fundamentar nada"
             )
             return d
@@ -441,25 +501,24 @@ class Verificador:
         if articulado_propio:
             otra = articulado_propio[0]
             d.motivo = (
-                f"el fragmento es de OTRA VERSION de {reg['referencia']}: consta en "
-                f"la version del {otra.fecha_version}, y en {ejercicio} regia la "
-                f"del {version.get('fecha_vigencia_efectiva')}"
+                f"el fragmento es de OTRA VERSION de {self.nombrar(d.clave)}: "
+                f"consta en la version del {otra.fecha_version}, y en {ejercicio} "
+                f"regia la del {version.get('fecha_vigencia_efectiva')}"
             )
             return d
 
         # (h) literal, pero de otro precepto (163 vs 163 bis).
         if ajenos:
-            donde = sorted({h.referencia for h in ajenos})
             d.motivo = (
-                f"el fragmento NO esta en {reg['referencia']}; el texto citado es "
-                f"de {', '.join(donde)}"
+                f"el fragmento NO esta en {self.nombrar(d.clave)}; el texto "
+                f"citado es de {self.nombrar_varios(h.clave for h in ajenos)}"
             )
             return d
 
         # (b) no esta en ninguna parte del corpus.
         laxo = self._parecido(cita.literal_norm, version.get("texto", ""))
         d.motivo = (
-            f"el fragmento no aparece en {reg['referencia']} "
+            f"el fragmento no aparece en {self.nombrar(d.clave)} "
             f"(version del {version.get('fecha_vigencia_efectiva')})"
         )
         if laxo:

@@ -13,7 +13,7 @@
 --- CASO: a-articulo-que-no-existe
 esperado: NO_VERIFICADA
 ejercicio: 2023
-motivo: la LIVA no tiene articulo 999; citar algo inexistente no puede colar
+motivo: no hay articulo 999 en NINGUNA de las normas cargadas (desde la fase 6 se comprueba contra todas, no solo contra la LIVA); citar algo inexistente no puede colar
 texto:
 Conforme al criterio legal, «Uno. Los empresarios o profesionales no podrán deducir las cuotas soportadas» (art. 999 LIVA, https://www.boe.es/buscar/act.php?id=BOE-A-1992-28740#a999).
 --- FIN
@@ -55,10 +55,19 @@ La norma advierte que «Atención: esta última actualización del apartado 2.1�
 --- FIN
 
 
---- CASO: e-remision-al-reglamento
+--- CASO: e-remision-a-norma-de-fuera-del-corpus
 esperado: NO_VERIFICABLE
 ejercicio: 2023
-motivo: el Reglamento del IVA no esta en el corpus; no se puede comprobar y NO se da por bueno
+motivo: la Directiva 2006/112/CE no esta cargada y su nombre no se parece a ninguna de las que si lo estan: el resolutor no encuentra NADA, que es la rama limpia de "fuera del corpus" (el corpus le remite 5 veces). CORREGIDO dos veces: citaba el Reglamento del IVA, que desde la fase 6 SI esta cargado (ver e2); y luego la Ley 58/2003, que tampoco servia porque entraba por la regla de oro -"Ley" es alias de una norma cargada- y no por estar ausente
+texto:
+El articulo 168 de la Directiva 2006/112/CE establece que «el sujeto pasivo tendra derecho a deducir el impuesto devengado por los bienes que le sean entregados».
+--- FIN
+
+
+--- CASO: e2-nombre-de-norma-seguido-de-otra-norma
+esperado: NO_VERIFICABLE
+ejercicio: 2023
+motivo: por aqui pasaba en realidad el antiguo caso e. La cita nombra dos normas seguidas ("Reglamento del IVA, Real Decreto 1624/1992") y el resolutor NO adivina a cual se refiere: ante la ambiguedad no resuelve, y sin norma resuelta no hay nada contra que comprobar. Se deja escrito como caso propio para que ese comportamiento conservador no vuelva a colarse disfrazado de otra cosa
 texto:
 El desarrollo reglamentario exige que «el sujeto pasivo presente la declaracion en el plazo establecido» (art. 5 del Reglamento del IVA, Real Decreto 1624/1992).
 --- FIN
@@ -212,6 +221,15 @@ ejercicio: 2023
 motivo: FASE 6, EL CASO QUE MANDA. "articulo 8 de la Ley del Impuesto" tiene que llevar al 8 de la LEY. El fragmento es del articulo 8 de la Ley 37/1992; si el sistema lo resolviera contra el articulo 8 del REGLAMENTO, el literal no estaria y esto saldria en rojo
 texto:
 El articulo 8 de la Ley del Impuesto dispone que «Uno. Se considerará entrega de bienes la transmisión del poder de disposición sobre bienes corporales, incluso si se efectúa mediante cesión de títulos representativos de dichos bienes.».
+--- FIN
+
+
+--- CASO: s3-nombre-de-reglamento-pero-el-texto-de-la-ley
+esperado: NO_VERIFICADA
+ejercicio: 2023
+motivo: el cuadrante que faltaba, espejo de s2. La cita dice "Reglamento" y el fragmento es del articulo 8 de la LEY. Debe comprobarse contra el REGLAMENTO, no encontrarlo alli, y salir NO VERIFICADA. Con s2 cierra la resolucion cruzada en las dos direcciones: ni la Ley se valida con texto del Reglamento, ni el Reglamento con texto de la Ley
+texto:
+El articulo 8 del Reglamento del Impuesto sobre el Valor Añadido dispone que «Uno. Se considerará entrega de bienes la transmisión del poder de disposición sobre bienes corporales, incluso si se efectúa mediante cesión de títulos representativos de dichos bienes.».
 --- FIN
 
 
