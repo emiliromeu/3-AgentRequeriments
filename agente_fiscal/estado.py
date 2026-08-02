@@ -179,6 +179,38 @@ def seleccionar_material(indice, consulta: str, resultados, grafo=None,
     coberturas = [cobertura_de(indice, utiles, r.doc.registro) for r in resultados]
     primera = coberturas[0] or 1e-9
 
+    # --- de que va la consulta, y por tanto quien puede contestarla --------
+    #
+    # La cobertura mide cuantas palabras de la consulta trata un precepto. No
+    # sabe de que va la consulta, y por eso deja que una norma general compita
+    # de tu a tu con la del impuesto: el articulo 55 LGT ("tipo de gravamen")
+    # cubre "tipo" igual de bien que el 91 LIVA, y se cuela en una pregunta
+    # sobre tipos de IVA que no va de procedimiento.
+    #
+    # La regla, por PAPEL de la norma y no por lista de articulos:
+    #
+    #   una norma GENERAL solo aporta material cuando la consulta es suya
+    #   -su precepto es el mejor resultado- o cuando un precepto ya elegido
+    #   la llama por remision.
+    #
+    # Es decir: la LGT entra como APOYO, no compitiendo. Si la consulta va de
+    # procedimiento, su articulo gana el primer puesto por si solo y entonces
+    # manda ella; si va del impuesto, se queda fuera salvo que la norma del
+    # impuesto la mande llamar. La excepcion por remision de la pasada 2 sigue
+    # intacta, que es la que trae la nota al pie que no se ve.
+    papel = getattr(indice.normas, "papel", None)
+    manda_general = False
+    if papel is not None and resultados:
+        primero = resultados[0].doc.registro
+        manda_general = papel(primero.get("cuerpo_clave") or "") == \
+            indice.normas.GENERAL
+
+    def es_apoyo(registro) -> bool:
+        """Este precepto es de una norma general en una consulta que no lo es."""
+        if papel is None or manda_general:
+            return False
+        return papel(registro.get("cuerpo_clave") or "") == indice.normas.GENERAL
+
     # --- pasada 1: el primero y los que llegan al umbral -------------------
     elegidos_idx: list[int] = []
     lineas = []
@@ -196,6 +228,14 @@ def seleccionar_material(indice, consulta: str, resultados, grafo=None,
         if i == 0:
             linea["decision"], linea["motivo"] = "enviado", "es el mejor resultado"
             elegidos_idx.append(i)
+        elif es_apoyo(r.doc.registro):
+            # Fuera por PAPEL, aunque la cobertura le diera de sobra. Puede
+            # volver a entrar en la pasada 2 si alguien la remite.
+            linea["decision"] = "descartado"
+            linea["motivo"] = (
+                "norma general de apoyo: esta consulta no es de procedimiento, "
+                "asi que solo entraria si un precepto elegido la remite"
+            )
         elif relativa >= umbral:
             linea["decision"] = "enviado"
             linea["motivo"] = (f"cubre el {relativa:.0%} de lo que cubre el "

@@ -50,6 +50,43 @@ _RE_DISP = re.compile(
 _RE_NUMERO = re.compile(r"\s*(\d+)")
 _RE_PALABRA_SUF = re.compile(r"\s+([a-zA-ZáéíóúÁÉÍÓÚ]+)")
 
+# Lo que puede ir detras de "disposicion adicional" y ser un ordinal de verdad.
+# Existe porque el patron de arriba captura los 40 caracteres siguientes sin
+# mirar que son: en un texto normal ("las disposiciones adicionales SE
+# aplicaran", "la disposicion final Y el anexo") eso fabricaba remisiones a
+# preceptos que no existen en ninguna norma.
+#
+# "unica" entra porque el BOE la usa de ordinal ("disposicion derogatoria
+# unica") aunque no sea un numero.
+_ORDINALES_VALIDOS = frozenset(B.ORDINAL_A_NUMERO) | {"unica", "unico"}
+_RE_ORDINAL_NUMERICO = re.compile(r"^\d{1,3}$")
+
+
+def _ordinal_de(palabras: list) -> tuple:
+    """(ordinal, cuantas palabras ocupa), o (None, 0) si eso no es un ordinal.
+
+    Se admiten tres formas, que son las que usa el BOE:
+      - la palabra suelta: "primera", "vigesimosegunda", "unica"
+      - el ordinal partido en dos: "vigesimo segunda", "decimo tercera"
+      - el numero: "22", "1"
+
+    Se prueba PRIMERO la forma de dos palabras: "vigesimo" a secas no esta en
+    el vocabulario, asi que mirar solo la primera dejaria fuera justo las
+    disposiciones altas, que son las que mas se citan por ser las nuevas.
+    """
+    if not palabras:
+        return None, 0
+
+    if len(palabras) >= 2:
+        compuesto = B.normalizar(f"{palabras[0]} {palabras[1]}")
+        if compuesto.replace(" ", "") in _ORDINALES_VALIDOS:
+            return compuesto, 2
+
+    suelta = B.normalizar(palabras[0])
+    if suelta in _ORDINALES_VALIDOS or _RE_ORDINAL_NUMERICO.match(suelta):
+        return suelta, 1
+    return None, 0
+
 # Cosas que cuelgan de un numero de articulo y NO son otro articulo:
 # "20, apartado uno, numero 22.º", "68.Dos.2.º", "13.2.º", "5, letra c)".
 _ATADURAS = [
@@ -494,6 +531,12 @@ class GrafoRemisiones:
             motivo=f"se menciona el {etiqueta} de {donde}, pero ahi no existe",
         )
 
+    @staticmethod
+    def _leer_disposicion_ordinal(palabras: list) -> tuple:
+        """Metodo puente: la comprobacion vive en `_ordinal_de`, a nivel de
+        modulo, para poder probarla sin construir el grafo entero."""
+        return _ordinal_de(palabras)
+
     def _leer_disposicion(
         self, origen: str, texto: str, m, cuerpo_origen: str = ""
     ) -> Remision | None:
@@ -511,8 +554,17 @@ class GrafoRemisiones:
         palabras = re.findall(r"[\wªº]+", resto)
         if not palabras:
             return None
-        ordinal = B.normalizar(palabras[0])
-        fin = m.start("resto") + (resto.find(palabras[0]) + len(palabras[0]))
+
+        # Lo que sigue tiene que ser DE VERDAD un ordinal. Sin esta
+        # comprobacion se cogia la palabra siguiente fuera cual fuera, y una
+        # frase corriente como "las disposiciones adicionales SE aplicaran"
+        # fabricaba una remision a la inexistente "disposicion adicional se".
+        # Salian 13 remisiones falsas, todas contra preceptos que no existen.
+        ordinal, consumidas = _ordinal_de(palabras)
+        if ordinal is None:
+            return None
+        ultima = palabras[consumidas - 1]
+        fin = m.start("resto") + (resto.find(ultima) + len(ultima))
 
         cuerpo_destino, ambito, norma, motivo_ambito = self._ambito(
             texto, m.start(), fin, cuerpo_origen

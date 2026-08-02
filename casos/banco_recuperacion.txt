@@ -90,3 +90,32 @@ como renunciar al régimen simplificado | Reglamento del IVA | 33, 35 | 3
 
 solicitar la devolución al final de cada periodo de liquidación | Reglamento del IVA | 30 | 3
 # art. 30: "Devoluciones al termino de cada periodo de liquidacion"
+
+
+# ------------------------------------------------------- LEY 58/2003 (FASE 8)
+#
+# Procedimiento. Estas cuatro NO se podian contestar con solo la Ley y el
+# Reglamento del IVA: el articulo que las resuelve esta en la General
+# Tributaria. Son la razon de ser de la fase 8, y la forma de notar si algun
+# dia la LGT se cae del corpus.
+#
+# Los cuatro articulos se eligieron leyendo las rubricas de la LGT; la
+# consulta se escribio despues, con las palabras que usaria un gestor y no
+# las de la rubrica.
+
+en cuantos años prescribe el derecho a solicitar una devolución | Ley 58/2003 | 66 | 3
+# art. 66: "Plazos de prescripcion". El plazo de cuatro anos, incluido el
+# derecho del obligado a pedir devoluciones. Es el caso de prescripcion.
+
+sanción por no atender un requerimiento de la Administración tributaria | Ley 58/2003 | 203 | 3
+# art. 203: "Infraccion tributaria por resistencia, obstruccion, excusa o
+# negativa a las actuaciones de la Administracion tributaria". Las
+# consecuencias de no atender un requerimiento.
+
+qué ocurre si Hacienda no resuelve en el plazo máximo | Ley 58/2003 | 104 | 3
+# art. 104: "Plazos de resolucion y efectos de la falta de resolucion
+# expresa". El silencio y sus efectos.
+
+me he retrasado en presentar una declaración y nadie me la ha reclamado | Ley 58/2003 | 27 | 3
+# art. 27: "Recargos por declaracion extemporanea sin requerimiento previo".
+# El recargo por presentar tarde pero de forma espontanea.

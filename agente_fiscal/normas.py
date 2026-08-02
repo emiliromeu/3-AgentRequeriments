@@ -213,6 +213,63 @@ class Registro:
             for c in cuerpos_de_norma(titulos[norma_id], norma_id, maximo + 1):
                 self.cuerpos[c.clave] = c
 
+        self.materia_dominante = self._materia_dominante()
+
+    # ------------------------------------------------------------- el papel
+    #
+    # QUE PAPEL JUEGA CADA NORMA EN ESTE CORPUS. Con una sola ley no hacia
+    # falta preguntarselo. Con la General Tributaria dentro, si: la LGT habla
+    # de plazos, notificaciones y sanciones EN ABSTRACTO, y su vocabulario
+    # encaja con casi cualquier consulta. Sin distinguir papeles, el articulo
+    # 55 LGT ("tipo de gravamen") compite de tu a tu con el articulo 91 LIVA
+    # en una consulta sobre tipos de IVA, y gana sitio que no le toca.
+    #
+    # El papel NO se declara en una lista escrita a mano, que es justo lo que
+    # este modulo evita en todo lo demas. Se deduce de la materia:
+    #
+    #   NORMA DEL IMPUESTO   alguno de sus cuerpos trata la materia que este
+    #                        corpus tiene como propia (la que comparten mas
+    #                        cuerpos: aqui, el Impuesto sobre el Valor Anadido)
+    #   NORMA GENERAL        ninguno la trata: esta en el corpus para dar
+    #                        apoyo, no para contestar sobre el impuesto
+    #
+    # El Real Decreto 1624/1992 sale bien parado sin excepciones: su cuerpo 0
+    # no declara materia, pero su cuerpo 1 (el Reglamento) si, y el papel se
+    # mira POR NORMA, no por cuerpo. Ingerir manana el Reglamento General de
+    # Recaudacion lo clasificaria solo, sin tocar esto.
+
+    IMPUESTO = "impuesto"
+    GENERAL = "general"
+
+    def _materia_dominante(self) -> str:
+        """La materia de la que va este corpus: la que mas cuerpos comparten."""
+        cuenta: dict[str, int] = {}
+        for c in self.cuerpos.values():
+            m = (c.materia or "").strip().lower()
+            # Las materias que el titulo no deja limpias salen como "58/2003,
+            # de 17 de diciembre, ...": llevan cifras y no nombran una materia.
+            if not m or re.search(r"\d", m):
+                continue
+            cuenta[m] = cuenta.get(m, 0) + 1
+        if not cuenta:
+            return ""
+        return max(cuenta.items(), key=lambda kv: (kv[1], -len(kv[0])))[0]
+
+    def papel_de_norma(self, norma_id: str) -> str:
+        """IMPUESTO si alguno de sus cuerpos trata la materia propia del corpus."""
+        if not self.materia_dominante:
+            return self.IMPUESTO      # corpus de una sola materia: todo es propio
+        for c in self.cuerpos.values():
+            if c.norma_id != norma_id:
+                continue
+            if (c.materia or "").strip().lower() == self.materia_dominante:
+                return self.IMPUESTO
+        return self.GENERAL
+
+    def papel(self, clave_cuerpo: str) -> str:
+        c = self.cuerpos.get(clave_cuerpo)
+        return self.papel_de_norma(c.norma_id) if c else self.IMPUESTO
+
     def __len__(self) -> int:
         return len(self.cuerpos)
 

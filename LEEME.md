@@ -36,6 +36,51 @@ junto al caso. Hay dos ejemplos reales:
   porque la premisa con la que se escribieron («el Reglamento no está en el
   corpus») dejó de ser cierta.
 
+## CRITERIOS REVOCADOS
+
+Un umbral que se mueve sin dejar rastro es como se lavan los resultados: se baja
+el listón, se declara verde y nadie puede reconstruir después que el listón
+estaba más alto. Por eso, cuando un criterio se revoca, **se queda escrito aquí
+con quién lo revocó y con qué argumento**, no se borra del sitio donde estaba.
+
+### 2 de agosto de 2026 · el mínimo de 13/15 del banco, bloque 1
+
+**Qué decía el criterio.** Al ingerir la Ley General Tributaria (fase 8) se
+fijó por adelantado: si el bloque 1 del banco baja de 13/15 sobre las quince
+consultas originales, la LGT no se queda.
+
+**Qué pasó.** Bajó a 12/15. Una sola consulta cruzó el umbral: «he repercutido
+IVA de mas en una factura, como lo corrijo», donde el artículo 89 LIVA pasó del
+puesto 3 al 5.
+
+**Quién lo revocó.** Emili, el 2 de agosto de 2026, tras ver la medición.
+
+**Con qué argumento.** Dos razones, y las dos por escrito:
+
+1. El criterio era **inconsistente con lo ya decidido** en el caso del artículo
+   91 (ver «Límites conocidos del buscador» más abajo): allí se aceptó
+   convivir con un rojo de puesto antes que tocar los pesos del buscador.
+   Aplicar 13/15 aquí y no allí es medir con dos varas.
+2. Quince casos **no distinguen 12 de 13**. Un banco de ese tamaño no tiene
+   resolución para que un caso decida la suerte de una norma entera.
+
+**Con qué evidencia se decidió, y por qué es independiente del banco.** La
+prueba a favor de la LGT no sale del banco, que es justo lo que estaba en
+discusión, sino de medidas que el banco no toca:
+
+- **+506 remisiones resueltas** (966 → 1472).
+- **20 remisiones IVA→LGT**, con **cero mal resueltas**, verificadas contra el
+  texto; 14 de ellas en el caso ambiguo de verdad (el número de artículo existe
+  también en la norma de origen).
+- Una consulta de procedimiento que antes no tenía respuesta pasa a tenerla:
+  «plazo para contestar un requerimiento» va de `NO ENCONTRADO` a
+  `CRITERIO DISCUTIDO`.
+
+**Qué NO se hizo.** No se tocó ninguna expectativa del banco para que saliera
+verde. Las tres consultas en rojo siguen en rojo y siguen contadas como rojo.
+La regla permanente de las expectativas queda intacta: lo que se revocó fue un
+umbral de decisión sobre una norma, no la expectativa de ningún caso.
+
 ## Cómo se escribe un caso de recuperación
 
 En este orden, y no al revés:
@@ -75,13 +120,50 @@ bienes* en la Ley y *Aplicación de las exenciones* en el Reglamento.
 ## Normas cargadas
 
 ```
-Ley 37/1992 (IVA)                       243 preceptos
+Ley 37/1992 (IVA)                       243 preceptos   norma del impuesto
 Real Decreto 1624/1992                    9 preceptos   (articulado del RD)
 Reglamento del IVA                      135 preceptos   (anexo del RD)
+Ley 58/2003 (General Tributaria)        335 preceptos   norma general
+                                        ---
+                                        722 preceptos
 ```
 
 Añadir una norma es `python3 fase1.py inspeccionar <ID>` → `ingerir` →
 `verificar`. Las fases 2, 3 y 4 la recogen solas: el corpus es el directorio.
+La LGT (`BOE-A-2003-23186`) entró así, **sin tocar una línea de código**: es la
+tercera norma seguida, y con tres ya no es casualidad.
+
+### El papel de cada norma (fase 8)
+
+No todas las normas del corpus juegan el mismo papel, y desde que está la LGT
+hay que distinguirlo. La LGT habla de plazos, notificaciones y sanciones **en
+abstracto**, así que su vocabulario encaja con casi cualquier consulta: sin
+distinguir papeles, el artículo 55 LGT («tipo de gravamen») compite de tú a tú
+con el 91 LIVA en una pregunta sobre tipos de IVA, y le quita sitio.
+
+```
+NORMA DEL IMPUESTO   alguno de sus cuerpos trata la materia propia del corpus
+NORMA GENERAL        ninguno la trata: está para dar apoyo, no para contestar
+                     sobre el impuesto
+```
+
+El papel **no se declara en una lista escrita a mano**: se deduce de la materia
+del título oficial, comparándola con la que más cuerpos comparten (aquí,
+«Impuesto sobre el Valor Añadido»). Se mira **por norma, no por cuerpo**, y por
+eso el Real Decreto 1624/1992 sale bien clasificado sin excepciones: su cuerpo 0
+no declara materia, pero el Reglamento que aprueba sí. Ingerir mañana el
+Reglamento General de Recaudación lo clasificaría solo.
+
+La regla que se aplica en el corte, en una línea:
+
+> Una norma **general** solo aporta material cuando la consulta es suya —su
+> precepto es el mejor resultado— o cuando un precepto ya elegido la llama por
+> remisión.
+
+Medido sobre las 19 consultas del banco: consultas con material de la LGT,
+**6 → 4**. Las cuatro que quedan son las cuatro de procedimiento, que deben
+tenerlo. En consultas que no son de procedimiento, la contaminación pasa de
+**2 a 0**. Los puestos no se mueven: la regla actúa después del buscador.
 
 ## Arranque y uso
 
@@ -200,10 +282,49 @@ convertiría en la nueva normalidad sin que nadie llegara a verla.
    daría por buena.
 7. El ejercicio nunca se supone: si no está escrito, el sistema para y pregunta.
 
+### La regla 6, en la práctica: el precio que se paga por cumplirla
+
+Al cargar la LGT, **siete remisiones del RIVA a la LIVA dejaron de resolverse**.
+No es un fallo: frases genéricas como «la Ley de este Impuesto» o «la Ley
+reguladora del tributo» encajaban con una sola Ley mientras solo había una
+cargada. Con dos, encajan con dos, y el resolutor **se niega a adivinar**.
+
+Se pierden siete enlaces. A cambio, **cero remisiones mal resueltas**. Es la
+regla 6 funcionando, no rompiéndose, y conviene tenerlo escrito porque en la
+tabla de números parece una regresión.
+
+### El extractor de disposiciones exige un ordinal de verdad (fase 8)
+
+El patrón de remisiones capturaba lo que hubiera detrás de «disposición
+adicional» y lo tomaba por ordinal. En un texto corriente («las disposiciones
+adicionales **se** aplicarán…», «la disposición final **y** el anexo…») eso
+fabricaba remisiones a preceptos que no existen en ninguna norma.
+
+Ahora lo que sigue tiene que ser un ordinal: palabra del vocabulario
+(`primera`, `vigesimosegunda`, `unica`), ordinal partido en dos
+(`vigésimo segunda`) o número. Efecto medido en las tres normas:
+
+| | antes | después |
+|---|---|---|
+| remisiones detectadas | 1718 | 1704 |
+| no encontradas | 43 | **29** |
+| **resueltas** | 1472 | **1472** |
+
+**14 remisiones falsas desaparecen** —13 en la LGT y 1 en el RD/RIVA— y las
+resueltas no se mueven ni una: no se ha perdido ninguna remisión legítima. Era
+ruido preexistente que la LGT solo hizo visible, porque usa mucho esa
+construcción. Las 2 que quedan en el RD/RIVA son referencias reales a
+disposiciones que no existen en el cuerpo de destino, no falsos positivos.
+
 ## Límites conocidos del buscador
 
-El bloque 1 del banco está en **13 de 15**, y se queda ahí a propósito. Los dos
+El bloque 1 del banco está en **16 de 19**, y se queda ahí a propósito. Los tres
 rojos están medidos, no supuestos.
+
+Desglose, porque el total solo no dice nada: **12 de las 15 originales** de IVA
+y **4 de 4** de las de procedimiento que añadió la fase 8. Las 15 originales
+estaban en 13 antes de cargar la LGT; la tercera en rojo es el artículo 89, y
+por qué cayó está explicado en el «Rojo 3» de aquí abajo.
 
 ### Rojo 1 · «un cliente no me paga la factura, puedo recuperar el IVA» → art. 80
 
@@ -274,6 +395,35 @@ sea más grande.
 De la opción 3 se conserva `texto.palabras_exactas()`: quita una duplicación
 entre el indexado y la consulta y no cambia ningún resultado.
 
+### Rojo 3 · «he repercutido IVA de mas…» → art. 89, del puesto 3 al 5
+
+Apareció al cargar la LGT (fase 8). **No es contaminación de la LGT**: se
+midió antes de tocar nada, y en esa consulta **ningún precepto de la LGT entra
+en el top 6**. El reordenamiento ocurre entre preceptos del IVA.
+
+Lo que pasó es que crecer el corpus cambia las **estadísticas globales** de
+BM25, que son compartidas por todos los documentos:
+
+| | 2 normas | 3 normas | |
+|---|---|---|---|
+| longitud media del cuerpo | 185,78 | 164,11 | **−11,7 %** |
+| idf de `factur` | 1,88 | 2,17 | +15,8 % |
+| idf de `iva` | 4,71 | 5,33 | +13,2 % |
+| idf de `repercut` | 2,76 | 3,04 | +10,1 % |
+
+Los artículos de la LGT son más cortos, así que la longitud media baja y la
+normalización **penaliza más a los documentos largos**. El art. 89 es largo y
+su fuerza está en `repercut` (10 veces en el cuerpo), justo el término cuyo idf
+menos sube. Sus rivales son más cortos y viven de `factur` e `iva`, que son los
+que más suben. Puntuaciones: el 89 pasa de 3,927 a 4,227 —**sube**—, pero el
+142 sube de 3,865 a 4,338 y el 63 de 3,884 a 4,283, y lo adelantan los dos.
+
+**Es un reordenamiento legítimo, no un fallo**, y no lo arregla la regla de
+papel de las normas: esa regla decide qué se manda al redactor, no en qué orden
+busca BM25. Se deja en rojo, medido y explicado, igual que los otros dos. Nótese
+que este caso ya se sabía frágil: la opción 3 de arriba también lo movía de 3º
+a 4º, por otra causa distinta.
+
 ### Antes de volver a tocar pesos: el bloque 5
 
 El bloque 1 **puentea el analizador a propósito**, así que sus rojos dicen «el
@@ -339,6 +489,44 @@ python fase4.py consultar "que tipo reducido se aplica" --ejercicio 2023
 La primera debe seguir dando `CRITERIO CLARO` con sus citas verificadas (con
 todo el material daba 6/6); la segunda es la que tiene el artículo 91 en el
 puesto 5 y sirve para confirmar que sigue llegando al redactor.
+
+## PENDIENTES QUE NECESITAN CRÉDITO DE API
+
+Los tres, juntos, para que no se pierda ninguno. Ninguno está ejecutado.
+
+**1 · El veredicto del verificador con menos material.** El de aquí arriba: dos
+consultas reales para confirmar que recortar el material no cambia el veredicto.
+
+**2 · La calidad de la redacción con el modelo real.** Todo lo que se ha medido
+del banco es el andamiaje determinista (bloque 1) con el motor de ensayo. La
+redacción y el análisis con el modelo real solo se prueban con crédito.
+
+**3 · La fuga de la puerta de materia (fase 8, anotado y NO ejecutado).**
+La consulta «cómo tributa en el IRPF la venta de acciones» devuelve
+`CRITERIO CLARO` cuando debería ser `NO ENCONTRADO`. Medido antes y después de
+ingerir la LGT: **la fuga ya existía con dos normas**, la LGT no la abre.
+
+Es, casi con seguridad, un **artefacto del motor de ensayo**: `MotorEnsayo`
+clasifica `impuesto="IVA"` solo si la palabra «iva» aparece literalmente en la
+pregunta, y en cualquier otro caso pone `"desconocido"` — que la puerta de la
+fase 4 deja pasar, porque `IMPUESTOS_EN_CORPUS = ("IVA", "desconocido")`. Con
+el analizador real la pregunta debería clasificarse como IRPF y parar ahí.
+
+Lo que la LGT sí cambió es **qué** se filtra: antes citaba el artículo 13 LIVA,
+ahora los artículos 180 y 183 LGT, que son de sanciones. La otra consulta de
+IRPF de control («retención del IRPF de un alquiler») sigue dando
+`NO ENCONTRADO` correctamente, ahí la corta el filtro de pertinencia.
+
+Cuando haya crédito:
+
+```
+python fase4.py consultar "como tributa en el IRPF la venta de acciones" --ejercicio 2023
+```
+
+Debe dar `NO ENCONTRADO`. Si diera `CRITERIO CLARO`, la fuga es real y no del
+motor de ensayo, y entonces hay que endurecer la puerta de materia: hoy la
+única defensa cuando el analizador dice `"desconocido"` es el filtro de
+pertinencia, y este caso demuestra que no siempre basta.
 
 ## Documentación por fases
 
