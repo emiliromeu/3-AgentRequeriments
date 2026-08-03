@@ -120,6 +120,14 @@ _RE_OTRA_NORMA = re.compile(
     re.IGNORECASE,
 )
 
+# Una consulta de la DGT. Se escribe siempre con su rotulo delante para que no
+# se confunda con nada: "Consulta DGT V1601-22". El numero suelto NO basta.
+_RE_REF_DGT = re.compile(
+    r"\b(?:Consulta\s+DGT|DGT|consulta\s+vinculante)\s+"
+    r"(?P<num>[VC]?\d{3,5}-\d{2})\b",
+    re.IGNORECASE,
+)
+
 VENTANA_DESPUES = 220   # cuanto se mira tras la comilla buscando la referencia
 VENTANA_ANTES = 200     # cuanto se mira antes (forma "el art. X dispone que ...")
 
@@ -172,6 +180,23 @@ def _leer_referencia(
         if not encontrados:
             return None
         return encontrados[-1] if ultima else encontrados[0]
+
+    # -- consulta de la DGT: se mira ANTES que nada -----------------------
+    # Va primero a proposito. "Consulta DGT V1601-22" no contiene ningun
+    # "articulo", asi que no chocaria con los otros patrones, pero el campo
+    # normativa que la acompaña SI los nombra ("Ley 37/1992 art. 80"), y sin
+    # esta rama una cita de criterio se leeria como una cita de la ley. Eso es
+    # exactamente lo que la fase 9B no puede permitir.
+    m_dgt = elegir(_RE_REF_DGT)
+    if m_dgt:
+        return Referencia(
+            bruto=m_dgt.group(0).strip(),
+            tipo="consulta_dgt",
+            numero=m_dgt.group("num").upper(),
+            norma="dgt",
+            norma_bruta=m_dgt.group(0).strip(),
+            posicion=desplazamiento + m_dgt.start(),
+        )
 
     m_art = elegir(_RE_REF_ARTICULO)
     m_disp = elegir(_RE_REF_DISPOSICION)

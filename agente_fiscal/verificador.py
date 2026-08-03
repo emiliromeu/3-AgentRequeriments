@@ -147,8 +147,13 @@ class Informe:
 class Verificador:
     """Comprueba citas contra el corpus de la fase 1."""
 
-    def __init__(self, indice):
+    def __init__(self, indice, cache_dgt=None):
         self.ix = indice
+        # La copia local de consultas de la DGT. Se puede inyectar para que la
+        # bateria use su propio juego de prueba: una consulta inventada NO
+        # puede acabar en la cache de verdad, donde seria indistinguible de una
+        # autentica.
+        self._cache_dgt = cache_dgt
         # Indice de textos normalizados, uno por version, para buscar literales.
         # Se construye una vez: son ~750 versiones.
         self._articulado: list[tuple[str, int, str, str]] = []
@@ -286,6 +291,84 @@ class Verificador:
     # la cita (existe y es literal), pero se hace constar.
     MINIMO_SUSTANCIA = 25
 
+    # ------------------------------------------------------- criterio DGT
+
+    def _verificar_dgt(self, cita: C.Cita, d: Dictamen) -> Dictamen:
+        """Una cita de consulta de la DGT. Ver el comentario en `verificar_cita`.
+
+        Se apoya SOLO en el registro cacheado (numero, contestacion, url). Ni
+        una linea de HTML: el troceo del HTML todavia no se ha visto funcionar
+        contra un documento real y no puede sostener una verificacion.
+        """
+        from . import dgt as D
+
+        numero = cita.referencia.numero.upper()
+        d.referencia_corpus = f"{D.ETIQUETA} {numero}"
+        d.norma = "dgt"
+
+        cache = self._cache_dgt if self._cache_dgt is not None else D.CacheDGT()
+        consulta = cache.leer(numero)
+
+        # 1. no cacheada -> NO VERIFICABLE. Nunca por buena.
+        if consulta is None:
+            d.estado = NO_VERIFICABLE
+            d.motivo = (
+                f"la consulta {numero} no esta en la copia local. Sin el "
+                f"documento delante no hay contra que comprobar el texto, asi "
+                f"que no se da por buena"
+            )
+            d.comprobaciones.append("consulta citada: no esta en la cache")
+            return d
+
+        d.enlace_correcto = consulta.url
+
+        # 2. el TEXTO, literal, contra el documento cacheado
+        cuerpo = C.normalizar_literal(
+            " ".join((consulta.contestacion, consulta.cuestion, consulta.hechos))
+        )
+        trozos = cita.trozos or [cita.literal_norm]
+        faltan = [t for t in trozos if t and t not in cuerpo]
+        if faltan:
+            d.estado = NO_VERIFICADA
+            d.motivo = (
+                f"el fragmento NO esta en la {D.ETIQUETA} {numero}; se ha "
+                f"comprobado contra la copia local del documento"
+            )
+            d.comprobaciones.append("texto: no aparece en la consulta citada")
+            return d
+        d.comprobaciones.append(
+            f"texto: literal en la {D.ETIQUETA} {numero} (copia local)")
+
+        # 3. el ENLACE: que apunte a ESTA consulta. No que devuelva el texto.
+        if cita.enlace:
+            m = D.RE_NUM_SUELTO.search(cita.enlace) or re.search(
+                r"num_consulta=([VC]?\d{3,5}-\d{2})", cita.enlace, re.I)
+            apuntado = (m.group(1) if m and m.lastindex else
+                        (m.group(0) if m else "")).upper()
+            if not apuntado:
+                d.estado = NO_VERIFICADA
+                d.motivo = (
+                    f"el enlace de la cita no dice a que consulta apunta: "
+                    f"{cita.enlace}")
+                d.comprobaciones.append("enlace: sin numero de consulta")
+                return d
+            if apuntado != numero:
+                d.estado = NO_VERIFICADA
+                d.motivo = (
+                    f"la cita dice {numero} pero el enlace lleva a {apuntado}: "
+                    f"quien lo pinche no vera lo que se le esta citando")
+                d.comprobaciones.append(
+                    f"enlace: apunta a {apuntado}, no a {numero}")
+                return d
+            d.comprobaciones.append(f"enlace: apunta a {numero}, correcto")
+        else:
+            d.comprobaciones.append("enlace: no se cito ninguno")
+
+        d.estado = VERIFICADA
+        d.motivo = ""
+        d.version_usada = {"fecha": consulta.fecha, "origen": "cache DGT"}
+        return d
+
     def verificar_cita(
         self, cita: C.Cita, ejercicio: int | None, exigir_norma: bool = False
     ) -> Dictamen:
@@ -307,6 +390,20 @@ class Verificador:
                 "no se puede comprobar contra nada"
             )
             return d
+
+        # -- 0 bis. consulta de la DGT: la regla DESDOBLADA -----------------
+        # El principio no cambia: fragmento literal mas enlace que resuelve, o
+        # no existe. Lo que cambia es CONTRA QUE se resuelve cada mitad, porque
+        # aqui el texto y el enlace no vienen del mismo sitio:
+        #
+        #   el TEXTO   contra el documento CACHEADO, literal, como siempre
+        #   el ENLACE  que apunte a la consulta correcta, y nada mas
+        #
+        # Del enlace NO se comprueba que devuelva el texto al descargarlo: no
+        # lo devuelve, porque es un armazon que carga por JavaScript. Exigirlo
+        # daria por falsas todas las citas de criterio, que serian correctas.
+        if ref.norma == "dgt":
+            return self._verificar_dgt(cita, d)
 
         # -- 1. norma fuera del corpus -> NO VERIFICABLE, nunca verificada --
         if ref.norma == "externa":

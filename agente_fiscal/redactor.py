@@ -204,14 +204,70 @@ def bloque_precepto(registro: dict, ejercicio: int | None, grafo=None) -> str:
     return "\n".join(partes)
 
 
+BLOQUE_DGT = """
+======================================================================
+CRITERIO DE LA ADMINISTRACION (consultas de la Direccion General de Tributos)
+======================================================================
+
+LEE ESTO ANTES DE USARLO:
+
+  Una consulta de la DGT NO ES UNA NORMA. Es el criterio que la
+  Administracion aplica, y vincula a Hacienda frente a quien consulto, pero
+  NO FUNDAMENTA POR SI SOLA. Ninguna afirmacion puede sostenerse solo en
+  una consulta: primero la ley, y el criterio despues.
+
+  EL ORDEN NO SE NEGOCIA. Primero lo que dice la norma, con sus citas. El
+  criterio va DESPUES, en parrafo aparte, presentado como lo que es. Nunca
+  mezcles norma y criterio en el mismo parrafo como si pesaran igual.
+
+  FORMATO DE LA CITA DE CRITERIO, distinto del de la ley a proposito:
+
+      «fragmento literal» [Consulta DGT V1601-22, de 01/07/2022 —
+      https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V1601-22]
+
+  Corchetes, el rotulo "Consulta DGT", el numero, la fecha y el enlace. Se
+  comprueba igual de estricto que la ley: el fragmento tiene que estar
+  LETRA POR LETRA en el texto de abajo.
+
+  Si el criterio de una consulta no encaja con lo que dice la norma, DILO.
+  No lo suavices y no elijas tu: quien decide es el profesional que lee.
+"""
+
+
+def bloque_consulta_dgt(c) -> str:
+    """Una consulta cacheada, para el material. Solo campos del registro."""
+    partes = [
+        "",
+        f"[CONSULTA DGT {c.numero}]",
+        f"  fecha      : {c.fecha or '(no consta)'}",
+        f"  organo     : {c.organo or '(no consta)'}",
+        f"  normativa  : {c.normativa or '(no consta)'}",
+        f"  enlace     : {c.url}",
+    ]
+    if c.cuestion:
+        partes += ["  cuestion planteada:", f"    {c.cuestion}"]
+    partes += [
+        "",
+        f"[CONTESTACION {c.numero}]",
+        c.contestacion,
+        f"[FIN CONTESTACION {c.numero}]",
+    ]
+    return "\n".join(partes)
+
+
 def construir_material(
     pregunta: str,
     ejercicio: int | None,
     registros: list,
     grafo=None,
     motivos_rechazo: list | None = None,
+    consultas_dgt: list | None = None,
 ) -> str:
-    """El unico contenido que ve el redactor."""
+    """El unico contenido que ve el redactor.
+
+    `consultas_dgt` es opcional: con la DGT apagada no se pasa y este material
+    sale byte a byte igual que antes de la fase 9B.
+    """
     cabecera = [
         f"DUDA PLANTEADA: {pregunta.strip()}",
         f"EJERCICIO DEL CASO: {ejercicio if ejercicio else '(no indicado)'}",
@@ -254,4 +310,10 @@ def construir_material(
             "Si no queda respaldo suficiente, escribe NO HAY RESPALDO SUFICIENTE.",
         ]
 
-    return "\n".join(cabecera + cuerpo + cola)
+    # El criterio va DESPUES de la ley tambien aqui, en el material: lo que se
+    # lee primero es lo que pesa primero al redactar.
+    criterio = []
+    if consultas_dgt:
+        criterio = [BLOQUE_DGT] + [bloque_consulta_dgt(c) for c in consultas_dgt]
+
+    return "\n".join(cabecera + cuerpo + criterio + cola)

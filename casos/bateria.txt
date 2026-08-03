@@ -240,3 +240,51 @@ motivo: FASE 6, la cara B del anterior. Mismo nombre de norma, pero el fragmento
 texto:
 El articulo 8 de la Ley del Impuesto establece que «1. La renuncia a las exenciones reguladas en los números 20.º y 22.º del apartado uno del artículo 20 de la Ley del Impuesto sobre el Valor Añadido, deberá comunicarse fehacientemente al adquirente con carácter previo o simultáneo a la entrega de los correspondientes bienes.».
 --- FIN
+
+
+# ===================================================================
+# FASE 9B - CRITERIO DE LA DGT
+#
+# La regla del verificador NO cambia: fragmento literal + enlace que
+# resuelve, o no existe. Lo que cambia es CONTRA QUE se resuelve cada
+# mitad, porque aqui el texto y el enlace no vienen del mismo sitio:
+#   el TEXTO  contra el documento cacheado, literal
+#   el ENLACE que apunte a la consulta correcta, nada mas
+# Las consultas de estos casos estan en casos/dgt_prueba/ y son
+# INVENTADAS: no son criterio real.
+# ===================================================================
+
+--- CASO: dgt-consulta-que-no-existe
+esperado: NO_VERIFICABLE
+ejercicio: 2023
+motivo: se cita una consulta que no existe en ninguna parte. No hay documento contra el que comprobar el texto, asi que NO se da por buena. NO_VERIFICABLE, nunca VERIFICADA: es la trampa comoda de dar por bueno lo que no se ha mirado
+texto:
+El criterio administrativo confirma que «la modificacion de la base imponible exige que el destinatario haya sido declarado en concurso» [Consulta DGT V9999-99, de 01/01/2099 — https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V9999-99].
+--- FIN
+
+
+--- CASO: dgt-texto-que-no-esta-en-la-consulta
+esperado: NO_VERIFICADA
+ejercicio: 2023
+motivo: la consulta SI esta en la copia local, pero el fragmento no aparece en ella. Es la cita alucinada de siempre, ahora sobre criterio: se comprueba contra el documento cacheado y no cuadra
+texto:
+El criterio administrativo senala que «bastara con la simple reclamacion extrajudicial al deudor para modificar la base imponible sin ningun otro requisito» [Consulta DGT V9001-22, de 01/07/2022 — https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V9001-22].
+--- FIN
+
+
+--- CASO: dgt-enlace-a-otro-numero
+esperado: NO_VERIFICADA
+ejercicio: 2023
+motivo: el texto SI esta en la consulta citada, pero el enlace lleva a otro numero. Quien lo pinche para comprobarlo no vera lo que se le esta citando, que es justo para lo que existe el enlace
+texto:
+El criterio administrativo confirma que «La modificacion de la base imponible exige que el destinatario haya sido declarado en concurso» [Consulta DGT V9001-22, de 01/07/2022 — https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V1601-22].
+--- FIN
+
+
+--- CASO: dgt-consulta-no-cacheada
+esperado: NO_VERIFICABLE
+ejercicio: 2023
+motivo: la consulta puede existir de verdad en PETETE, pero no la tenemos descargada. Sin el documento delante no hay contra que comprobar: no se sale a la red a verificar, y sin copia local no se da por buena
+texto:
+Segun el criterio de la Administracion, «el plazo para la modificacion de la base imponible es de tres meses» [Consulta DGT V2500-23, de 15/09/2023 — https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V2500-23].
+--- FIN

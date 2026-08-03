@@ -1,0 +1,15 @@
+{
+  "numero": "V9001-22",
+  "fecha": "01/07/2022",
+  "organo": "SG de Impuestos sobre el Consumo (CONSULTA DE PRUEBA, NO REAL)",
+  "normativa": "Ley 37/1992 art. 80",
+  "cuestion_planteada": "Si procede la modificacion de la base imponible.",
+  "descripcion_hechos": "La consultante tiene creditos incobrables de un cliente en concurso.",
+  "contestacion": "Este es un texto de prueba de la bateria y no es criterio real. La modificacion de la base imponible exige que el destinatario haya sido declarado en concurso conforme al articulo 80 de la Ley del Impuesto.",
+  "doc_id": "prueba9001",
+  "tab": "2",
+  "url_navegador": "https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V9001-22",
+  "descargado": "2026-08-03T00:00:00Z",
+  "sha256_crudo": "(juego de prueba, sin crudo)",
+  "crudo": ""
+}

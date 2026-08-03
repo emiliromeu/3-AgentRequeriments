@@ -1,0 +1,8 @@
+JUEGO DE PRUEBA DE LA BATERIA. NO ES CRITERIO REAL.
+
+Estas consultas estan INVENTADAS para los casos adversarios de la bateria del
+verificador. No vienen de la DGT y no valen para contestar a nadie.
+
+Viven aqui y NO en datos/dgt/ a proposito: dentro de la cache de verdad serian
+indistinguibles de una consulta autentica el dia que alguien mire ahi buscando
+criterio.

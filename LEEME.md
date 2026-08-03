@@ -528,7 +528,116 @@ motor de ensayo, y entonces hay que endurecer la puerta de materia: hoy la
 única defensa cuando el analizador dice `"desconocido"` es el filtro de
 pertinencia, y este caso demuestra que no siempre basta.
 
+## EL DESDOBLAMIENTO DE LA DGT: texto y enlace no vienen del mismo sitio
+
+**Esto hay que entenderlo ANTES de integrar la DGT (fase 9B). Si no queda
+claro, el verificador rechazará citas buenas — ya nos pasó con las viñetas.**
+
+Para la ley, el texto y el enlace vienen del mismo sitio: se descarga el BOE, se
+trocea, y el enlace apunta al mismo artículo del que salió el texto. Comprobar
+una cita es comprobar las dos cosas a la vez.
+
+**Con la DGT no.** La fuente es una aplicación con endpoints internos, y la URL
+que sirve a una persona no devuelve el texto al descargarla. Se desdobla:
+
+| | de dónde sale | cómo se comprueba |
+|---|---|---|
+| **el TEXTO** | del documento **cacheado** en `datos/dgt/` | fragmento literal contra la copia local, igual que la ley |
+| **el ENLACE** | `…/consultas/?num_consulta=V1601-22` | que apunte a **la consulta correcta**, y nada más |
+
+**Del enlace NO se comprueba que devuelva el texto al descargarlo.** No lo
+devuelve, y no es un fallo: esa URL es un armazón que carga el contenido por
+JavaScript. Un verificador que exija «descarga el enlace y busca el fragmento»
+daría por falsas todas las citas de la DGT, que serían correctas.
+
+La regla del verificador **no cambia** —fragmento literal más URL que resuelve,
+o no existe—; lo que cambia es contra qué se resuelve cada mitad. Una consulta
+cacheada es corpus local y se verifica exactamente igual que la Ley del IVA.
+
+Y una tercera cosa, que es de la 9B pero se anota aquí porque nace del mismo
+desdoblamiento: **una cita de la DGT nunca puede parecer una cita de la ley.**
+En la respuesta tiene que verse que es **criterio**, no **norma**.
+
+## PENDIENTE de la fase 9 (no necesita crédito, no ejecutado)
+
+**El texto de `CRITERIO CLARO` caducará el día que entre la DGT.** Hoy dice, en
+la ventana y en `GUIA.md`, que la DGT y los tribunales no están en la
+herramienta. En cuanto las consultas vinculantes entren en el corpus, esa frase
+pasa a ser falsa y hay que reescribirla **en los dos sitios a la vez**: si se
+cambia solo uno, la hoja impresa de la mesa y la pantalla dirán cosas distintas,
+que es peor que no cambiar nada.
+
+El reconocimiento de la fuente está hecho y **no se ha ingerido nada**: ver
+`FASE9.md`. Resumen de por qué no se siguió adelante: la URL por número no
+devuelve datos —es una aplicación con carga por JavaScript— y el buscador
+responde a 20 segundos o corta con 504. Ahí está el mapa de campos, los
+endpoints reales y el problema de la cadena de certificados.
+
 ## Documentación por fases
 
 `FASE1.md` … `FASE6.md` — qué se construyó, qué se rompió y por qué se decidió
 cada cosa. `ARRANQUE.md` — instalación y credencial.
+
+## FASE 9B · El criterio de la DGT, integrado y APAGADO
+
+**Está construido y está apagado.** Con la DGT apagada el sistema se comporta
+exactamente como antes: batería 29/29, banco 16/19 y comprobaciones de fase 4
+5/5, idénticas. El interruptor:
+
+```
+AGENTE_DGT=1 python fase4.py consultar "..." --ejercicio 2023
+```
+
+**Por qué sigue apagada:** el extractor de PETETE no ha visto todavía un
+documento real (ver `FASE9.md`). Mientras eso no ocurra, la DGT no está de
+verdad, y encenderla sería prometer criterio que no tenemos.
+
+### La cita de criterio no puede parecer ley
+
+```
+ley       «fragmento» (artículo 95 de la Ley 37/1992, https://www.boe.es/…)
+criterio  «fragmento» [Consulta DGT V1601-22, de 01/07/2022 — https://petete…]
+```
+
+Paréntesis contra corchetes, y el rótulo «Consulta DGT» delante. En la
+respuesta, la ley va primero y el criterio después, en párrafo aparte: nunca
+mezclados como si pesaran igual. Al redactor se le dice explícitamente que una
+consulta **no fundamenta por sí sola**.
+
+### De qué se fía este módulo
+
+`agente_fiscal/dgt.py` **no mira ni una línea de HTML**. Se apoya solo en la
+forma del registro cacheado, que es un JSON que escribimos nosotros. Si mañana
+cambia el troceo, cambia `petete.py` y esto sigue igual.
+
+### Lo que el código NO puede calcular, y no finge calcular
+
+El encargo decía: «si el criterio de la DGT apunta en otra dirección que la
+norma → DISCUTIDO». **Eso es semántica, y aquí no hay quien la lea.** No se ha
+implementado un juicio de fondo disfrazado de regla. Lo que se mide son dos
+señales **estructurales**, y cada una dice solo lo que sabe:
+
+1. **varias consultas sobre el mismo artículo y de años distintos** → el
+   criterio ha podido evolucionar. La más reciente manda y las anteriores se
+   citan como antecedente.
+2. **una consulta cuyo campo `normativa` no toca ninguno de los preceptos que
+   sostienen la respuesta** → el criterio va de otra cosa.
+
+Ninguna afirma que haya contradicción de fondo. Afirman que **no se puede
+afirmar que no la haya**, que es lo que corresponde a un sistema que no lee, y
+por eso producen DISCUTIDO y no NO ENCONTRADO.
+
+### La fuente caída baja el estado
+
+Si la fuente de criterio no respondía, cualquier respuesta baja de CLARO a
+DISCUTIDO y **lo dice en una señal visible**. Y si nunca se ha comprobado, se
+asume **caída**: dar por viva una fuente sin mirarla sería justo el fallo que
+esta fase evita.
+
+### El texto de CRITERIO CLARO, en dos versiones
+
+`interfaz.py` tiene ya escritas `CLARO_SIN_DGT` (la de hoy, activa) y
+`CLARO_CON_DGT` (la nueva, inactiva). Cambian solas con el interruptor. **Al
+encender la DGT hay que actualizar `GUIA.md` a la vez**, que sigue diciendo que
+la DGT no está: si se cambia solo uno, la hoja de la mesa y la pantalla dirán
+cosas distintas.

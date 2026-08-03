@@ -28,6 +28,7 @@ import sys
 from pathlib import Path
 
 from agente_fiscal import analizador as AN
+from agente_fiscal import dgt as DGT
 from agente_fiscal import estado as EST
 from agente_fiscal import modelo as MOD
 from agente_fiscal import redactor as RED
@@ -285,6 +286,29 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     res["preceptos_enviados"] = [r["referencia"] for r in registros]
     res["preceptos_descartados"] = [d["referencia"] for d in seleccion.descartados]
 
+    # ------------------------------------------------- CRITERIO (fase 9B)
+    # Con la DGT apagada -que es lo normal hoy- todo lo de aqui queda en None
+    # y el resto del camino es identico al de antes de la fase 9B.
+    consultas_dgt = None
+    lectura_dgt = None
+    if DGT.activa():
+        paso("Buscando criterio de la DGT en la copia local...")
+        apartado("2 bis. Criterio de la DGT (solo de la copia local)")
+        viva, motivo_fuente = DGT.fuente_viva()
+        consultas_dgt = DGT.CacheDGT().buscar(pregunta)
+        print(f"   consultas en la copia local que vienen al caso: "
+              f"{len(consultas_dgt)}")
+        for c in consultas_dgt:
+            print(f"     · {c.numero} ({c.fecha or 's/f'}) {c.normativa[:40]}")
+        if not viva:
+            print(f"   [AVISO] la fuente de criterio no responde: {motivo_fuente}")
+        res["dgt"] = {
+            "activa": True,
+            "fuente_viva": viva,
+            "motivo_fuente": motivo_fuente,
+            "consultas": [c.numero for c in consultas_dgt],
+        }
+
     # ---------------------------------------------------- LLAMADA 2 + bucle
     apartado("3. Redaccion y verificacion (llamada 2, en bucle cerrado)")
     verificador = VF.Verificador(ix)
@@ -295,7 +319,8 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
 
     for intento in range(1, MAX_INTENTOS + 1):
         material = RED.construir_material(
-            pregunta, ejercicio, registros, grafo, motivos or None
+            pregunta, ejercicio, registros, grafo, motivos or None,
+            consultas_dgt=consultas_dgt,
         )
         tr.escribir(f"material_{intento}.txt", material)
         paso(f"Redactando con los articulos encontrados"
@@ -344,7 +369,28 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     # ---------------------------------------------------- ESTADO (reglas)
     paso("Calculando el estado de la respuesta...")
     apartado("4. Estado (lo calcula el codigo, no el modelo)")
-    dictamen = EST.calcular(informe, ix, grafo, ejercicio, len(registros))
+    if DGT.activa():
+        # Solo cuenta el criterio que HA PASADO el verificador. Una consulta
+        # citada y no verificada no puede mover el estado: seria dar peso a
+        # algo que no hemos podido comprobar.
+        citadas = []
+        if informe is not None:
+            numeros = {d.referencia_citada for d in informe.dictamenes
+                       if d.estado == VF.VERIFICADA and d.norma == "dgt"}
+            cache_dgt = DGT.CacheDGT()
+            for bruto in numeros:
+                m = DGT.RE_NUM_CONSULTA.search(bruto) or DGT.RE_NUM_SUELTO.search(bruto)
+                if m:
+                    c = cache_dgt.leer(m.group("num"))
+                    if c:
+                        citadas.append(c)
+        viva, motivo_fuente = DGT.fuente_viva()
+        lectura_dgt = DGT.leer_criterio(citadas, res.get("preceptos") or [])
+        lectura_dgt.fuente_caida = not viva
+        lectura_dgt.motivo_fuente = motivo_fuente
+
+    dictamen = EST.calcular(informe, ix, grafo, ejercicio, len(registros),
+                            lectura_dgt=lectura_dgt)
     tr.json("estado.json", dictamen.a_json())
     print(f"   {dictamen.estado}")
     for m in dictamen.motivos:

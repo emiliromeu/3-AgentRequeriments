@@ -44,6 +44,19 @@ MARCA = {
 }
 
 
+def _cache_dgt_de_prueba():
+    """La copia local de consultas DGT que usa la BATERIA, y solo ella.
+
+    Vive en `casos/dgt_prueba/` y no en `datos/dgt/`: los casos adversarios
+    necesitan una consulta contra la que comprobar, y una consulta inventada
+    dentro de la cache de verdad seria indistinguible de una autentica el dia
+    que alguien mire ahi buscando criterio real.
+    """
+    from agente_fiscal import dgt as _D
+    from pathlib import Path as _P
+    return _D.CacheDGT(_P(__file__).resolve().parent / "casos" / "dgt_prueba")
+
+
 def titulo(t: str) -> None:
     print("\n" + "=" * ANCHO)
     print(t)
@@ -111,7 +124,7 @@ def modo_verificar(args) -> int:
     texto = ruta.read_text(encoding="utf-8")
 
     ix = Indice(CORPUS)
-    v = VF.Verificador(ix)
+    v = VF.Verificador(ix, cache_dgt=_cache_dgt_de_prueba())
     informe = v.verificar_texto(texto, args.ejercicio, args.exigir_norma)
 
     pinta_informe(informe, ruta.name)
@@ -199,7 +212,7 @@ def modo_probar(args) -> int:
         return 1
 
     ix = Indice(CORPUS)
-    v = VF.Verificador(ix)
+    v = VF.Verificador(ix, cache_dgt=_cache_dgt_de_prueba())
 
     titulo(f"BATERIA DE CASOS ADVERSARIOS  ·  {ruta.name}")
     print(f"{len(casos)} casos escritos a mano, cada uno con el veredicto que debe dar.\n")

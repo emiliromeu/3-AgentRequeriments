@@ -302,8 +302,15 @@ def calcular(
     grafo,
     ejercicio: int | None,
     n_resultados: int,
+    lectura_dgt=None,
 ) -> Dictamen:
-    """Estado a partir de la evidencia. Ningun texto del modelo entra aqui."""
+    """Estado a partir de la evidencia. Ningun texto del modelo entra aqui.
+
+    `lectura_dgt` es lo que aporta el criterio de la DGT, ya masticado por
+    `dgt.leer_criterio`. Es OPCIONAL a proposito: si no se pasa -que es lo que
+    ocurre con la DGT apagada- esta funcion hace exactamente lo mismo que hacia
+    antes de la fase 9B, linea por linea.
+    """
 
     # --- NO ENCONTRADO: los tres casos en que no hay respaldo ---
     if n_resultados == 0:
@@ -368,10 +375,32 @@ def calcular(
                 f"no la recoge; ahi suelen estar las excepciones"
             )
 
+    # --- 4) lo que dice el criterio de la DGT ---------------------------
+    # Hasta la fase 9B el DISCUTIDO solo podia venir de la propia norma, y por
+    # eso no habia saltado nunca: la ley y su reglamento rara vez se
+    # contradicen por escrito. El criterio administrativo es otra cosa.
+    motivos_dgt = []
+    if lectura_dgt is not None:
+        senales.extend(lectura_dgt.senales)
+
+        # La fuente caida NO se disimula. Se responde con la ley, se baja de
+        # estado y se dice por que: contestar como si tuvieramos criterio
+        # cuando no sabemos si lo tenemos es el fallo que esta fase evita.
+        if lectura_dgt.fuente_caida:
+            senales.append(
+                "no se ha podido consultar el criterio de la DGT"
+                + (f" ({lectura_dgt.motivo_fuente})"
+                   if lectura_dgt.motivo_fuente else "")
+                + ": esta respuesta se sostiene SOLO en la norma, y puede "
+                  "haber criterio administrativo que no se ha visto"
+            )
+            motivos_dgt.append(
+                "el estado baja porque la fuente de criterio no respondia")
+
     if senales:
         return Dictamen(
             DISCUTIDO,
-            [
+            motivos_dgt or [
                 "las citas estan verificadas, pero hay textos que pueden "
                 "llevar a una solucion distinta"
             ],

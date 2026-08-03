@@ -54,6 +54,7 @@ except ImportError:  # pragma: no cover - depende de la instalacion de Python
 
 import fase4
 from agente_fiscal import analizador as AN
+from agente_fiscal import dgt as DGT
 from agente_fiscal import estado as EST
 
 # ----------------------------------------------------------------- textos
@@ -63,11 +64,30 @@ from agente_fiscal import estado as EST
 # innegociable y va SIEMPRE: si alguien lee "criterio claro" y entiende
 # "Hacienda opina esto", la herramienta hace dano en vez de ayudar.
 
+# EL TEXTO DEL CRITERIO CLARO, EN DOS VERSIONES.
+#
+# El de hoy dice que la DGT no esta. Es cierto y tiene que seguir diciendolo
+# MIENTRAS sea cierto. Cuando la DGT entre de verdad dejara de serlo, y la
+# frase pasara a ser justo lo contrario de lo que hace falta.
+#
+# La version nueva esta escrita y NO se usa todavia. Se activa sola cuando se
+# encienda la DGT (fase 9B), y no antes: el extractor de PETETE aun no ha visto
+# un documento real, asi que hoy la DGT no esta de verdad.
+#
+# Las dos frases dicen lo mismo en lo que importa: que el ESTADO habla de los
+# textos, no de lo que Hacienda vaya a hacer.
+CLARO_SIN_DGT = (
+    "La ley y el reglamento no se contradicen. NO dice que criterio aplica "
+    "Hacienda: la DGT y los tribunales no estan en esta herramienta."
+)
+CLARO_CON_DGT = (
+    "La ley y el reglamento no se contradicen, y el criterio de la DGT que "
+    "hay en la herramienta va en la misma linea. NO incluye los tribunales, "
+    "y el criterio puede cambiar: comprueba las citas antes de decidir."
+)
+
 EXPLICACION = {
-    EST.CLARO: (
-        "La ley y el reglamento no se contradicen. NO dice que criterio aplica "
-        "Hacienda: la DGT y los tribunales no estan en esta herramienta."
-    ),
+    EST.CLARO: (CLARO_CON_DGT if DGT.activa() else CLARO_SIN_DGT),
     EST.DISCUTIDO: (
         "Los textos encontrados apuntan a soluciones distintas, o hay avisos "
         "que no se han podido cerrar. Lee los avisos de arriba y comprueba las "
