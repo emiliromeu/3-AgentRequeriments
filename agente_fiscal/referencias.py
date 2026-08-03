@@ -111,6 +111,103 @@ _RE_CONECTOR = re.compile(
 )
 _RE_RANGO = re.compile(r"\s*,?\s+a\s+(?=\d)", re.IGNORECASE)
 
+# Un apartado pegado al numero. El articulo es el numero; lo que cuelga detras
+# es su apartado y NO otro articulo. Cuatro pinturas del mismo caso, todas
+# vistas en consultas reales:
+#
+#     80-cuatro     guion + palabra
+#     10-3          guion + numero
+#     93.Cuatro     punto + palabra
+#     94.Uno.1º     encadenado, y con ordinal al final
+#
+# El espacio admitido es [ \t] y NO \s: con \s un punto final de bloque se
+# comeria el salto de linea y el nombre de la norma siguiente.
+_RE_APARTADO_PEGADO = re.compile(
+    r"(?:[ \t]*[-.][ \t]*(?:[a-záéíóúñ]+|\d+)[ \t]*[ºª]?)+", re.IGNORECASE)
+
+
+def numeros_citados(texto: str) -> list[str]:
+    """Solo los numeros. Ver `leer_numeros` si hace falta saber que sobro."""
+    return leer_numeros(texto)[0]
+
+
+def leer_numeros(texto: str) -> tuple:
+    """Lee una lista de numeros de articulo de un texto suelto.
+
+    Devuelve (numeros, resto): lo que ha sabido leer y lo que queda sin leer.
+    El RESTO importa: si ahi queda un numero, es que el campo trae una forma
+    que no reconocemos y estamos perdiendo articulos. Perderlos en silencio es
+    peor que fallar, asi que quien llama lo cuenta y lo dice.
+
+    «95, 130» -> ['95', '130']          «33 a 36» -> ['33','34','35','36']
+    «80-cuatro» -> ['80']               «93.Cuatro, 94.Uno.1º» -> ['93','94']
+
+    Es la parte PURA de `GrafoRemisiones._leer_articulos`, sacada aqui para que
+    la use tambien el campo «normativa» de las consultas de la DGT. Se comparte
+    lo que se puede compartir: los mismos patrones de lista, de rango y de
+    conector. Lo que NO se comparte es el resto de aquel metodo, que decide
+    ambito contra el corpus y produce remisiones: eso es del grafo y aqui no
+    pinta nada.
+
+    Aqui el rango se expande por aritmetica y no contra el corpus, porque este
+    texto puede hablar de una norma que no tenemos cargada.
+    """
+    numeros: list[str] = []
+    cursor = 0
+    pendiente_rango = False
+    while True:
+        m = _RE_NUMERO.match(texto, cursor)
+        if not m:
+            break
+        numero = m.group(1)
+        cursor = m.end()
+
+        if pendiente_rango and numeros:
+            try:
+                desde = int(re.match(r"^(\d+)", numeros[-1]).group(1))
+                hasta = int(numero)
+            except (AttributeError, ValueError):
+                desde = hasta = 0
+            if 0 < desde < hasta and hasta - desde <= 400:
+                numeros.extend(str(n) for n in range(desde + 1, hasta + 1))
+            else:
+                numeros.append(numero)
+            pendiente_rango = False
+        else:
+            numeros.append(numero)
+
+        # Sufijo latino ("163 bis"): cuenta como parte del numero.
+        ms = _RE_PALABRA_SUF.match(texto, cursor)
+        if ms and ms.group(1).lower() in B.SUFIJOS_CONOCIDOS:
+            numeros[-1] = f"{numero} {ms.group(1).lower()}"
+            cursor = ms.end()
+
+        # Apartado pegado (guion o punto, palabra o numero): se consume.
+        ma = _RE_APARTADO_PEGADO.match(texto, cursor)
+        if ma:
+            cursor = ma.end()
+
+        while True:
+            for patron in _ATADURAS:
+                mt = patron.match(texto, cursor)
+                if mt and mt.end() > cursor:
+                    cursor = mt.end()
+                    break
+            else:
+                break
+
+        mr = _RE_RANGO.match(texto, cursor)
+        if mr:
+            cursor = mr.end()
+            pendiente_rango = True
+            continue
+        mc = _RE_CONECTOR.match(texto, cursor)
+        if mc and _RE_NUMERO.match(texto, mc.end()):
+            cursor = mc.end()
+            continue
+        break
+    return numeros, texto[cursor:]
+
 # "de esta Ley", "de la presente Ley" y la errata "articulo 65 esta ley".
 _RE_ES_ESTA_LEY = re.compile(
     r"^[\s,;]*(?:de\s+)?(?:est[ae]|la\s+presente)\s+ley\b", re.IGNORECASE

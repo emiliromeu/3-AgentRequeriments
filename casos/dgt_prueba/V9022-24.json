@@ -1,0 +1,15 @@
+{
+  "numero": "V9022-24",
+  "fecha": "14/02/2024",
+  "organo": "SG de Impuestos sobre la Renta (CONSULTA DE PRUEBA, NO REAL)",
+  "normativa": "RIRPF, RD 439/2007, art. 22",
+  "cuestion_planteada": "Prueba de la fase 9C.",
+  "descripcion_hechos": "Prueba.",
+  "contestacion": "Texto de prueba de la bateria, no es criterio real. El articulo 22 del Reglamento del IRPF regula una materia distinta de la del articulo 22 de la Ley del IVA.",
+  "doc_id": "prueba9022",
+  "tab": "2",
+  "url_navegador": "https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V9022-24",
+  "descargado": "2026-08-03T00:00:00Z",
+  "sha256_crudo": "(juego de prueba, sin crudo)",
+  "crudo": ""
+}

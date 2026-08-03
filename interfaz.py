@@ -70,12 +70,29 @@ from agente_fiscal import estado as EST
 # MIENTRAS sea cierto. Cuando la DGT entre de verdad dejara de serlo, y la
 # frase pasara a ser justo lo contrario de lo que hace falta.
 #
-# La version nueva esta escrita y NO se usa todavia. Se activa sola cuando se
-# encienda la DGT (fase 9B), y no antes: el extractor de PETETE aun no ha visto
-# un documento real, asi que hoy la DGT no esta de verdad.
+# La version nueva esta escrita y NO se usa todavia.
+#
+# TIENE SU PROPIO INTERRUPTOR, Y NO EL DE LA DGT. Estuvieron atados al mismo y
+# fue un error: encender el motor y cambiar lo que lee el profesional son dos
+# decisiones distintas. Con `AGENTE_DGT=1` para probar, el texto cambiaba solo
+# y la ventana pasaba a decir lo contrario que la hoja impresa de GUIA.md, que
+# es justo lo que no puede pasar.
+#
+# Los dos textos -este y el de GUIA.md- se cambian A LA VEZ, a mano, el dia que
+# se decida que la DGT esta de verdad. Hasta entonces esta variable no se toca:
+#
+#     AGENTE_DGT_TEXTOS=1     cambia la frase de la ventana
 #
 # Las dos frases dicen lo mismo en lo que importa: que el ESTADO habla de los
 # textos, no de lo que Hacienda vaya a hacer.
+VARIABLE_TEXTOS = "AGENTE_DGT_TEXTOS"
+
+
+def textos_con_dgt() -> bool:
+    import os
+    return os.environ.get(VARIABLE_TEXTOS, "").strip() not in ("", "0", "no", "off")
+
+
 CLARO_SIN_DGT = (
     "La ley y el reglamento no se contradicen. NO dice que criterio aplica "
     "Hacienda: la DGT y los tribunales no estan en esta herramienta."
@@ -87,7 +104,7 @@ CLARO_CON_DGT = (
 )
 
 EXPLICACION = {
-    EST.CLARO: (CLARO_CON_DGT if DGT.activa() else CLARO_SIN_DGT),
+    EST.CLARO: (CLARO_CON_DGT if textos_con_dgt() else CLARO_SIN_DGT),
     EST.DISCUTIDO: (
         "Los textos encontrados apuntan a soluciones distintas, o hay avisos "
         "que no se han podido cerrar. Lee los avisos de arriba y comprueba las "

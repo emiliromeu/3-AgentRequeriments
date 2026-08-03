@@ -288,3 +288,12 @@ motivo: la consulta puede existir de verdad en PETETE, pero no la tenemos descar
 texto:
 Segun el criterio de la Administracion, «el plazo para la modificacion de la base imponible es de tres meses» [Consulta DGT V2500-23, de 15/09/2023 — https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V2500-23].
 --- FIN
+
+
+--- CASO: dgt-mismo-numero-otra-norma
+esperado: VERIFICADA
+ejercicio: 2023
+motivo: EL CASO QUE MOTIVA LA FASE 9C. La consulta cita el articulo 22 de OTRA norma (Reglamento del IRPF). El fragmento esta literalmente en ella y el enlace apunta donde debe, asi que la CITA es correcta y se verifica. Lo que no puede pasar -y se comprueba aparte, en la prueba de la señal- es que su articulo 22 se compare con el 22 de la Ley del IVA como si fueran el mismo precepto
+texto:
+El criterio administrativo indica que «El articulo 22 del Reglamento del IRPF regula una materia distinta de la del articulo 22 de la Ley del IVA» [Consulta DGT V9022-24, de 14/02/2024 — https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V9022-24].
+--- FIN

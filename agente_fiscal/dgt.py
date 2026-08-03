@@ -68,15 +68,188 @@ RE_NUM_SUELTO = re.compile(r"\b(?P<num>V\d{3,5}-\d{2})\b")
 URL_NAVEGADOR = ("https://petete.tributos.hacienda.gob.es/consultas/"
                  "?num_consulta={num}")
 
-# Un articulo nombrado dentro del campo 'normativa' de una consulta.
-_SUFIJOS = (r"bis|ter|qu[aá]ter|quinquies|sexies|septies|octies|nonies|decies|"
-            r"undecies|duodecies|terdecies|quaterdecies|quindecies|"
-            r"quinquiesdecies|sexiesdecies|septiesdecies|octiesdecies|"
-            r"noniesdecies|vicies")
-_RE_PRECEPTO = re.compile(
-    r"\bart(?:[íi]culos?)?\.?\s*(?P<num>\d+(?:\s+(?:" + _SUFIJOS + r"))?)",
-    re.IGNORECASE,
-)
+# ------------------------------------------------- el campo «normativa»
+#
+# EL FALLO QUE ESTO EVITA, Y QUE YA COSTO CARO UNA VEZ. En la fase 6 una
+# remision del Reglamento se resolvia contra la Ley porque se comparaba por
+# NUMERO DE ARTICULO sin mirar de que norma era. Aqui pasaba lo mismo: una
+# consulta que cita «RIRPF, RD 439/2007, art. 22» se comparaba con el articulo
+# 22 de la Ley del IVA como si fueran el mismo precepto. No lo son.
+#
+# La regla es la misma que en las remisiones: ANTE LA DUDA, NO SE COMPARA.
+# Perder una señal es barato; inventarse una es lo que hace que un profesional
+# lea «criterio discutido» donde no hay discusion ninguna.
+#
+# Quien resuelve el nombre de la norma es `normas.Registro.resolver`, el mismo
+# que usan las remisiones del BOE. No hay aqui ningun resolutor nuevo, ni una
+# lista de siglas escrita a mano: los alias (LIVA, RIVA, LIRPF...) los conoce
+# ya el registro porque salen del titulo oficial de cada norma.
+
+# Donde empieza la lista de articulos dentro de un trozo: "art.", "arts.",
+# "articulo", "articulos", con o sin mayuscula.
+# El punto de la abreviatura se consume aqui: si se deja, la lista de numeros
+# empieza por "." y el lector de numeros no arranca.
+_RE_MARCA_ART = re.compile(r"\bart[íi]culos?\b\.?|\barts?\b\.?", re.IGNORECASE)
+
+# Un trozo de campo por norma. El campo mezcla separadores sin criterio:
+#
+#     Ley 38/1992;Ley 37/1992                          punto y coma
+#     LIRPF, Ley 35/2006, Art. 33 a 36.                una sola norma, con coma
+#     LIRPF, Ley 35/2006, Art. 27.\n\n LIVA, Ley 37/1992, Art. 95.
+#                                                      SALTO DE LINEA
+#
+# El salto de linea aparecio en las consultas de 2026 y sin el se perdian los
+# articulos de todas las normas menos la primera: el campo entero se leia como
+# un solo bloque, ganaba el primer "art." y el resto se tiraba EN SILENCIO.
+_RE_SEPARADOR_NORMA = re.compile(r"\s*[;\r\n]+\s*")
+
+
+@dataclass(frozen=True)
+class Precepto:
+    """Un articulo con SU norma. El numero solo no identifica nada."""
+
+    numero: str
+    cuerpo: str = ""        # clave del cuerpo, si la norma esta cargada
+    norma_bruta: str = ""   # como venia escrita
+    estado: str = "sin_norma"   # cargada | externa | sin_norma
+
+    @property
+    def comparable(self) -> bool:
+        """Solo se compara lo que se ha podido situar en una norma CARGADA."""
+        return self.estado == "cargada" and bool(self.cuerpo)
+
+    @property
+    def clave(self) -> tuple:
+        """Como se agrupa: por norma Y articulo, nunca por articulo solo."""
+        return (self.cuerpo or f"externa:{self.norma_bruta.lower()}",
+                self.numero.lower())
+
+
+@dataclass
+class Normativa:
+    """Lo leido del campo, y lo que NO se ha sabido leer.
+
+    `sin_reconocer` es la parte que importa tanto como la otra: si el campo
+    trae una forma nueva, hay que ENTERARSE. Perder articulos en silencio es
+    peor que fallar, porque una señal que no salta parece una señal que no
+    tenia que saltar.
+    """
+
+    preceptos: list = field(default_factory=list)
+    sin_reconocer: list = field(default_factory=list)
+
+    @property
+    def hay_formas_nuevas(self) -> bool:
+        return bool(self.sin_reconocer)
+
+
+# Un resto que todavia tiene un numero dentro es un articulo que se ha perdido.
+_RE_QUEDA_NUMERO = re.compile(r"\d")
+
+
+def analizar_normativa(texto: str, normas=None) -> Normativa:
+    """Como `pares_de_normativa`, pero contando ademas lo que no se reconocio."""
+    from . import referencias as R
+
+    salida = Normativa()
+    for trozo in _RE_SEPARADOR_NORMA.split(texto or ""):
+        trozo = trozo.strip()
+        if not trozo:
+            continue
+
+        m = _RE_MARCA_ART.search(trozo)
+        designacion = (trozo[:m.start()] if m else trozo).strip(" ,.;:")
+        if m:
+            numeros, resto = R.leer_numeros(trozo[m.end():])
+        else:
+            numeros, resto = [], ""
+            # Un trozo sin marca de articulo es normal ("Ley 38/1992" a secas):
+            # nombra la norma y no cita ningun precepto. No es forma nueva.
+
+        cuerpo, estado = _resolver_designacion(designacion, normas)
+
+        for n in numeros:
+            salida.preceptos.append(Precepto(numero=n, cuerpo=cuerpo,
+                                             norma_bruta=designacion,
+                                             estado=estado))
+        if m and _RE_QUEDA_NUMERO.search(resto):
+            salida.sin_reconocer.append(
+                f"«{trozo.strip()}»: se leyeron {numeros or 'ningun articulo'} "
+                f"y quedo sin leer «{resto.strip()[:40]}»")
+    return salida
+
+
+def pares_de_normativa(texto: str, normas=None) -> list:
+    """«Ley 37/1992 arts. 75, 78, 80-cuatro, 89» -> cuatro Preceptos de la LIVA.
+
+    Formas reales que se han visto en la cache y que hay que aguantar:
+
+        Ley 37/1992 art. 95, 130              lista
+        Ley 37/1992 arts. 75, 78, 80-cuatro   plural, y apartado pegado
+        LIRPF, Ley 35/2006, Art. 33 a 36.     sigla + rango
+        Ley 38/1992;Ley 37/1992               dos normas, sin articulos
+        RIRPF, RD 439/2007, art. 22           otra norma, articulo que existe
+                                              tambien en la nuestra
+
+    La lista de numeros la lee `referencias.numeros_citados`, que es la misma
+    que usa el grafo de remisiones para el BOE: listas, rangos y sufijos.
+    """
+    return analizar_normativa(texto, normas).preceptos
+
+
+# Una designacion explicita: rango + numero/año. Es la forma que NO admite dos
+# lecturas, y por eso es la que se busca cuando el trozo entero no resuelve.
+_RE_NORMA_EXPLICITA = re.compile(
+    r"\b(?:Ley\s+Org[aá]nica|Ley|Real\s+Decreto(?:-ley)?|RD|Reglamento|"
+    r"Decreto|Orden|Directiva)\s+\d+/\d{2,4}", re.IGNORECASE)
+
+
+def _resolver_designacion(designacion: str, normas=None) -> tuple:
+    """(clave_cuerpo, estado) para el nombre de norma de un trozo del campo.
+
+    El campo escribe la misma norma de dos maneras a la vez y sin separador:
+    «LIVA Ley 37/1992». Pasarselo entero al resolutor no vale -y hace bien en
+    no valer-: para el es un alias seguido de OTRA norma, que es justo el caso
+    en que no debe adivinar.
+
+    Asi que se prueban varias designaciones del mismo trozo y se exige que
+    TODAS las que resuelvan lleven al mismo cuerpo. Si dos llevan a cuerpos
+    distintos, no se resuelve: es la misma regla de siempre, ante la duda nada.
+
+    NO se prueban trozos recortados a mano («Ley» suelto sacado de «Ley
+    27/2014»): eso resolveria a la Ley del IVA y le atribuiria articulos de la
+    Ley del Impuesto sobre Sociedades. Solo se prueban designaciones enteras.
+    """
+    if normas is None or not designacion:
+        return "", "sin_norma"
+
+    candidatas = [designacion]
+    candidatas += _RE_NORMA_EXPLICITA.findall(designacion)
+    candidatas += [p.strip() for p in designacion.split(",") if p.strip()]
+
+    encontrados = set()
+    for c in candidatas:
+        clave, _motivo = normas.resolver(c)
+        if clave:
+            encontrados.add(clave)
+
+    if len(encontrados) == 1:
+        return encontrados.pop(), "cargada"
+    if len(encontrados) > 1:
+        # El trozo nombra dos normas cargadas distintas: no se sabe de cual es
+        # el articulo, asi que no se compara con ninguna.
+        return "", "sin_norma"
+    return "", ("externa" if _parece_norma(designacion) else "sin_norma")
+
+
+_RE_PARECE_NORMA = re.compile(
+    r"\b(?:ley|real\s+decreto|rd|reglamento|decreto|orden|directiva|"
+    r"l[a-z]{2,5}|r[a-z]{2,5})\b", re.IGNORECASE)
+
+
+def _parece_norma(designacion: str) -> bool:
+    """¿Esto nombra una norma, aunque no la tengamos? «Ley 38/1992», si."""
+    return bool(_RE_PARECE_NORMA.search(designacion or ""))
 
 
 def activa() -> bool:
@@ -127,20 +300,13 @@ class Consulta:
         m = re.search(r"(\d{4})", self.fecha)
         return int(m.group(1)) if m else None
 
-    @property
-    def preceptos_citados(self) -> set:
-        """Que articulos nombra el campo 'normativa'. Sin inventar nada: si el
-        campo viene vacio, el conjunto es vacio y no se supone nada.
+    def preceptos(self, normas=None) -> list:
+        """El campo 'normativa' -> lista de `Precepto`, con SU norma cada uno.
 
-        Reconoce las dos formas, porque el campo las mezcla sin criterio:
-        «Ley 37/1992 art. 80» y «articulo 80». El sufijo latino solo se admite
-        de una lista cerrada: con `\\w+` se tragaba la palabra siguiente y
-        «art. 80 de la Ley» acababa siendo el articulo «80 de».
+        Ver `pares_de_normativa`. Si no se pasa el registro de normas, los
+        preceptos salen sin resolver y por tanto no se comparan con nada.
         """
-        salida = set()
-        for m in _RE_PRECEPTO.finditer(self.normativa or ""):
-            salida.add(re.sub(r"\s+", " ", m.group("num")).strip().lower())
-        return salida
+        return pares_de_normativa(self.normativa or "", normas)
 
     def cita(self) -> str:
         """El formato de cita. Numero, fecha y enlace de navegador."""
@@ -259,15 +425,24 @@ class Lectura:
         return bool(self.senales)
 
 
-def _agrupar_por_precepto(consultas: list) -> dict:
+def _agrupar_por_precepto(consultas: list, normas=None) -> dict:
+    """Agrupa por (NORMA, articulo). Nunca por articulo solo.
+
+    Las consultas cuyo precepto no se ha podido situar en una norma cargada NO
+    entran en ningun grupo: no se pueden comparar con nada, ni entre ellas.
+    """
     grupos: dict = {}
     for c in consultas:
-        for p in (c.preceptos_citados or {"(sin precepto)"}):
-            grupos.setdefault(p, []).append(c)
+        for p in c.preceptos(normas):
+            if not p.comparable:
+                continue
+            grupos.setdefault(p.clave, {"precepto": p, "consultas": []})
+            grupos[p.clave]["consultas"].append(c)
     return grupos
 
 
-def leer_criterio(consultas: list, preceptos_verificados: list) -> Lectura:
+def leer_criterio(consultas: list, preceptos_verificados: list,
+                  normas=None) -> Lectura:
     """Convierte las consultas citadas en señales de estado. LO CALCULA EL CODIGO.
 
     IMPORTANTE, y conviene no engañarse: el codigo NO puede leer si un criterio
@@ -290,20 +465,32 @@ def leer_criterio(consultas: list, preceptos_verificados: list) -> Lectura:
     if not consultas:
         return lectura
 
-    verificados = {re.sub(r"^articulo\s+", "", p.lower()).strip()
-                   for p in (preceptos_verificados or [])}
+    # Lo que sostiene la respuesta, tambien como pares (cuerpo, articulo). Se
+    # aceptan claves completas del corpus ("BOE-...#0#articulo 80") o pares ya
+    # hechos; una cadena suelta como "Articulo 80" NO vale, porque no dice de
+    # que norma es y era justo el fallo que se esta corrigiendo.
+    verificados = set()
+    for p in (preceptos_verificados or []):
+        if isinstance(p, (tuple, list)) and len(p) == 2:
+            verificados.add((p[0], str(p[1]).lower()))
+        elif isinstance(p, str) and p.count("#") >= 2:
+            norma_id, indice, referencia = p.split("#", 2)
+            numero = re.sub(r"^articulo\s+", "", referencia.strip(), flags=re.I)
+            verificados.add((f"{norma_id}#{indice}", numero.lower()))
 
     # --- 1. el tiempo: la mas reciente manda ---------------------------
-    for precepto, grupo in _agrupar_por_precepto(consultas).items():
-        if len(grupo) < 2:
+    for _clave, grupo in _agrupar_por_precepto(consultas, normas).items():
+        cs, precepto = grupo["consultas"], grupo["precepto"]
+        if len(cs) < 2:
             continue
-        anios = {c.anio for c in grupo if c.anio}
+        anios = {c.anio for c in cs if c.anio}
         if len(anios) < 2:
             continue
-        ordenadas = sorted(grupo, key=lambda c: c.anio or 0, reverse=True)
+        ordenadas = sorted(cs, key=lambda c: c.anio or 0, reverse=True)
         reciente, previas = ordenadas[0], ordenadas[1:]
+        etiqueta = _nombrar(precepto, normas)
         lectura.senales.append(
-            f"sobre el articulo {precepto} hay {len(grupo)} consultas de años "
+            f"sobre el {etiqueta} hay {len(cs)} consultas de años "
             f"distintos: la mas reciente es {reciente.numero} "
             f"({reciente.anio}) y es la que manda; "
             f"{', '.join(c.numero for c in previas)} "
@@ -314,10 +501,17 @@ def leer_criterio(consultas: list, preceptos_verificados: list) -> Lectura:
         lectura.antecedentes.extend(previas)
 
     # --- 2. criterio que no habla de lo que sostiene la respuesta -------
+    #
+    # Solo se mira si hay ALGO comparable. Una consulta de otra norma no
+    # "desalinea" nada: simplemente va de otra cosa, y decir lo contrario
+    # seria la señal inventada que no queremos.
     if verificados:
         for c in consultas:
-            citados = c.preceptos_citados
-            if citados and not (citados & verificados):
+            comparables = [p for p in c.preceptos(normas) if p.comparable]
+            if not comparables:
+                continue
+            if not any((p.cuerpo, p.numero.lower()) in verificados
+                       for p in comparables):
                 lectura.senales.append(
                     f"{c.numero} da criterio sobre {c.normativa or 'otra norma'}, "
                     f"que no es lo que sostiene esta respuesta: no se puede dar "
@@ -325,3 +519,12 @@ def leer_criterio(consultas: list, preceptos_verificados: list) -> Lectura:
                 )
 
     return lectura
+
+
+def _nombrar(precepto, normas=None) -> str:
+    """«articulo 80 de la Ley 37/1992». Nunca «articulo 80» a secas."""
+    if normas is not None and precepto.cuerpo:
+        cuerpo = normas.por_clave(precepto.cuerpo)
+        if cuerpo:
+            return f"articulo {precepto.numero} de {cuerpo.etiqueta}"
+    return f"articulo {precepto.numero}"

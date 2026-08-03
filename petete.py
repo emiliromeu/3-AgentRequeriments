@@ -115,7 +115,16 @@ def aviso(t: str) -> None:
 
 
 class FuenteCaida(Exception):
-    """La fuente no responde o responde mal. Se dice, no se disimula."""
+    """La fuente no responde o responde mal. Se dice, no se disimula.
+
+    `codigo` es el HTTP que devolvio, si llego a devolver alguno. Sirve para
+    distinguir DE QUIEN es el fallo, que es justo lo que antes no se sabia:
+    un 5xx es de su servidor y un 4xx es nuestro, por preguntar mal.
+    """
+
+    def __init__(self, mensaje: str, codigo: int | None = None):
+        super().__init__(mensaje)
+        self.codigo = codigo
 
 
 class FormaInesperada(Exception):
@@ -166,10 +175,24 @@ class Fuente:
         if falta > 0 and self._ultima:
             time.sleep(falta)
 
-    def pedir(self, ruta: str, datos: dict | None = None) -> Respuesta:
+    def pedir(self, ruta: str, datos=None, metodo: str = "GET") -> Respuesta:
+        """Una peticion, con pausa y con tope.
+
+        `datos` puede ser un dict o una lista de pares. La LISTA importa: el
+        buscador recibe los campos en un orden concreto y un dict no garantiza
+        ninguno. Con GET los datos van en la URL, que es como los manda la
+        propia aplicacion.
+        """
         url = f"{BASE}{ruta}"
-        cuerpo = urllib.parse.urlencode(datos).encode() if datos else None
+        cuerpo = None
+        if datos:
+            codificado = urllib.parse.urlencode(datos)
+            if metodo.upper() == "GET":
+                url = f"{url}?{codificado}"
+            else:
+                cuerpo = codificado.encode()
         ultimo = ""
+        ultimo_codigo = None
         for intento in range(1, self.reintentos + 1):
             self._respirar()
             req = urllib.request.Request(url, data=cuerpo, headers={
@@ -187,6 +210,7 @@ class Fuente:
                 return Respuesta(200, texto, time.time() - t0, url)
             except urllib.error.HTTPError as e:
                 ultimo = f"el servidor respondio {e.code}"
+                ultimo_codigo = e.code
                 self.peticiones += 1
             except urllib.error.URLError as e:
                 ultimo = f"no se pudo conectar ({getattr(e, 'reason', e)})"
@@ -199,33 +223,72 @@ class Fuente:
                 print(f"    reintento {intento}/{self.reintentos - 1}: {ultimo}")
             if intento < self.reintentos:
                 time.sleep(PAUSA_REINTENTO)
-        raise FuenteCaida(ultimo or "sin respuesta")
+        raise FuenteCaida(ultimo or "sin respuesta", ultimo_codigo)
 
     def sesion(self) -> None:
-        """El buscador quiere una sesion abierta. Se abre una sola vez."""
+        """Abre sesion pidiendo la pagina del buscador. Una sola vez."""
         if not self._sesion:
-            self.pedir("/do/form")
+            self.pedir("/")
             self._sesion = True
 
     # ------------------------------------------------------------- consultas
 
+    def _campos(self, terminos: str, numero: str, tab: str, pagina: int,
+                orden: str = "FECHA-SALIDA", direccion: str = "1") -> list:
+        """Los parametros de una busqueda, EN EL MISMO ORDEN que los manda la
+        aplicacion.
+
+        Copiados de una busqueda real capturada en el navegador (3 de agosto de
+        2026). Se mandan los dos `type`, como hace el formulario, y `dirOrder`
+        va en 0/1 y no en «asc»/«desc», que es lo que vale el desplegable.
+
+        POR DEFECTO SE ORDENA POR FECHA, DE LA MAS RECIENTE A LA MAS ANTIGUA.
+        El buscador NO ordena por relevancia -solo deja elegir entre numero de
+        consulta, organo y fecha-, y ordenar por numero mezcla los años sin
+        criterio: la primera pagina salia con consultas de 2006 y de 2025
+        revueltas. Con fecha descendente, lo primero que se ve es el criterio
+        vigente, que es el que manda.
+        """
+        return [
+            ("type1", "on"), ("type2", "on"),
+            ("NMCMP_1", "NUM-CONSULTA"), ("VLCMP_1", numero), ("OPCMP_1", ".Y"),
+            ("NMCMP_2", "FECHA-SALIDA"), ("VLCMP_2", ""), ("dateIni_2", ""),
+            ("OPCMP_2", ".Y"),
+            ("NMCMP_3", "NORMATIVA"), ("VLCMP_3", ""), ("OPCMP_3", ".Y"),
+            ("NMCMP_4", "CUESTION-PLANTEADA"), ("VLCMP_4", ""), ("OPCMP_4", ".Y"),
+            ("NMCMP_5", "DESCRIPCION-HECHOS"), ("VLCMP_5", ""), ("OPCMP_5", ".Y"),
+            ("NMCMP_6", "FreeText"), ("VLCMP_6", terminos), ("OPCMP_6", ".Y"),
+            ("NMCMP_7", "CRITERIO"),
+            ("cmpOrder", orden), ("dirOrder", direccion), ("auto", ""),
+            ("tab", tab), ("page", str(pagina)),
+        ]
+
     def buscar(self, terminos: str = "", numero: str = "",
                tab: str = TAB_VINCULANTES, pagina: int = 1) -> str:
-        self.sesion()
-        campos = {f"NMCMP_{i}": n for i, n in CAMPO.items()}
-        for i in range(1, 7):
-            campos[f"VLCMP_{i}"] = ""
-            campos[f"OPCMP_{i}"] = ".Y"
-        campos["VLCMP_1"] = numero
-        campos["VLCMP_6"] = terminos
-        campos["type1" if tab == TAB_GENERALES else "type2"] = "on"
-        campos.update({"cmpOrder": "FECHA-SALIDA", "dirOrder": "desc",
-                       "auto": "", "tab": tab, "page": str(pagina)})
-        return self.pedir("/do/search", campos).cuerpo
+        """POR GET, no por POST.
 
-    def documento(self, doc_id: str, tab: str = TAB_VINCULANTES) -> str:
+        Esto costo un canario en rojo y una acusacion injusta a la fuente. El
+        JavaScript de la aplicacion llama a `$(...).load(url, params, cb)` con
+        `params` como CADENA, y jQuery, cuando los parametros son una cadena,
+        hace GET con ellos en la URL; solo hace POST si le pasas un objeto.
+        Nosotros mandabamos POST. Comprobado capturando la peticion real en el
+        navegador: sale un GET con la query entera detras.
+        """
         self.sesion()
-        return self.pedir("/do/document", {"doc": doc_id, "tab": tab}).cuerpo
+        return self.pedir("/do/search", self._campos(terminos, numero, tab,
+                                                     pagina)).cuerpo
+
+    def documento(self, doc_id: str, tab: str = TAB_VINCULANTES,
+                  query: str = "") -> str:
+        """Tambien por GET, y por el mismo motivo que `buscar`.
+
+        `query` es el campo oculto que la pagina de resultados arrastra hasta
+        aqui. Se manda si lo tenemos: es como lo pide la propia aplicacion.
+        """
+        self.sesion()
+        datos = ([("query", query)] if query else []) + [
+            ("doc", str(doc_id)), ("tab", str(tab))]
+        return self.pedir("/do/document", datos).cuerpo
 
 
 # ------------------------------------------------------------------- extraer
@@ -271,14 +334,77 @@ def _normaliza(s: str) -> str:
     return re.sub(r"[^a-z0-9 ]", " ", s.lower()).strip()
 
 
+# Como se llama cada campo en el marcado REAL, capturado el 3 de agosto de
+# 2026 sobre V1601-22. La pagina del documento es una tabla y cada campo es una
+# fila con su clase:
+#
+#   <tr class="CONTESTACION-COMPL">
+#     <th scope="row" class="field">Contestación completa</th>
+#     <td class="value">
+#        <p class="CONTESTACION-COMPL">...</p>   (14 parrafos en este caso)
+#     </td>
+#   </tr>
+#
+# Se ancla en la CLASE y no en la etiqueta visible. La etiqueta cambia con
+# cualquier retoque de redaccion -y de hecho nuestra suposicion inicial fallo
+# por eso: pusimos "Nº CONSULTA" y la real es "Nº de consulta"-, mientras que
+# la clase es la que usa su propia hoja de estilos.
+CLASES = {
+    "numero": "NUM-CONSULTA",
+    "organo": "ORGANO",
+    "fecha": "FECHA-SALIDA",
+    "normativa": "NORMATIVA",
+    "descripcion": "DESCRIPCION-HECHOS",
+    "cuestion": "CUESTION-PLANTEADA",
+    "contestacion": "CONTESTACION-COMPL",
+}
+
+
+def _por_clases(crudo: str) -> dict:
+    """Los campos, leidos de las filas con clase. Devuelve {} si no hay ninguna."""
+    campos: dict = {}
+    for nombre, clase in CLASES.items():
+        m = re.search(
+            r'<tr[^>]*class="[^"]*\b' + re.escape(clase) + r'\b[^"]*"[^>]*>(.*?)</tr>',
+            crudo, re.S | re.I)
+        if not m:
+            continue
+        fila = m.group(1)
+        # Dentro de la fila, solo la celda de valor: el <th> es el rotulo.
+        mv = re.search(r'<td[^>]*class="[^"]*\bvalue\b[^"]*"[^>]*>(.*?)</td>',
+                       fila, re.S | re.I)
+        valor = _texto(mv.group(1) if mv else fila)
+        if valor:
+            campos[nombre] = valor
+    return campos
+
+
 def extraer(crudo: str, numero_pedido: str = "") -> dict:
     """HTML de un documento -> campos. Si no reconoce la forma, PARA.
 
-    Se apoya en las etiquetas visibles, que son las mismas que declara el
-    formulario de busqueda. Si la plantilla cambia y dejan de aparecer, esto
-    lanza FormaInesperada en vez de guardar un registro medio vacio: un
-    criterio fiscal a medias es peor que ninguno.
+    Dos caminos, en este orden:
+      1. las CLASES de la tabla, que es como viene el documento real;
+      2. si no hay ninguna, las etiquetas visibles, por si algun dia cambian
+         el marcado y dejan solo los rotulos.
+
+    Si no sale ni por una ni por otra, lanza FormaInesperada en vez de guardar
+    un registro medio vacio: un criterio fiscal a medias es peor que ninguno.
     """
+    campos_clase = _por_clases(crudo)
+    if campos_clase:
+        campos = {k: "" for k in ETIQUETAS}
+        campos.update(campos_clase)
+        if not campos["numero"] and numero_pedido:
+            campos["numero"] = numero_pedido
+        faltan = [c for c in IMPRESCINDIBLES if not campos[c]]
+        if faltan:
+            raise FormaInesperada(
+                f"el documento trae la tabla de campos pero le faltan "
+                f"{', '.join(faltan)}. Hay que mirar la pagina antes de "
+                f"fiarse de lo que salga")
+        campos["numero"] = campos["numero"].split()[0] if campos["numero"] else ""
+        return campos
+
     texto = _texto(crudo)
     if not texto:
         raise FormaInesperada("el documento vino vacio")
@@ -342,22 +468,55 @@ def extraer_resultados(crudo: str) -> list[dict]:
             "plantilla del buscador"
         )
 
+    # El marcado real, capturado el 3 de agosto de 2026:
+    #
+    #   <td id="doc_45970" onClick="return viewDocument(45970, 2);" ...>
+    #     <h4><span class="NUM-CONSULTA"><strong> V1601-22 </strong></span></h4>
+    #     <span class="DESCRIPCION-HECHOS"> ... </span>
+    #
+    # El id va SIN COMILLAS. La version anterior las exigia y por eso no
+    # encontraba nada aunque la busqueda respondiera bien. Y el numero se saca
+    # de la clase NUM-CONSULTA, que es semantica y aguanta mas que buscar un
+    # patron suelto en el texto de la fila.
     salida = []
-    # viewDocument('ID', 'TAB') dentro de una fila; el numero de consulta esta
-    # en el texto de la misma fila.
-    for m in re.finditer(r"viewDocument\(\s*['\"]([^'\"]+)['\"]", crudo):
-        doc_id = m.group(1)
-        # contexto de la fila para sacar el numero visible
-        ini = crudo.rfind("<tr", 0, m.start())
-        fin = crudo.find("</tr>", m.start())
-        fila = _texto(crudo[ini if ini >= 0 else m.start(): fin if fin > 0 else m.end()])
+    # El (?<![A-Za-z]) es necesario: cada fila trae ademas un
+    # onKeyDown="keyViewDocument(45970, 2)" para navegar con el teclado, y sin
+    # el limite cada consulta salia DOS veces.
+    for m in re.finditer(
+        r"(?<![A-Za-z])viewDocument\(\s*['\"]?(?P<id>[^,'\")\s]+)['\"]?"
+        r"\s*,\s*['\"]?(?P<tab>\d+)",
+        crudo, re.IGNORECASE,
+    ):
+        ini = crudo.rfind("<td", 0, m.start())
+        fin = crudo.find("</td>", m.start())
+        celda = crudo[ini if ini >= 0 else m.start(): fin if fin > 0 else m.end()]
+
         num = ""
-        mm = re.search(r"\b([VC]?\d{3,5}-\d{2})\b", fila)
-        if mm:
-            num = mm.group(1)
-        salida.append({"doc_id": doc_id, "numero": num,
-                       "resumen": fila[:180]})
+        mn = re.search(r'class="NUM-CONSULTA"[^>]*>(.*?)</span>', celda,
+                       re.S | re.I)
+        if mn:
+            num = _texto(mn.group(1)).strip()
+        if not num:   # respaldo: el patron suelto, por si cambian la clase
+            mm = re.search(r"\b([VC]?\d{3,5}-\d{2})\b", _texto(celda))
+            num = mm.group(1) if mm else ""
+
+        salida.append({"doc_id": m.group("id"), "tab": m.group("tab"),
+                       "numero": num.upper(),
+                       "resumen": _texto(celda)[:180]})
     return salida
+
+
+def extraer_consulta_query(crudo: str) -> str:
+    """El campo oculto `query` de una pagina de resultados.
+
+    La aplicacion lo arrastra a la peticion del documento (su JavaScript hace
+    `query + "&doc=" + doc + "&tab=" + tab`), asi que se manda tambien: pedir
+    el documento sin el es preguntar de una forma que ellos nunca usan.
+    """
+    m = re.search(r'id="query"[^>]*value="([^"]*)"', crudo, re.I)
+    if not m:
+        m = re.search(r'name="query"[^>]*value="([^"]*)"', crudo, re.I)
+    return _html.unescape(m.group(1)) if m else ""
 
 
 # --------------------------------------------------------------------- cache
@@ -728,7 +887,12 @@ def modo_canario(args) -> int:
     print(f"\n  fuente : {BASE}")
     print(f"  patron : consulta {CANARIO_NUM}\n")
 
-    fallos, avisos_ = [], []
+    # Tres cubos distintos a proposito. Meterlos todos en "fallos" es lo que
+    # hizo que un bug nuestro se leyera como una caida de la fuente.
+    fallos = []          # es de ELLOS: su servidor no responde o se atraganta
+    culpa_nuestra = []   # es NUESTRO: preguntamos mal y nos lo rechazan
+    cambios = []         # la fuente cambio de forma: hay que mirarla
+    avisos_ = []
     fuente = Fuente(silencioso=True)
 
     # 0. el certificado, que caduca y no lo mira nadie hasta que rompe
@@ -757,6 +921,7 @@ def modo_canario(args) -> int:
     # 3. la busqueda sigue devolviendo la consulta patron
     print("  [2/3] la busqueda funciona ...... ", end="", flush=True)
     doc_id = ""
+    consulta_query = ""
     if not fallos:
         try:
             crudo = fuente.buscar(numero=CANARIO_NUM)
@@ -764,19 +929,46 @@ def modo_canario(args) -> int:
             elegido = next((x for x in resultados
                             if x["numero"].upper() == CANARIO_NUM), None)
             if elegido is None:
-                print("NO")
-                fallos.append(
-                    f"la busqueda respondio pero {CANARIO_NUM} no estaba entre "
-                    f"los {len(resultados)} resultados")
+                # Respondio. Que no sepamos leerlo NO es que la fuente este
+                # caida: o han cambiado la plantilla o la consulta ya no esta.
+                print("SIN EL PATRON")
+                cambios.append(
+                    f"la busqueda respondio, pero {CANARIO_NUM} no estaba "
+                    f"entre los {len(resultados)} resultados que hemos sabido "
+                    f"leer. O ha cambiado la plantilla, o la consulta ya no "
+                    f"esta donde estaba")
             else:
                 doc_id = elegido["doc_id"]
+                consulta_query = extraer_consulta_query(crudo)
                 print(f"SI   (id {doc_id})")
         except FuenteCaida as e:
-            print("NO")
-            fallos.append(f"la busqueda no responde: {e}")
+            # DE QUIEN ES EL FALLO. Antes esto decia siempre "la fuente no
+            # responde", y con ese mensaje estuvimos culpando a la DGT de un
+            # bug nuestro -mandabamos POST donde su aplicacion manda GET-.
+            # El codigo HTTP lo distingue sin adivinar nada:
+            #   4xx  su servidor entendio la peticion y la rechaza: es NUESTRA
+            #   5xx  su servidor se atraganta: es SUYO
+            #   sin codigo: no llego a contestar, no se puede saber de quien es
+            codigo = getattr(e, "codigo", None)
+            if codigo and 400 <= codigo < 500:
+                print("RECHAZADA")
+                culpa_nuestra.append(
+                    f"la busqueda fue RECHAZADA con {codigo}: su servidor la "
+                    f"entendio y no le gusta. El fallo es NUESTRO, no de la "
+                    f"fuente: estamos preguntando mal")
+            elif codigo and codigo >= 500:
+                print("NO")
+                fallos.append(
+                    f"la busqueda fallo con {codigo}: es un error DE SU "
+                    f"SERVIDOR. La peticion iba bien formada")
+            else:
+                print("SIN RESPUESTA")
+                fallos.append(
+                    f"la busqueda no llego a contestar ({e}). No se puede "
+                    f"saber si el fallo es suyo o nuestro")
         except FormaInesperada as e:
             print("CAMBIO DE FORMA")
-            fallos.append(f"la lista de resultados ha cambiado: {e}")
+            cambios.append(f"la lista de resultados ha cambiado: {e}")
     else:
         print("(no se prueba)")
 
@@ -784,7 +976,7 @@ def modo_canario(args) -> int:
     print("  [3/3] el documento se lee ....... ", end="", flush=True)
     if doc_id:
         try:
-            crudo = fuente.documento(doc_id)
+            crudo = fuente.documento(doc_id, query=consulta_query)
             campos = extraer(crudo, CANARIO_NUM)
             if not campos.get("contestacion"):
                 print("VACIO")
@@ -792,32 +984,71 @@ def modo_canario(args) -> int:
             else:
                 print(f"SI   ({len(campos['contestacion'])} caracteres)")
         except FuenteCaida as e:
-            print("NO")
-            fallos.append(f"el documento no responde: {e}")
+            codigo = getattr(e, "codigo", None)
+            if codigo and 400 <= codigo < 500:
+                print("RECHAZADA")
+                culpa_nuestra.append(
+                    f"la peticion del documento fue rechazada con {codigo}: "
+                    f"el fallo es NUESTRO")
+            else:
+                print("NO")
+                fallos.append(f"el documento no responde: {e}")
         except FormaInesperada as e:
             print("CAMBIO DE FORMA")
-            fallos.append(f"el documento ha cambiado de forma: {e}")
+            cambios.append(f"el documento ha cambiado de forma: {e}")
     else:
         print("(no se prueba)")
 
     print()
     print("=" * ANCHO)
-    if fallos:
-        print("  CANARIO EN ROJO — la fuente de criterio NO es fiable ahora")
+    if culpa_nuestra:
+        # Va PRIMERO porque es lo unico que podemos arreglar nosotros.
+        print("  CANARIO EN ROJO — Y EL FALLO ES NUESTRO")
+        print()
+        for f in culpa_nuestra:
+            print(f"    · {f}")
+        print()
+        print("  Que significa: la fuente esta bien. Somos nosotros los que")
+        print("  preguntamos de una forma que no acepta. Se arregla en")
+        print("  petete.py, no esperando a que la DGT arregle nada.")
+    elif cambios:
+        print("  CANARIO EN ROJO — LA FUENTE HA CAMBIADO DE FORMA")
+        print()
+        for f in cambios:
+            print(f"    · {f}")
+        print()
+        print("  Que significa: responde, pero ya no devuelve lo que")
+        print("  esperabamos. Estos endpoints son internos y sin documentar.")
+        print("  Hay que mirar la pagina a mano antes de fiarse de nada.")
+    elif fallos:
+        print("  CANARIO EN ROJO — LA FUENTE NO RESPONDE")
         print()
         for f in fallos:
             print(f"    · {f}")
         print()
-        print("  Que significa: el agente puede seguir contestando con la LEY.")
-        print("  Lo que no puede es anadir criterio de la DGT. Cuando se")
-        print("  integre (fase 9B), esto tiene que verse en pantalla, nunca")
-        print("  quedarse en silencio.")
+        print("  Que significa: el fallo es de su servidor, no de nuestra")
+        print("  peticion. No hay nada que arreglar aqui: hay que esperar.")
+        print("  El agente puede seguir contestando con la LEY; lo que no")
+        print("  puede es anadir criterio de la DGT, y eso tiene que verse")
+        print("  en pantalla, nunca quedarse en silencio.")
     else:
         print("  CANARIO EN VERDE — la fuente responde y tiene la forma de siempre")
     for a in avisos_:
         print(f"\n  aviso: {a}")
     print("=" * ANCHO)
-    return 1 if fallos else 0
+
+    hay_fallo = bool(fallos or culpa_nuestra or cambios)
+    # El estado queda escrito para que el agente sepa si puede contar con
+    # criterio. "Preguntamos mal" tambien es fuente NO disponible.
+    try:
+        import sys as _s
+        _s.path.insert(0, str(RAIZ))
+        from agente_fiscal import dgt as _dgt
+        motivo = (culpa_nuestra or cambios or fallos or [""])[0]
+        _dgt.marcar_fuente(not hay_fallo, motivo[:200])
+    except Exception:  # noqa: BLE001
+        pass
+    return 1 if hay_fallo else 0
 
 
 # ----------------------------------------------------------------------- cli

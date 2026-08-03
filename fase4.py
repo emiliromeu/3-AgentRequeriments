@@ -384,8 +384,14 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
                     c = cache_dgt.leer(m.group("num"))
                     if c:
                         citadas.append(c)
+        # Las CLAVES, no las referencias: una clave lleva dentro de que norma
+        # es el articulo, y comparar por numero suelto es el fallo que la fase
+        # 6 ya nos costo una vez.
+        claves_verificadas = [d.clave for d in (informe.dictamenes if informe
+                                                else [])
+                              if d.estado == VF.VERIFICADA and d.clave]
         viva, motivo_fuente = DGT.fuente_viva()
-        lectura_dgt = DGT.leer_criterio(citadas, res.get("preceptos") or [])
+        lectura_dgt = DGT.leer_criterio(citadas, claves_verificadas, ix.normas)
         lectura_dgt.fuente_caida = not viva
         lectura_dgt.motivo_fuente = motivo_fuente
 
