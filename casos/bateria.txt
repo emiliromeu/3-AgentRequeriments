@@ -297,3 +297,82 @@ motivo: EL CASO QUE MOTIVA LA FASE 9C. La consulta cita el articulo 22 de OTRA n
 texto:
 El criterio administrativo indica que «El articulo 22 del Reglamento del IRPF regula una materia distinta de la del articulo 22 de la Ley del IVA» [Consulta DGT V9022-24, de 14/02/2024 — https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V9022-24].
 --- FIN
+
+
+# ===================================================================
+# FASE 11 - DOCTRINA DEL TEAC
+# Mismos principios que la DGT: texto contra la copia cacheada, enlace
+# contra el criterio que dice ser. Los criterios estan en
+# casos/teac_prueba/ y son INVENTADOS.
+# ===================================================================
+
+--- CASO: teac-criterio-que-no-existe
+esperado: NO_VERIFICABLE
+ejercicio: 2023
+motivo: se cita un criterio del TEAC que no existe en ninguna parte. Sin documento no hay contra que comprobar: NO_VERIFICABLE, nunca VERIFICADA
+texto:
+La doctrina del tribunal confirma que «La modificacion de la base imponible exige el cumplimiento de los requisitos» {Criterio TEAC 00/99999/2099/00/00, de 01/01/2099 — https://serviciostelematicosext.hacienda.gob.es/TEAC/DYCTEA/criterio.aspx?id=00/99999/2099/00/0/1}.
+--- FIN
+
+
+--- CASO: teac-texto-que-no-esta-en-el-criterio
+esperado: NO_VERIFICADA
+ejercicio: 2023
+motivo: el criterio SI esta en la copia local, pero el fragmento no aparece en el. Cita alucinada sobre doctrina
+texto:
+El tribunal senala que «bastara con la simple reclamacion verbal al deudor sin ningun otro requisito» {Criterio TEAC 00/09001/2024/00/00, de 15/03/2025, TEAC — https://serviciostelematicosext.hacienda.gob.es/TEAC/DYCTEA/criterio.aspx?id=00/09001/2024/00/0/1}.
+--- FIN
+
+
+--- CASO: teac-enlace-a-otro-criterio
+esperado: NO_VERIFICADA
+ejercicio: 2023
+motivo: el texto SI esta en el criterio citado, pero el enlace lleva a otro. Quien lo pinche no vera lo que se le cita
+texto:
+El tribunal senala que «La modificacion de la base imponible exige el cumplimiento de los requisitos» {Criterio TEAC 00/09001/2024/00/00, de 15/03/2025, TEAC — https://serviciostelematicosext.hacienda.gob.es/TEAC/DYCTEA/criterio.aspx?id=00/06614/2024/00/0/1}.
+--- FIN
+
+
+--- CASO: teac-criterio-no-cacheado
+esperado: NO_VERIFICABLE
+ejercicio: 2023
+motivo: el criterio puede existir de verdad en DYCTEA, pero no lo tenemos descargado. Sin copia local no se da por bueno y no se sale a la red a verificar
+texto:
+Segun la doctrina del TEAC, «el plazo para la modificacion es de tres meses» {Criterio TEAC 00/07777/2022/00/00, de 10/10/2024, TEAC — https://serviciostelematicosext.hacienda.gob.es/TEAC/DYCTEA/criterio.aspx?id=00/07777/2022/00/0/1}.
+--- FIN
+
+
+# ===================================================================
+# FASE 14 - LA UNIDAD RESOLUTORIA. UN TEAR NO ES EL TEAC.
+# El defecto era real y estaba en la copia local: dos resoluciones de
+# TEAR citadas como "Criterio TEAC", con la fuerza del art. 239.8 LGT
+# atribuida a quien no la tiene. El rotulo de la cita se comprueba
+# contra el campo `unidad` del documento, en LOS DOS SENTIDOS.
+# El de prueba esta en casos/teac_prueba/ y es INVENTADO.
+# ===================================================================
+
+--- CASO: tear-presentado-como-doctrina-del-teac
+esperado: NO_VERIFICADA
+ejercicio: 2023
+motivo: EL CASO QUE DA NOMBRE A LA FASE. El fragmento es literal y el enlace es correcto, pero la resolucion es del TEAR de Cataluña y se cita como «Criterio TEAC»: se le atribuye una fuerza vinculante frente a toda la Administracion que un tribunal regional no tiene. Una cita comprobable atribuida al tribunal equivocado es peor que una inventada, porque sale verde
+texto:
+La doctrina del tribunal establece que «el credito debe acreditarse como definitivamente incobrable antes de rectificar la cuota repercutida» {Criterio TEAC 08/09003/2022/00/00, de 21/09/2022, TEAC — https://serviciostelematicosext.hacienda.gob.es/TEAC/DYCTEA/criterio.aspx?id=08/09003/2022/00/0/1}.
+--- FIN
+
+
+--- CASO: tear-citado-como-lo-que-es
+esperado: VERIFICADA
+ejercicio: 2023
+motivo: la misma resolucion y el mismo fragmento, pero nombrando al tribunal que la dicto. Asi SI vale: lo que se rechaza es la atribucion falsa, no la fuente
+texto:
+El tribunal regional resolvio que «el credito debe acreditarse como definitivamente incobrable antes de rectificar la cuota repercutida» {Resolucion del TEAR de Cataluña 08/09003/2022/00/00, de 21/09/2022 — https://serviciostelematicosext.hacienda.gob.es/TEAC/DYCTEA/criterio.aspx?id=08/09003/2022/00/0/1}.
+--- FIN
+
+
+--- CASO: teac-degradado-a-tribunal-regional
+esperado: NO_VERIFICADA
+ejercicio: 2023
+motivo: el engaño al reves, y tambien engaña: es doctrina del TEAC presentada como resolucion de un TEAR. Quien lo lea descartara como caso aislado algo que SI vincula a toda la Administracion
+texto:
+El tribunal regional señala que «La modificacion de la base imponible exige el cumplimiento de los requisitos» {Resolucion del TEAR de Cataluña 00/09001/2024/00/00, de 15/03/2025 — https://serviciostelematicosext.hacienda.gob.es/TEAC/DYCTEA/criterio.aspx?id=00/09001/2024/00/0/1}.
+--- FIN

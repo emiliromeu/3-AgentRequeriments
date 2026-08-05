@@ -147,13 +147,14 @@ class Informe:
 class Verificador:
     """Comprueba citas contra el corpus de la fase 1."""
 
-    def __init__(self, indice, cache_dgt=None):
+    def __init__(self, indice, cache_dgt=None, cache_teac=None):
         self.ix = indice
         # La copia local de consultas de la DGT. Se puede inyectar para que la
         # bateria use su propio juego de prueba: una consulta inventada NO
         # puede acabar en la cache de verdad, donde seria indistinguible de una
         # autentica.
         self._cache_dgt = cache_dgt
+        self._cache_teac = cache_teac
         # Indice de textos normalizados, uno por version, para buscar literales.
         # Se construye una vez: son ~750 versiones.
         self._articulado: list[tuple[str, int, str, str]] = []
@@ -369,6 +370,91 @@ class Verificador:
         d.version_usada = {"fecha": consulta.fecha, "origen": "cache DGT"}
         return d
 
+    def _verificar_teac(self, cita: C.Cita, d: Dictamen) -> Dictamen:
+        """Un criterio del TEAC, contra la copia local. Ver `_verificar_dgt`."""
+        from . import teac as T
+
+        numero = cita.referencia.numero
+        d.referencia_corpus = f"{T.ETIQUETA} {numero}"
+        d.norma = "teac"
+
+        cache = self._cache_teac if self._cache_teac is not None else T.CacheTEAC()
+        criterio = cache.leer(numero)
+        if criterio is not None:
+            d.referencia_corpus = f"{criterio.etiqueta} {numero}"
+        if criterio is None:
+            d.estado = NO_VERIFICABLE
+            d.motivo = (
+                f"el criterio {numero} del TEAC no esta en la copia local. Sin "
+                f"el documento delante no hay contra que comprobar el texto, "
+                f"asi que no se da por bueno")
+            d.comprobaciones.append("criterio citado: no esta en la cache")
+            return d
+
+        d.enlace_correcto = criterio.url
+
+        # EL TRIBUNAL QUE DICE SER TIENE QUE SER EL QUE ES. Se comprueba ANTES
+        # que el texto: una cita literalmente correcta atribuida al tribunal
+        # equivocado es peor que una inventada, porque es comprobable y sale
+        # verde. Ver `teac.rotulo_valido`.
+        estado_rotulo, motivo = T.rotulo_valido(cita.referencia.bruto,
+                                                criterio.unidad)
+        if estado_rotulo != T.ROTULO_OK:
+            # Sin unidad en la copia local NO se puede comprobar: eso es
+            # NO_VERIFICABLE, no NO_VERIFICADA. La diferencia importa porque
+            # una es culpa del texto y la otra es un hueco de nuestra cache.
+            d.estado = (NO_VERIFICABLE if estado_rotulo == T.ROTULO_SIN_UNIDAD
+                        else NO_VERIFICADA)
+            d.motivo = motivo
+            d.comprobaciones.append(
+                f"unidad: la copia local dice {criterio.unidad or '(no consta)'}")
+            return d
+        d.comprobaciones.append(
+            f"unidad: {criterio.unidad or '(no consta)'}, y la cita lo dice bien")
+
+        cuerpo = C.normalizar_literal(
+            " ".join((criterio.criterio, criterio.asunto)))
+        trozos = cita.trozos or [cita.literal_norm]
+        faltan = [x for x in trozos if x and x not in cuerpo]
+        if faltan:
+            d.estado = NO_VERIFICADA
+            d.motivo = (
+                f"el fragmento NO esta en {criterio.etiqueta} {numero}; se ha "
+                f"comprobado contra la copia local del criterio")
+            d.comprobaciones.append("texto: no aparece en el criterio citado")
+            return d
+        d.comprobaciones.append(
+            f"texto: literal en {criterio.etiqueta} {numero} (copia local)")
+
+        if cita.enlace:
+            m = T.RE_ID_CRITERIO.search(cita.enlace)
+            apuntado = m.group("id") if m else ""
+            if not apuntado:
+                d.estado = NO_VERIFICADA
+                d.motivo = (f"el enlace de la cita no dice a que criterio "
+                            f"apunta: {cita.enlace}")
+                d.comprobaciones.append("enlace: sin numero de criterio")
+                return d
+            # Se compara por RESOLUCION, no por cadena: la cita nombra la
+            # resolucion y el enlace lleva al criterio, que es la resolucion
+            # mas el numero de criterio. Son el mismo documento.
+            if not T.mismo_criterio(apuntado, numero):
+                d.estado = NO_VERIFICADA
+                d.motivo = (
+                    f"la cita dice {numero} pero el enlace lleva a {apuntado}: "
+                    f"quien lo pinche no vera lo que se le esta citando")
+                d.comprobaciones.append(
+                    f"enlace: apunta a {apuntado}, no a {numero}")
+                return d
+            d.comprobaciones.append(f"enlace: apunta a {numero}, correcto")
+        else:
+            d.comprobaciones.append("enlace: no se cito ninguno")
+
+        d.estado = VERIFICADA
+        d.motivo = ""
+        d.version_usada = {"fecha": criterio.fecha, "origen": "cache TEAC"}
+        return d
+
     def verificar_cita(
         self, cita: C.Cita, ejercicio: int | None, exigir_norma: bool = False
     ) -> Dictamen:
@@ -404,6 +490,13 @@ class Verificador:
         # daria por falsas todas las citas de criterio, que serian correctas.
         if ref.norma == "dgt":
             return self._verificar_dgt(cita, d)
+
+        # -- 0 ter. criterio del TEAC: la misma regla desdoblada -----------
+        # Los principios no cambian: texto contra la copia cacheada, enlace
+        # contra el criterio que dice ser. Un criterio no cacheado es NO
+        # VERIFICABLE, jamas verificado.
+        if ref.norma == "teac":
+            return self._verificar_teac(cita, d)
 
         # -- 1. norma fuera del corpus -> NO VERIFICABLE, nunca verificada --
         if ref.norma == "externa":

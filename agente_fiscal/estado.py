@@ -1,7 +1,7 @@
 """El ESTADO de una respuesta, calculado por reglas.
 
-    CRITERIO CLARO      norma alineada y vigente en el ejercicio
-    CRITERIO DISCUTIDO  hay textos que apuntan a soluciones distintas
+    CRITERIO CLARO      nada de lo consultado apunta a una solucion distinta
+    CRITERIO DISCUTIDO  hay DESACUERDO DE FONDO entre los textos
     NO ENCONTRADO       no hay respaldo suficiente
 
 Lo decide el codigo mirando la evidencia recuperada y el dictamen del
@@ -10,6 +10,62 @@ verificador. El modelo no elige el estado ni lo influye con su tono.
 Por que asi: un agente que siempre suena seguro es peor que inutil. La oficina
 se calibra con el, deja de comprobarlo, y el dia que se equivoca no lo mira
 nadie. El tono es del modelo; el estado, del expediente.
+
+----------------------------------------------------------------------------
+DOS EJES, DOS CAJONES. LA CORRECCION QUE TRAJO LA MEDICION DE LAS TRES FUENTES
+----------------------------------------------------------------------------
+Medido sobre las 19 consultas del banco, DISCUTIDO salia 17 de 19 ANTES de
+encender la DGT y el TEAC. Con las capas de criterio, 19 de 19. Una señal que
+sale siempre no informa de nada: quien la lee deja de mirarla, y el dia que
+hay discusion de verdad se lee igual que los otros dieciocho dias.
+
+La causa no era el criterio: eran los avisos de vigencia y las remisiones a
+normas que no tenemos. Eso NO es criterio discutido. Es COBERTURA INCOMPLETA
+DE NUESTRO CORPUS, que es un eje distinto, y estaba en el mismo cajon.
+
+    ESTADO ................ SOLO por desacuerdo de fondo entre textos:
+                            · varias consultas de la DGT de años distintos
+                              sobre el mismo precepto
+                            · el TEAC pronunciandose sobre una consulta que
+                              esta respuesta cita
+                            Nada mas. Ver `Dictamen.senales`.
+
+    AVISOS DE COBERTURA ... lo que NO SE HA PODIDO MIRAR. Se enseñan IGUAL DE
+                            CLAROS y NO tocan el estado.
+
+Que un aviso de cobertura no mueva el estado NO significa que importe menos:
+significa que responde a otra pregunta. El estado dice «¿los textos se
+contradicen?»; la cobertura dice «¿que no he podido mirar?». Juntarlas hacia
+que la primera no se pudiera contestar.
+
+----------------------------------------------------------------------------
+Y LA COBERTURA, PARTIDA OTRA VEZ: UN AVISO QUE SALE SIEMPRE ES DECORACION
+----------------------------------------------------------------------------
+Separar el estado de la cobertura arreglo el estado y traslado el problema un
+piso mas abajo: 101 avisos en 19 consultas, 5,3 de media. Un bloque asi se deja
+de leer exactamente igual que se dejaba de leer el DISCUTIDO.
+
+Se parten por lo que el lector PUEDE HACER con ellos, que es la unica division
+que le sirve a quien lo lee:
+
+    ACCIONABLE ..... hay algo CONCRETO que mirar, y cambia de una consulta a
+                     otra: doctrina del TEAC sobre este articulo, el articulo
+                     cambio despues del ejercicio, una disposicion que le
+                     afecta y no se recogio, una fuente que no respondia, una
+                     consulta citada que va de otra cosa.
+                     Van ARRIBA y COMPLETOS. Ver `Dictamen.cobertura`.
+
+    ESTRUCTURAL .... limites PERMANENTES del corpus: remisiones a normas que
+                     no tenemos y que no vamos a tener (Ley Concursal, Codigo
+                     Penal). Son los mismos hoy que dentro de un año, no
+                     dependen de la consulta y no hay nada que hacer con
+                     ellos, pero ocupaban el mismo sitio que los importantes.
+                     Van RESUMIDOS EN UNA LINEA al final.
+                     Ver `Dictamen.estructural` y `Dictamen.linea_estructural`.
+
+EL CRITERIO, PARA LA PROXIMA VEZ: un aviso que sale siempre no es un aviso, es
+decoracion. Si algo aparece en todas las respuestas, o se resume o se quita;
+dejarlo entero solo consigue que se deje de leer lo que esta a su lado.
 """
 
 from __future__ import annotations
@@ -284,14 +340,48 @@ def seleccionar_material(indice, consulta: str, resultados, grafo=None,
 class Dictamen:
     estado: str
     motivos: list = field(default_factory=list)   # por que ese estado
-    senales: list = field(default_factory=list)   # senales de discusion halladas
+    # DESACUERDO DE FONDO. Estas SI mueven el estado a DISCUTIDO.
+    senales: list = field(default_factory=list)
+    # LO QUE NO SE HA PODIDO MIRAR Y SE PUEDE HACER ALGO AL RESPECTO. Se enseña
+    # igual de claro y NO mueve el estado. Un CRITERIO CLARO con avisos de
+    # cobertura es normal: los textos no se contradicen, pero hay huecos.
+    cobertura: list = field(default_factory=list)
+    # LIMITES PERMANENTES DEL CORPUS. Cada uno es {"referencia", "normas"}. No
+    # cambian de una consulta a otra, asi que se resumen en una linea.
+    estructural: list = field(default_factory=list)
     preceptos: list = field(default_factory=list) # referencias que lo sostienen
+
+    @property
+    def linea_estructural(self) -> str:
+        """Los limites del corpus, en UNA linea. «» si no hay ninguno.
+
+        Se resume porque es siempre lo mismo: que el articulo 80 remita a la
+        Ley Concursal no es una novedad de esta consulta, es el mapa del
+        corpus. Entero ocupaba tanto como los avisos que si hay que leer.
+        """
+        if not self.estructural:
+            return ""
+        refs = sorted({e["referencia"] for e in self.estructural})
+        normas = sorted({n for e in self.estructural for n in e["normas"]})
+        cuantos = f"{len(refs)} de los preceptos citados" if len(refs) > 1 \
+            else refs[0]
+        corte = normas[:4]
+        resto = len(normas) - len(corte)
+        return (
+            f"{cuantos} remite" + ("n" if len(refs) > 1 else "") + " a "
+            + ", ".join(corte) + (f" y {resto} norma(s) mas" if resto else "")
+            + ", que no estan en el corpus. Es un limite permanente de la "
+              "herramienta, no algo de esta consulta"
+        )
 
     def a_json(self) -> dict:
         return {
             "estado": self.estado,
             "motivos": self.motivos,
             "senales_de_discusion": self.senales,
+            "avisos_de_cobertura": self.cobertura,
+            "limites_del_corpus": self.estructural,
+            "linea_estructural": self.linea_estructural,
             "preceptos_que_lo_sostienen": self.preceptos,
         }
 
@@ -303,6 +393,7 @@ def calcular(
     ejercicio: int | None,
     n_resultados: int,
     lectura_dgt=None,
+    lectura_teac=None,
 ) -> Dictamen:
     """Estado a partir de la evidencia. Ningun texto del modelo entra aqui.
 
@@ -337,74 +428,108 @@ def calcular(
 
     preceptos = [indice.por_clave[c].registro["referencia"] for c in claves]
 
-    # --- senales de que el criterio no esta cerrado ---
-    senales: list[str] = []
+    # LOS DOS CAJONES. Ver la cabecera del modulo: uno mueve el estado y el
+    # otro no, y por eso no pueden compartir lista.
+    desacuerdo: list[str] = []   # -> DISCUTIDO
+    cobertura: list[str] = []    # -> se enseña entero, no mueve nada
+    estructural: list[dict] = [] # -> se resume en una linea al final
+    motivos: list[str] = []
 
     for clave in claves:
         reg = indice.por_clave[clave].registro
         ref = reg["referencia"]
 
-        # 1) el texto no es el del ejercicio, o cambio dentro de el
+        # --- COBERTURA 1) el texto no es el del ejercicio, o cambio dentro ---
+        # Que un articulo se reformara en 2024 no enfrenta a dos textos: dice
+        # que el nuestro puede no ser el que aplicaba. Es un hueco, no una
+        # discusion.
         for a in V.avisos(reg, ejercicio):
             if a.nivel == V.GRAVE:
-                senales.append(f"{ref}: {a.texto}")
+                cobertura.append(f"{ref}: {a.texto}")
 
-        # 2) el precepto remite a algo que no esta en el corpus: la respuesta
-        #    podria depender de una norma que no se ha podido consultar
+        # --- ESTRUCTURAL) remite a una norma que no esta en el corpus -------
+        # Esto NO es accionable: no hay nada que el lector pueda mirar, porque
+        # la norma no esta y no va a estar. Y es el aviso que mas salia: en las
+        # 19 del banco era casi la mitad de todos los avisos de cobertura. Va
+        # resumido al final, no repetido articulo por articulo arriba.
         pendientes = grafo.pendientes_de(clave)
         if pendientes:
             destinos = sorted(
                 {r.norma_externa or "norma sin identificar" for r in pendientes}
             )
-            senales.append(
-                f"{ref} remite a {', '.join(destinos[:3])}, que no esta en el "
-                f"corpus: no se ha podido comprobar que dice"
-            )
+            estructural.append({"referencia": ref, "normas": destinos})
 
-        # 3) una disposicion menciona a este articulo y NO se ha citado.
-        #    Es el caso que mas duele: el articulo parece cerrado y la
-        #    excepcion vive al final de la ley.
+        # --- COBERTURA 3) una disposicion lo menciona y no se ha citado -----
+        # El articulo parece cerrado y la excepcion vive al final de la ley.
+        # Tampoco es desacuerdo: es material del corpus que la respuesta no ha
+        # mirado, que es exactamente la definicion del otro eje.
         for rem in grafo.le_mencionan(clave):
             origen = indice.por_clave[rem.origen].registro
             if not origen["tipo"].startswith("disposicion"):
                 continue
             if rem.origen in claves:
                 continue  # se ha citado, luego se ha tenido en cuenta
-            senales.append(
+            cobertura.append(
                 f"{ref}: la {origen['referencia']} lo menciona y la respuesta "
                 f"no la recoge; ahi suelen estar las excepciones"
             )
 
-    # --- 4) lo que dice el criterio de la DGT ---------------------------
-    # Hasta la fase 9B el DISCUTIDO solo podia venir de la propia norma, y por
-    # eso no habia saltado nunca: la ley y su reglamento rara vez se
-    # contradicen por escrito. El criterio administrativo es otra cosa.
-    motivos_dgt = []
-    if lectura_dgt is not None:
-        senales.extend(lectura_dgt.senales)
+    # --- la doctrina del TEAC -------------------------------------------
+    # LAS DOS SEÑALES NO PESAN IGUAL, NO SE PRESENTAN IGUAL Y AHORA TAMPOCO
+    # VAN AL MISMO CAJON.
+    #
+    #   FUERTE  el TEAC cita POR NUMERO una consulta que esta respuesta usa.
+    #           No hay que adivinar: el tribunal ha puesto las dos cosas en la
+    #           misma frase. Es DESACUERDO DE FONDO y mueve el estado.
+    #   DEBIL   coincidencia de articulo. No afirma que haya discusion; afirma
+    #           que hay doctrina sin comprobar. Es COBERTURA.
+    #
+    # Ver `teac.leer_doctrina` y el LEEME.
+    if lectura_teac is not None:
+        desacuerdo.extend(lectura_teac.desacuerdo)
+        cobertura.extend(lectura_teac.cobertura)
+        if lectura_teac.desacuerdo:
+            motivos.append(
+                "el TEAC se ha pronunciado expresamente sobre criterio que "
+                "esta respuesta cita")
+        # La fuente caida NO se disimula, pero tampoco es una discusion: es un
+        # hueco declarado, y ese es su sitio.
+        if lectura_teac.fuente_caida:
+            cobertura.append(
+                "no se ha podido consultar la doctrina del TEAC"
+                + (f" ({lectura_teac.motivo_fuente})"
+                   if lectura_teac.motivo_fuente else "")
+                + ": puede haber doctrina de tribunales que no se ha visto")
 
-        # La fuente caida NO se disimula. Se responde con la ley, se baja de
-        # estado y se dice por que: contestar como si tuvieramos criterio
-        # cuando no sabemos si lo tenemos es el fallo que esta fase evita.
+    # --- el criterio de la DGT ------------------------------------------
+    if lectura_dgt is not None:
+        desacuerdo.extend(lectura_dgt.senales)
+        cobertura.extend(lectura_dgt.cobertura)
+        if lectura_dgt.senales:
+            motivos.append(
+                "hay consultas de la DGT de años distintos sobre el mismo "
+                "precepto: el criterio ha podido cambiar")
         if lectura_dgt.fuente_caida:
-            senales.append(
+            cobertura.append(
                 "no se ha podido consultar el criterio de la DGT"
                 + (f" ({lectura_dgt.motivo_fuente})"
                    if lectura_dgt.motivo_fuente else "")
                 + ": esta respuesta se sostiene SOLO en la norma, y puede "
                   "haber criterio administrativo que no se ha visto"
             )
-            motivos_dgt.append(
-                "el estado baja porque la fuente de criterio no respondia")
 
-    if senales:
+    cobertura = sorted(set(cobertura))
+
+    if desacuerdo:
         return Dictamen(
             DISCUTIDO,
-            motivos_dgt or [
-                "las citas estan verificadas, pero hay textos que pueden "
-                "llevar a una solucion distinta"
+            motivos or [
+                "las citas estan verificadas, pero hay textos que apuntan a "
+                "una solucion distinta"
             ],
-            senales=sorted(set(senales)),
+            senales=sorted(set(desacuerdo)),
+            cobertura=cobertura,
+            estructural=estructural,
             preceptos=preceptos,
         )
 
@@ -412,7 +537,12 @@ def calcular(
         CLARO,
         [
             f"{len(verificadas)} cita(s) verificada(s) sobre {len(claves)} "
-            f"precepto(s), vigentes en el ejercicio y sin remisiones pendientes"
+            f"precepto(s), y ningun texto de los consultados apunta a una "
+            f"solucion distinta"
+            + (f" (quedan {len(cobertura)} aviso(s) de cobertura, que no "
+               f"cambian el estado)" if cobertura else "")
         ],
+        cobertura=cobertura,
+        estructural=estructural,
         preceptos=preceptos,
     )

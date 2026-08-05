@@ -33,6 +33,7 @@ from agente_fiscal import estado as EST
 from agente_fiscal import modelo as MOD
 from agente_fiscal import redactor as RED
 from agente_fiscal import referencias as R
+from agente_fiscal import teac as TEAC
 from agente_fiscal import verificador as VF
 from agente_fiscal import vigencia as V
 from agente_fiscal.indice import ErrorCorpus, Indice
@@ -109,7 +110,12 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         "estado": None,
         "ejercicio": None,
         "preceptos": [],
+        # DOS EJES, DOS LISTAS. `senales` es desacuerdo de fondo y mueve el
+        # estado; `cobertura` es lo que no se ha podido mirar y no lo mueve.
         "senales": [],
+        "cobertura": [],
+        # Los limites permanentes del corpus, ya resumidos en una linea.
+        "estructural": "",
         "intentos": 0,
         "reintentos": 0,
         "veredicto": None,
@@ -309,6 +315,34 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
             "consultas": [c.numero for c in consultas_dgt],
         }
 
+    # ------------------------------------------------ DOCTRINA (fase 11)
+    # AL TEAC SE LE PREGUNTA POR PRECEPTO, no por palabras: el buscador acaba
+    # de decir que articulos sostienen la respuesta, asi que se le pregunta
+    # directamente por esos. Nada de inventar terminos.
+    criterios_teac = None
+    lectura_teac = None
+    if TEAC.activa():
+        paso("Buscando doctrina del TEAC en la copia local...")
+        apartado("2 ter. Doctrina del TEAC (solo de la copia local)")
+        pares = [(r.get("cuerpo_clave", ""),
+                  r["referencia"].replace("Articulo ", "").lower())
+                 for r in registros]
+        criterios_teac = TEAC.CacheTEAC().por_preceptos(pares, ix.normas)
+        viva_t, motivo_t = TEAC.fuente_viva()
+        print(f"   preceptos consultados: "
+              f"{', '.join(n for _c, n in pares) or '(ninguno)'}")
+        print(f"   criterios en la copia local que citan esos articulos: "
+              f"{len(criterios_teac)}")
+        for c in criterios_teac:
+            print(f"     · {c.resolucion} ({c.fecha}) {c.unidad}"
+                  + ("  [UNIFICACION DE CRITERIO]" if c.unifica_criterio else ""))
+        if not viva_t:
+            print(f"   [AVISO] la fuente de doctrina no responde: {motivo_t}")
+        res["teac"] = {
+            "activa": True, "fuente_viva": viva_t, "motivo_fuente": motivo_t,
+            "criterios": [c.resolucion for c in criterios_teac],
+        }
+
     # ---------------------------------------------------- LLAMADA 2 + bucle
     apartado("3. Redaccion y verificacion (llamada 2, en bucle cerrado)")
     verificador = VF.Verificador(ix)
@@ -317,10 +351,25 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     borrador = ""
     intento = 0
 
+    # EL RECORTE DEL CRITERIO, CONTADO ANTES DE MANDAR NADA. Se calcula una vez
+    # -no cambia entre intentos- y se escribe en la traza: lo que se deja fuera
+    # tiene que poder verse, no adivinarse.
+    plan = RED.plan_de_criterio(registros, ejercicio, grafo, consultas_dgt,
+                                criterios_teac, ix.normas)
+    if plan.recortes:
+        tr.json("recorte_criterio.json", plan.a_json())
+        print(f"   material: ley {plan.ley} car. · criterio {plan.criterio} car. "
+              f"({plan.proporcion_ley:.0%} ley)")
+        for r in plan.recortes:
+            print(f"     · {r.fuente}: {r.enviado}/{r.completo} car. "
+                  f"({r.parrafos_enviados}/{r.parrafos} parrafos) — {r.motivo}")
+        res["recorte"] = plan.a_json()
+
     for intento in range(1, MAX_INTENTOS + 1):
         material = RED.construir_material(
             pregunta, ejercicio, registros, grafo, motivos or None,
-            consultas_dgt=consultas_dgt,
+            consultas_dgt=consultas_dgt, criterios_teac=criterios_teac,
+            normas=ix.normas, plan=plan,
         )
         tr.escribir(f"material_{intento}.txt", material)
         paso(f"Redactando con los articulos encontrados"
@@ -382,7 +431,12 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
                 m = DGT.RE_NUM_CONSULTA.search(bruto) or DGT.RE_NUM_SUELTO.search(bruto)
                 if m:
                     c = cache_dgt.leer(m.group("num"))
-                    if c:
+                    # SOLO LAS QUE TIENEN TEXTO EN EL MATERIAL. Hoy no puede
+                    # colarse otra -para citarla el redactor tendria que
+                    # haberla visto- pero la garantia no se deja a que eso siga
+                    # siendo verdad: una señal que nombra una consulta cuyo
+                    # texto no esta manda a leer algo que no se le ha dado.
+                    if c and c.numero in plan.enviadas:
                         citadas.append(c)
         # Las CLAVES, no las referencias: una clave lleva dentro de que norma
         # es el articulo, y comparar por numero suelto es el fallo que la fase
@@ -395,8 +449,44 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         lectura_dgt.fuente_caida = not viva
         lectura_dgt.motivo_fuente = motivo_fuente
 
+    if TEAC.activa():
+        # Solo cuenta la doctrina que se ha llegado a citar y verificar, y las
+        # consultas de la DGT que esta respuesta cita: la señal fuerte es el
+        # cruce de las dos cosas.
+        citados_teac = []
+        if informe is not None:
+            cache_t = TEAC.CacheTEAC()
+            for d in informe.dictamenes:
+                if d.estado == VF.VERIFICADA and d.norma == "teac":
+                    m = TEAC.RE_ID_CRITERIO.search(d.referencia_citada or "")
+                    c = cache_t.leer(m.group("id")) if m else None
+                    if c:
+                        citados_teac.append(c)
+        if not citados_teac:
+            citados_teac = criterios_teac or []
+        nums_dgt = []
+        if informe is not None:
+            from agente_fiscal import dgt as _D
+            for d in informe.dictamenes:
+                if d.estado == VF.VERIFICADA and d.norma == "dgt":
+                    m = (_D.RE_NUM_CONSULTA.search(d.referencia_citada or "")
+                         or _D.RE_NUM_SUELTO.search(d.referencia_citada or ""))
+                    if m:
+                        nums_dgt.append(m.group("num"))
+        pares_v = []
+        for c in (claves_verificadas if 'claves_verificadas' in dir() else []):
+            if c.count("#") >= 2:
+                norma_id, indice, referencia = c.split("#", 2)
+                pares_v.append((f"{norma_id}#{indice}",
+                                referencia.replace("articulo ", "").strip().lower()))
+        viva_t, motivo_t = TEAC.fuente_viva()
+        lectura_teac = TEAC.leer_doctrina(citados_teac, pares_v, nums_dgt,
+                                          ix.normas)
+        lectura_teac.fuente_caida = not viva_t
+        lectura_teac.motivo_fuente = motivo_t
+
     dictamen = EST.calcular(informe, ix, grafo, ejercicio, len(registros),
-                            lectura_dgt=lectura_dgt)
+                            lectura_dgt=lectura_dgt, lectura_teac=lectura_teac)
     tr.json("estado.json", dictamen.a_json())
     print(f"   {dictamen.estado}")
     for m in dictamen.motivos:
@@ -404,6 +494,8 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
 
     res["estado"] = dictamen.estado
     res["senales"] = dictamen.senales
+    res["cobertura"] = dictamen.cobertura
+    res["estructural"] = dictamen.linea_estructural
     res["preceptos"] = dictamen.preceptos
 
     if dictamen.estado == EST.NO_ENCONTRADO:
@@ -412,10 +504,24 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
 
     # ---------------------------------------------------- RESPUESTA
     titulo(f"RESPUESTA  ·  {dictamen.estado}  ·  ejercicio {ejercicio}")
+    # DOS BLOQUES, PORQUE SON DOS EJES. Arriba lo que enfrenta textos entre si
+    # -y por eso mueve el estado-; debajo lo que no se ha podido mirar, que se
+    # enseña igual de claro y no lo mueve. Ver la cabecera de `estado.py`.
     if dictamen.senales:
-        print("AVISOS (por los que el criterio no se da por cerrado):")
+        print("DESACUERDO (por esto el criterio no se da por cerrado):")
         for s in dictamen.senales:
             print(f"  !! {s}")
+        print("-" * ANCHO)
+    # Y la cobertura, partida por lo que se puede HACER con ella: lo accionable
+    # entero y arriba; los limites permanentes del corpus, en una linea al
+    # final. Un aviso que sale siempre no es un aviso, es decoracion.
+    if dictamen.cobertura:
+        print("LO QUE NO SE HA PODIDO MIRAR (no cambia el estado, pero lee):")
+        for s in dictamen.cobertura:
+            print(f"  ·· {s}")
+    if dictamen.linea_estructural:
+        print(f"  (limite del corpus: {dictamen.linea_estructural})")
+    if dictamen.cobertura or dictamen.linea_estructural:
         print("-" * ANCHO)
     res["respuesta"] = borrador.strip()
     print(borrador.strip())
@@ -435,6 +541,8 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         "veredicto": informe.veredicto, "intentos": intento,
         "motor": motor.nombre, "modelo": getattr(motor, "modelo", "(ninguno)"),
         "preceptos": dictamen.preceptos, "senales": dictamen.senales,
+        "avisos_de_cobertura": dictamen.cobertura,
+        "limites_del_corpus": dictamen.linea_estructural,
     })
     res["codigo"] = 0
     return res

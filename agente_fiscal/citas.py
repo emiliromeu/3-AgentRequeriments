@@ -128,6 +128,23 @@ _RE_REF_DGT = re.compile(
     re.IGNORECASE,
 )
 
+# Un criterio del TEAC. Rotulo delante + numero de resolucion, como la DGT:
+# el numero suelto NO basta, porque «00/06614/2024/00/00» a secas podria ser
+# cualquier cosa.
+# El rotulo se captura APARTE del numero, porque hay que comprobarlo: dice de
+# que tribunal es la resolucion, y eso se contrasta contra la copia local. Una
+# resolucion del TEAR de Baleares citada como «Criterio TEAC» esta afirmando
+# una fuerza vinculante que no tiene.
+_RE_REF_TEAC = re.compile(
+    r"\b(?P<rotulo>Criterio\s+TEAC"
+    r"|Resoluci[oó]n\s+del\s+(?:TEAC|TEAR\s+de[l]?\s+[^,\d]{2,32}"
+    r"|Sala\s+Desconc\.?\s+de\s+[^,\d]{2,32})"
+    r"|resoluci[oó]n\s+del\s+TEAC"
+    r"|TEAC)\s+"
+    r"(?P<num>\d{2}/\d{4,5}/\d{4}/\d{2}/\d{1,2}(?:/\d+)?)\b",
+    re.IGNORECASE,
+)
+
 VENTANA_DESPUES = 220   # cuanto se mira tras la comilla buscando la referencia
 VENTANA_ANTES = 200     # cuanto se mira antes (forma "el art. X dispone que ...")
 
@@ -180,6 +197,18 @@ def _leer_referencia(
         if not encontrados:
             return None
         return encontrados[-1] if ultima else encontrados[0]
+
+    # -- criterio del TEAC: antes que nada, igual que la DGT --------------
+    m_teac = elegir(_RE_REF_TEAC)
+    if m_teac:
+        return Referencia(
+            bruto=m_teac.group(0).strip(),
+            tipo="criterio_teac",
+            numero=m_teac.group("num"),
+            norma="teac",
+            norma_bruta=m_teac.group(0).strip(),
+            posicion=desplazamiento + m_teac.start(),
+        )
 
     # -- consulta de la DGT: se mira ANTES que nada -----------------------
     # Va primero a proposito. "Consulta DGT V1601-22" no contiene ningun
@@ -245,7 +274,8 @@ def _leer_referencia(
     return ref
 
 
-_RE_PARENTESIS_PEGADO = re.compile(r"^[\s,;:.\-—]{0,6}[\(\[](?P<dentro>[^)\]]{1,300})[\)\]]")
+_RE_PARENTESIS_PEGADO = re.compile(
+    r"^[\s,;:.\-—]{0,6}[\(\[\{](?P<dentro>[^)\]\}]{1,300})[\)\]\}]")
 _ABRECOMILLAS = "«“\""
 
 
@@ -264,9 +294,12 @@ def _hasta_fin_de_frase(despues: str) -> str:
     corte = len(despues)
     profundidad = 0
     for i, ch in enumerate(despues):
-        if ch in "([":
+        # Las LLAVES cuentan como las otras. La cita del TEAC va entre { }, y
+        # sin contarlas la ventana se cortaba en el primer punto de la URL
+        # -«https://serviciostelematicosext.»- y el enlace llegaba partido.
+        if ch in "([{":
             profundidad += 1
-        elif ch in ")]":
+        elif ch in ")]}":
             profundidad = max(0, profundidad - 1)
         elif ch in _ABRECOMILLAS and i > 0:
             corte = i

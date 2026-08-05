@@ -4,6 +4,29 @@ Sistema de consulta sobre normativa del IVA para el departamento fiscal de una
 gestoría. **No decide: decide la persona.** Busca la norma aplicable, la lee y
 devuelve la respuesta con las citas y los enlaces para comprobarla.
 
+## ⚠️ HOY EN PRODUCCIÓN HAY DOS ESTADOS, NO TRES
+
+> **Con la DGT y el TEAC apagados —que es como está hoy— `CRITERIO DISCUTIDO`
+> NO PUEDE SALIR NUNCA.** Solo salen `CRITERIO CLARO` y `NO ENCONTRADO`.
+
+No es un fallo, es la consecuencia de separar el estado de la cobertura (fase
+12): el estado solo se mueve por **desacuerdo de fondo entre textos**, y el
+desacuerdo de fondo solo lo pueden producir las fuentes de criterio. Sin ellas
+no hay con qué detectar que dos textos se contradicen — la ley y su reglamento
+casi nunca se contradicen por escrito, y de hecho antes de la fase 9B el
+DISCUTIDO no había saltado nunca por esa vía.
+
+**Qué hay que decidir, y no es programar:**
+
+- `GUIA.md` describe tres estados y explica uno que hoy no puede pasar. El
+  texto de sustitución está escrito y **sin activar** en `GUIA_ESTADOS_NUEVO.md`.
+- Las opciones son dos: **encender las fuentes** (y entonces los tres estados
+  vuelven a tener sentido y se cambian los textos a la vez), o **quitar
+  DISCUTIDO de la guía** mientras sigan apagadas. Lo que no se puede dejar es
+  la hoja de la mesa describiendo un estado que la herramienta no produce.
+- Mientras tanto no hay riesgo de decir algo falso en pantalla: la frase de
+  DISCUTIDO no llega a mostrarse porque el estado no se alcanza.
+
 ## LA REGLA PERMANENTE DE LAS EXPECTATIVAS
 
 > **Una expectativa solo se cambia con evidencia INDEPENDIENTE de la salida del
@@ -42,6 +65,30 @@ Un umbral que se mueve sin dejar rastro es como se lavan los resultados: se baja
 el listón, se declara verde y nadie puede reconstruir después que el listón
 estaba más alto. Por eso, cuando un criterio se revoca, **se queda escrito aquí
 con quién lo revocó y con qué argumento**, no se borra del sitio donde estaba.
+
+### 5 de agosto de 2026 · «la fuente caída baja el estado»
+
+**Qué decía el criterio.** De la fase 9B: si la fuente de criterio no respondía,
+la respuesta bajaba de CRITERIO CLARO a CRITERIO DISCUTIDO, para no contestar
+como si tuviéramos criterio cuando no sabemos si lo tenemos.
+
+**Quién lo revoca y con qué argumento.** Emili, en el encargo de separar el
+estado de la cobertura. El argumento: **son dos ejes distintos**. Que PETETE no
+responda no enfrenta dos textos entre sí; dice que hay un hueco. Meterlo en el
+mismo cajón que el desacuerdo de fondo era parte de por qué DISCUTIDO salía en
+17 de cada 19 consultas *antes incluso* de encender la DGT y el TEAC, y una
+etiqueta que sale casi siempre deja de informar.
+
+**Qué NO cambia, y es lo que importa.** La fuente caída **se sigue diciendo,
+igual de clara**, en el bloque «lo que no se ha podido mirar», y se sigue
+asumiendo caída si nunca se ha comprobado. No se disimula: cambia de bloque, no
+de visibilidad. Lo que se revoca es el automatismo de bajar el estado, no el
+deber de avisar.
+
+**Qué habría que ver para volver atrás.** Que alguien lea el bloque de cobertura
+como decoración y firme sin mirarlo. Si eso pasa, el problema no se arregla
+devolviendo el aviso al estado —volvería la saturación—, sino haciendo que el
+bloque pese más en pantalla.
 
 ### 2 de agosto de 2026 · el mínimo de 13/15 del banco, bloque 1
 
@@ -627,12 +674,13 @@ Ninguna afirma que haya contradicción de fondo. Afirman que **no se puede
 afirmar que no la haya**, que es lo que corresponde a un sistema que no lee, y
 por eso producen DISCUTIDO y no NO ENCONTRADO.
 
-### La fuente caída baja el estado
+### La fuente caída se dice, pero ya NO baja el estado
 
-Si la fuente de criterio no respondía, cualquier respuesta baja de CLARO a
-DISCUTIDO y **lo dice en una señal visible**. Y si nunca se ha comprobado, se
-asume **caída**: dar por viva una fuente sin mirarla sería justo el fallo que
-esta fase evita.
+**REVOCADO el 5 de agosto de 2026** — ver «Criterios revocados». Si la fuente de
+criterio no respondía, se dice en el bloque de **cobertura**, igual de claro, y
+el estado no se mueve. Y si nunca se ha comprobado, se sigue asumiendo
+**caída**: dar por viva una fuente sin mirarla sería justo el fallo que esta
+fase evita.
 
 ### El texto de CRITERIO CLARO, en dos versiones
 
@@ -641,3 +689,570 @@ esta fase evita.
 encender la DGT hay que actualizar `GUIA.md` a la vez**, que sigue diciendo que
 la DGT no está: si se cambia solo uno, la hoja de la mesa y la pantalla dirán
 cosas distintas.
+
+## FASE 11 · La doctrina del TEAC, y LAS DOS SEÑALES
+
+**Construida y APAGADA**, con interruptor propio `AGENTE_TEAC=1`, distinto del
+de la DGT. Con los dos apagados el sistema se comporta exactamente igual que
+antes: batería 34/34, banco 16/19, fase 4 5/5, ocho suites en verde.
+
+### La jerarquía
+
+```
+ley y reglamento   >   TEAC   >   DGT
+```
+
+No es preferencia de estilo. El criterio del TEAC **vincula a toda la
+Administración tributaria** (art. 239.8 LGT); una consulta de la DGT vincula
+**frente a quien consultó**. En la respuesta: primero la norma, después el TEAC,
+después la DGT, cada bloque etiquetado. El orden del material que ve el redactor
+**es** la jerarquía: lo que se lee primero pesa primero.
+
+Tres fuentes, tres formas de cita, distinguibles sin leer:
+
+```
+ley    (artículo 95 de la Ley 37/1992, https://www.boe.es/…)
+TEAC   {Criterio TEAC 00/06614/2024/00/00, de 21/05/2026, TEAC — https://…}
+DGT    [Consulta DGT V1601-22, de 01/07/2022 — https://petete…]
+```
+
+### LAS DOS SEÑALES DE DISCUTIDO NO PESAN IGUAL
+
+Esto es lo que hay que tener claro dentro de tres meses, porque si no se
+tratarán igual y una de las dos miente.
+
+**SEÑAL FUERTE — estructural.** El TEAC cita **por número** una consulta de la
+DGT que esta respuesta también está citando. No hay que adivinar nada: el propio
+tribunal ha puesto las dos cosas en la misma frase, así que sabemos que se ha
+pronunciado sobre *ese* criterio y no sobre uno parecido. Se da en **4 de cada 9**
+criterios reales medidos. El aviso es afirmativo: *«el TEAC se ha pronunciado
+sobre V2092-15, que es criterio que esta respuesta cita»*.
+
+**SEÑAL DÉBIL — coincidencia de artículos.** Hay doctrina del TEAC sobre el
+mismo artículo. Es una **aproximación**: que dos textos hablen del artículo 80 no
+significa que hablen del mismo supuesto. El aviso lo dice en condicional:
+*«Coincide el artículo, PERO no se ha comprobado que trate del mismo supuesto:
+compruébalo tú»*.
+
+**Cuando existe la fuerte, manda ella** y la débil no se repite para el mismo
+criterio: decir dos veces lo mismo con distinta seguridad confunde. Las fuertes
+salen primero en la lista de señales.
+
+**Línea doctrinal.** Una consulta citada por **varios** criterios pesa más que una
+mencionada de pasada, y se dice cuántos la citan. Medido: `0745-03`, `1010-03` y
+`V2092-15` las citan dos criterios distintos (00/03399/2023 y 00/05524/2024).
+
+### La búsqueda encaja sola
+
+Al TEAC se le pregunta **por precepto**, no por palabras: el buscador acaba de
+decir qué artículos sostienen la respuesta. Nada de inventar términos como hubo
+que hacer con la DGT. Y los criterios se ordenan poniendo delante los de
+**unificación de criterio**, que es la jerarquía aplicada ya al elegir.
+
+### Qué norma de DYCTEA es cuál de las nuestras: POR CÓDIGO
+
+DYCTEA nombra al Reglamento del IVA como *«RD 1624/1992 Reglamento Impuesto
+sobre el Valor Añadido IVA»*. Ese nombre menciona **dos** cosas que en nuestro
+corpus son dos cuerpos distintos —el Real Decreto y el Reglamento que aprueba—,
+así que el resolutor no podía decidir y devolvía vacío. Hacía bien: ante la
+duda, nada. Pero la consecuencia era que **toda la doctrina del TEAC sobre el
+Reglamento se perdía en silencio**.
+
+La salida no fue adivinar mejor, fue dejar de adivinar. DYCTEA identifica cada
+norma con un **código estable**, y el código no admite dos lecturas:
+
+```
+02:07:01:00:00  ->  Ley 37/1992
+02:07:02:00:00  ->  Reglamento del Impuesto sobre el Valor Añadido
+01:02:01:00:00  ->  Ley 58/2003
+```
+
+El mapa está en `agente_fiscal/teac.py`, a la vista. **Los códigos se leen del
+catálogo que baja `teac.py`, no de memoria**: la primera versión de este mapa
+llevaba `01:01:01:00:00` para la LGT y el real es `01:02:01:00:00`.
+
+Tres reglas que no cambian:
+
+- Se mapea a una **designación** (`"Ley 37/1992"`), no a la clave del cuerpo:
+  la clave depende de cómo esté montado el corpus hoy y la designación la
+  resuelve `normas.resolver`, que es quien sabe de eso.
+- Un **código no mapeado es norma externa**, y no se intenta adivinar por el
+  nombre. Mejor decir «no la tengo» que acertar por casualidad.
+- El **nombre sigue como respaldo** para cuando no haya código, con su regla de
+  siempre: si es ambiguo, vacío.
+
+La página del criterio no trae el código, solo el nombre; el código se recupera
+del catálogo de DYCTEA por coincidencia **exacta** de nombre. No es interpretar
+un nombre: es buscarlo en la tabla de la propia fuente.
+
+### El texto de CRITERIO CLARO
+
+`interfaz.py` tiene ya escrita `CLARO_CON_TRES_FUENTES`, **inactiva**. Se
+enciende con `AGENTE_DGT_TEXTOS` **a la vez que `GUIA.md`**, nunca sola.
+
+---
+
+# FASE 12 · DOS EJES SEPARADOS, Y LA LEY DE VUELTA AL 83%
+
+Sale de medir las tres fuentes juntas. Los dos números que lo dispararon:
+**la ley era el 17% del material** y **DISCUTIDO salía 19 de 19**.
+
+## 1 · El estado y la cobertura son dos ejes, no uno
+
+DISCUTIDO salía **17 de 19 antes de encender la DGT y el TEAC**. La causa no era
+el criterio: eran los avisos de vigencia y las remisiones a normas que no
+tenemos. Eso no es criterio discutido, es **cobertura incompleta de nuestro
+corpus**, y estaba en el mismo cajón.
+
+| | **ESTADO** (`Dictamen.senales`) | **COBERTURA** (`Dictamen.cobertura`) |
+|---|---|---|
+| Contesta a | ¿los textos se contradicen? | ¿qué no he podido mirar? |
+| Mueve el estado | **sí**, a DISCUTIDO | **no**, nunca |
+| Qué entra | consultas de la DGT de años distintos sobre el mismo precepto; el TEAC pronunciándose sobre una consulta que citamos | vigencia fuera del ejercicio; remisiones fuera del corpus; disposición del corpus no recogida; fuente caída; doctrina del TEAC sobre el mismo artículo sin comprobar |
+| Se enseña | bloque «DESACUERDO ENTRE LOS TEXTOS», solo si lo hay | bloque «LO QUE NO SE HA PODIDO MIRAR», **siempre**, aunque sea para decir que no falta nada |
+
+**Que un aviso no mueva el estado no significa que importe menos**: significa
+que responde a otra pregunta. Juntarlas hacía que la primera no se pudiera
+contestar.
+
+**Medido sobre las 19 del banco, suponiendo respuesta verificada:**
+
+| | antes | después |
+|---|---|---|
+| con las capas de criterio | 19 DISCUTIDO · 0 CLARO | **5 DISCUTIDO · 14 CLARO** |
+| sin las capas | 17 DISCUTIDO · 2 CLARO | **0 DISCUTIDO · 19 CLARO** |
+
+**Consecuencia que hay que tener presente:** con la DGT y el TEAC **apagados**,
+el desacuerdo de fondo solo puede venir de ellos, así que **DISCUTIDO no puede
+salir hoy**. En producción hay dos estados, no tres, hasta que se enciendan las
+fuentes. Es correcto —sin fuentes de criterio no se puede detectar desacuerdo—
+pero no es obvio, y por eso está escrito aquí.
+
+## 2 · El criterio no puede ocupar más que la ley
+
+Se mandaban **contestaciones enteras** de hasta tres consultas, de 20 a 78 KB
+cada una. Dos reglas, las dos en `redactor.py`:
+
+- **Selección estructural**, nunca resumen: de cada consulta van solo los
+  párrafos que mencionan los artículos en juego **y su entorno inmediato**
+  (`ENTORNO = 1`). Lo que se manda sigue siendo **literal y verificable**; hay
+  una prueba que busca cada fragmento, letra por letra y con la normalización
+  del verificador, dentro del documento cacheado.
+- **Tope relativo**: el bloque de criterio (TEAC + DGT) **no puede pasar del
+  tamaño del bloque de ley**. Relativo y no fijo, porque lo que hay que
+  garantizar es la proporción.
+
+Reglas de detalle que costaron una vuelta cada una:
+
+- **Si al recortar una consulta se queda sin nada pertinente, no se manda.**
+  Mejor dos consultas útiles que tres a medias.
+- **Se llena por párrafos, no por fragmentos enteros.** Una consulta en la que
+  *todos* los párrafos hablan del artículo produce un fragmento único enorme, y
+  con el tope aplicado al fragmento entero esa consulta —justo la más
+  pertinente que existe— se caía del todo. Un prefijo de párrafos seguidos
+  sigue siendo texto contiguo y literal.
+- **Se mide el bloque real, con el peor caso de la cuenta de omitidos.** Medir
+  uno y mandar otro es como se sale del tope sin enterarse.
+- **Los huecos se marcan.** Cada trozo va entre `[FRAGMENTO n DE ...]` y el
+  material prohíbe expresamente citar de un fragmento a otro: entre uno y otro
+  falta texto y esa cita no existe en el documento. (El verificador lo pararía
+  igual —compara contra el documento **entero**— pero avisar ahorra un intento.)
+- **La norma, no solo el número.** Un párrafo que dice «el artículo 80 de la Ley
+  35/2006» **no** se selecciona. Un párrafo que nombra una norma que no tenemos
+  tampoco: que no la tengamos no la hace nuestra. Un «el citado artículo 80» sin
+  norma al lado **sí** cuenta, y es deliberado: aquí un falso positivo se paga
+  en caracteres y un falso negativo en una respuesta peor. Y esto **no produce
+  ninguna señal**, solo elige qué se manda.
+
+**Medido sobre las 19, ley / criterio en caracteres:**
+
+| | ley | criterio | % ley |
+|---|---|---|---|
+| antes | 331.009 | 1.729.552 | **16%** |
+| después | 331.009 | 67.244 | **83%** |
+
+El criterio baja un **96%**. El peor caso pasa del **6%** de ley al **52%**, y
+**no queda ninguna consulta por debajo de la mitad**. Todo lo recortado se
+cuenta en `Recorte` y se escribe en `recorte_criterio.json` dentro de la traza.
+
+## 3 · Los avisos se agrupan por artículo, no por criterio
+
+Sobre el artículo 80 salían **seis avisos idénticos** cambiando solo el número
+de criterio. Quien lee el primero se salta los otros cinco, así que seis avisos
+informaban **menos** que uno. Ahora es **un aviso por artículo** con la lista
+dentro, los de **unificación de criterio primero** (vinculan a toda la
+Administración) y `TOPE_NOMBRADOS = 4` antes de resumir en «y N más».
+
+## Lo que queda cojo y hay que mirar
+
+- **En 5 de las 19 no se manda criterio ninguno**, porque ninguna de las
+  consultas que trae el buscador local habla de los artículos en juego. No es un
+  fallo del recorte: es el buscador local (`CacheDGT.buscar`, cobertura de
+  palabras) trayendo lo que hay en una caché de 130 consultas.
+- **El presupuesto se lo come el primero.** En el art. 80, `V0160-23` se lleva
+  todo el hueco y `V0053-13` y `V0041-07` se quedan en cero, aunque la señal de
+  desacuerdo las nombra. La señal sigue siendo cierta —dice que existen y que
+  hay que mirarlas— pero su texto no está en el material. Si molesta, el reparto
+  se puede hacer por cuota en vez de por orden.
+- **101 avisos de cobertura en 19 consultas** (5,3 de media) con las capas
+  encendidas; 44 sin ellas. Son huecos reales, pero conviene vigilar que el
+  bloque nuevo no se sature igual que se saturó el estado.
+
+---
+
+# FASE 13 · UN AVISO QUE SALE SIEMPRE NO ES UN AVISO, ES DECORACIÓN
+
+**Ese es el criterio, y vale para todo lo que se enseñe de aquí en adelante.**
+Si algo aparece en todas las respuestas, o se resume o se quita: dejarlo entero
+solo consigue que se deje de leer lo que está a su lado. No es una cuestión de
+estilo, es que un aviso constante entrena a no mirar el sitio donde aparece.
+
+Se aprendió dos veces seguidas, que es como se aprenden estas cosas:
+
+1. `CRITERIO DISCUTIDO` salía **17 de 19** → se separó el estado de la
+   cobertura (fase 12) → bajó a 5 de 19.
+2. El cajón nuevo salió con **101 avisos en 19 consultas, 5,3 de media** → el
+   mismo fallo un piso más abajo.
+
+## La cobertura, partida por lo que se puede HACER
+
+| | **ACCIONABLE** | **ESTRUCTURAL** |
+|---|---|---|
+| qué es | hay algo concreto que mirar | límite permanente del corpus |
+| cambia de una consulta a otra | sí | **no**, es el mapa de lo que tenemos |
+| qué entra | doctrina del TEAC sobre este artículo; el artículo cambió después del ejercicio; una disposición que le afecta y no se recogió; una fuente que no respondía; una consulta citada que va de otra cosa | remisiones a normas que no tenemos y no vamos a tener (Ley Concursal, Código Penal, TFUE) |
+| cómo se enseña | arriba y **completos** | **una línea** al final, en gris |
+
+**Medido sobre las 19, avisos accionables por consulta:**
+
+| | antes | después |
+|---|---|---|
+| con las capas de criterio | 5,3 | **2,4** (máximo 5, dos consultas con 0) |
+| sin las capas | 2,3 | **1,2** |
+
+Los estructurales son 1,2 por consulta y van en una sola línea, así que aportan
+una línea, no una por precepto.
+
+### La mitad de la mejora vino de dejar de avisar sobre lo que no se manda
+
+Del desglose salió que **48 de 75 avisos** (2,5 por consulta) eran del tipo
+*«V0123 da criterio sobre otra norma»* — y con el recorte de la fase 12 esas
+consultas son **justo las que ya no se mandan** (cero párrafos pertinentes). Se
+estaba avisando de un documento que el redactor no ve y no puede citar.
+
+`dgt.leer_criterio` recibe **solo las consultas que tienen texto en el
+material** (`redactor.Plan.enviadas`). Pasando todas: 2,5 avisos por consulta de
+ese tipo. Pasando solo las mandadas: 0,9.
+
+## El presupuesto no se lo puede comer el primero
+
+Antes se llenaba en orden y la primera consulta se llevaba todo el hueco. Y
+aquí eso es lo peor que puede pasar: **el valor de esta capa es ver que el
+criterio ha ido cambiando con los años**, y para eso hacen falta las tres, no
+una larga.
+
+- **Cuota por consulta**: el hueco se reparte a partes iguales entre las
+  consultas con material pertinente. Es un **suelo garantizado**, no un techo:
+  lo que una no gasta pasa a la siguiente, pero **nadie puede gastar el suelo
+  de las que vienen detrás**.
+- **O se le hace sitio o no se nombra.** Si con esa cuota alguna no cabe ni con
+  su primer párrafo, se cae la de menos prioridad y se reparte otra vez entre
+  las que quedan. `Plan.enviadas` lleva las que sí tienen texto, y una señal no
+  puede nombrar nada que no esté ahí: **la señal y el material no se
+  contradicen**.
+
+Medido con tres consultas grandes sobre el mismo artículo: antes `2224 / 0 / 0`
+caracteres; ahora `2224 / 2595 / 2224`.
+
+**Rectificación de lo que informé la vez anterior:** dije que en el art. 80 la
+señal nombraba consultas cuyo texto no estaba en el material. En el camino real
+de `fase4` eso no pasaba: la señal se calcula desde las consultas **citadas y
+verificadas**, y para citarlas el redactor tiene que haberlas visto. La
+contradicción estaba en mi guion de demostración, que pasaba las tres. El
+reparto por cuota sí era un problema real y es lo que se ha arreglado; ahora
+además la garantía está comprobada en el código y no deducida.
+
+## La caché no cubría procedimiento
+
+En **7 de las 19** consultas del banco no había criterio ninguno *(la vez
+anterior informé 5: la cifra era corta)*. Los artículos que faltaban son casi
+todos de **procedimiento** —27, 135, 138, 198, 203, 236, 239, 267 de la LGT—, y
+la primera siembra solo miró IVA: la despensa estaba vacía **por construcción**,
+no por falta de criterio en la fuente.
+
+`sembrar.py` ya no lleva la lista a mano: `articulos_sin_criterio()` la
+**calcula**. Para cada consulta del banco corre la búsqueda y el corte de
+material —deterministas los dos, ni una llamada al modelo— y mira qué preceptos
+acaban en el material sin ninguna consulta cacheada que los cite. Se apunta a lo
+que **se manda**, no a lo que el banco espera, porque el recorte compara contra
+los preceptos del material. Las disposiciones se saltan: no tienen número que
+buscar en PETETE.
+
+## El artículo 4 y las señales de mentirijilla
+
+Al filtrar por «solo lo que está en el material», `CRITERIO DISCUTIDO` bajó de
+4 a 2 sobre las 19. Antes de darlo por bueno se miró **qué señales se pierden**,
+y el resultado cambia la lectura:
+
+| señal perdida | veces |
+|---|---|
+| «sobre el **artículo 4** de la Ley 37/1992 hay 2 consultas de años distintos» | 4 |
+| lo mismo sobre el **artículo 5** | 1 |
+| lo mismo sobre el **artículo 93** | 1 |
+
+Los artículos 4 y 5 son *hecho imponible* y *concepto de empresario*: la DGT los
+cita **de oficio en el campo `normativa` de casi cualquier consulta de IVA**.
+Que dos consultas de años distintos los mencionen no es evidencia de que el
+criterio haya evolucionado; es el encabezado de rigor.
+
+Las tres señales que **sobreviven** son sobre los artículos 99, 8 y 68 —
+sustantivas las tres. Así que el filtro no está tapando desacuerdos: está
+quitando señales que salían del membrete.
+
+**Nota de método:** la señal se calcula desde el campo `normativa` (metadatos) y
+el recorte selecciona por menciones **en la prosa**. Cuando discrepan, gana la
+prosa. Es discutible y es la decisión tomada: si la contestación no habla del
+artículo, no hay texto que enseñar, y una señal sin texto detrás manda a leer
+algo que no se ha dado.
+
+### Lo que se probó y NO se quedó
+
+Se implementó una prioridad al descartar por presupuesto: que se cayera antes
+una consulta suelta que una que forma **par de años distintos** sobre el mismo
+precepto. **No cambia ni un resultado** sobre las 19 — las señales no se
+perdían por presupuesto sino por falta de párrafos pertinentes, que es lo de
+arriba. Se quitó: maquinaria sin efecto medido es maquinaria que engaña al que
+la lee dentro de seis meses. Queda el comentario en `redactor.py` para que no
+se vuelva a intentar sin medir.
+
+## Segunda siembra: la despensa casi se dobla, el agujero baja a la mitad
+
+| | antes | después |
+|---|---|---|
+| consultas guardadas | 117 | **241** |
+| pares (norma, artículo) a norma cargada | — | 650 de 1042 |
+| ocupa | — | 13,6 MB |
+| artículos del banco sin criterio | 19 | **11** |
+| consultas del banco sin criterio en el material | 7 | **6** |
+
+111 descargas nuevas en la pasada, **5 fallidas** por forma inesperada (no se
+guardan) y **3 cortes por caída** de los que se retomó solo. Terminó sola, sin
+llegar al tope de 300.
+
+**La cobertura por artículo mejora mucho más que el resultado final**, y conviene
+entender por qué: que un artículo tenga consultas no basta: hace falta que
+alguna **hable de él en la prosa**, no solo que lo cite en el campo `normativa`.
+Ahí es donde se queda la diferencia entre 19→11 artículos y 7→6 consultas.
+
+Lo que sigue sin criterio, y son los que hay que mirar si se quiere cerrar el
+hueco: RIVA 22, 31, 31 bis y sus dos disposiciones adicionales; LGT 27, 103,
+138, 203, 267; LIVA 9 bis. En procedimiento puro (LGT) puede sencillamente no
+haber consulta vinculante de la DGT: no es lo suyo, para eso está el TEAC.
+
+---
+
+# FASE 14 · UN TEAR NO ES EL TEAC
+
+Salió de mirar si el TEAR estaba al alcance y encontrar que **ya estaba dentro,
+sin filtrar y mal etiquetado**. No es funcionalidad nueva: es un defecto.
+
+## Qué estaba pasando
+
+La búsqueda de DYCTEA manda el filtro de unidad **vacío** (`u=""`), así que
+devuelve **todos los tribunales**. En la copia local de 9 criterios había dos
+que no eran del TEAC, y se citaban así:
+
+```
+{Criterio TEAC 07/02872/2023/00/00, de 29/04/2025, TEAR de Baleares — …}
+```
+
+La etiqueta decía TEAC y la unidad decía TEAR, en la misma línea. Y
+`BLOQUE_TEAC` le atribuía la fuerza del **art. 239.8 LGT**, que un tribunal
+regional no tiene. Una resolución que no obliga a nadie, presentada como
+doctrina que obliga a toda la Administración.
+
+Medido: sin filtrar salen **71** resoluciones sobre el art. 80; del TEAC son
+**55**. Las otras 16 son regionales, y las tratábamos igual.
+
+## Cuatro reglas, y ninguna la ponemos nosotros
+
+**1 · La etiqueta sale del registro.** `etiqueta_de(unidad)`: `TEAC` →
+«Criterio TEAC»; `TEAR de Cataluña` → «Resolución del TEAR de Cataluña». El
+TEAR **nunca** se llama «criterio»: un criterio es doctrina, y la doctrina la
+sienta el TEAC.
+
+**2 · La fuerza sale de la calificación de la fuente.** DYCTEA ya califica cada
+resolución (`Doctrina`, `No vinculante`). `fuerza_de(unidad, calificacion)` lee
+esa calificación y **combina los dos campos**, porque hacen falta los dos: la
+fuerza del 239.8 es del TEAC **cuando sienta doctrina**. Ni un TEAR con la
+calificación más alta la tiene, ni un TEAC «No vinculante». Calificación
+desconocida → **no se afirma nada**. Es la regla de siempre: callar cuesta una
+frase, atribuir fuerza de más cuesta un cliente.
+
+En la copia local hay un TEAC `00/02189/2021` calificado **«No vinculante»**:
+no es una hipótesis, pasa.
+
+**3 · Dos ejes, dos bloques.**
+
+| | peso jurídico | valor predictivo |
+|---|---|---|
+| doctrina del TEAC | alto, vincula (239.8) | medio |
+| consulta de la DGT | vincula frente a quien consultó | medio |
+| resolución de un TEAR | **ninguno**, resuelve su caso | **el más alto** para un cliente de esa provincia |
+
+Son ejes distintos y no se pueden mezclar. El orden del material es el del peso
+jurídico —`LEY → TEAC → DGT → TEAR`— y el bloque regional dice lo que es: no
+vincula a nadie, pero es lo más informativo sobre **qué le va a pasar de hecho**
+al cliente, porque es el tribunal que le va a tocar.
+
+**4 · El orden, por peso y luego por fecha.** `teac.peso` y `teac.nivel`:
+
+```
+0  TEAC que unifica criterio
+1  TEAC que sienta doctrina
+2  TEAC sin fuerza declarada
+3  TEAR y salas desconcentradas
+```
+
+Dentro de cada nivel, la fecha. Antes se ordenaba solo por unificación y fecha,
+y por eso **una resolución del TEAR de 2025 adelantaba a doctrina del TEAC de
+2023**: más nueva sí, con más peso no.
+
+**Y los avisos cuentan por unidad**: «hay 1 resolución del TEAR de Baleares y 1
+resolución del TEAR de Madrid sobre el artículo 95», no «2 criterios del TEAC».
+
+## El rótulo se comprueba, en los dos sentidos
+
+`teac.rotulo_valido` contrasta el rótulo de la cita contra el campo `unidad` de
+la copia local, y engañan **los dos sentidos**:
+
+- llamar TEAC a lo que es de un TEAR → le da fuerza que no tiene;
+- llamar TEAR a lo que es del TEAC → se la quita, y el profesional descarta
+  doctrina que sí le obliga.
+
+Tres desenlaces, no dos: `ok`, `mal` y **`sin_unidad`**. Si la copia local no
+dice qué tribunal la dictó, **no se puede comprobar**, y eso es `NO_VERIFICABLE`,
+no `NO_VERIFICADA`: dar el visto bueno sería dejar pasar la atribución sin
+mirarla, y rechazar sería tumbar la respuesta por un hueco **nuestro**.
+
+La comparación del rótulo ignora tildes —«TEAR de Cataluna» vale— porque es
+**nuestro** rótulo, no texto copiado de la fuente. El fragmento citado se sigue
+comprobando letra por letra, con tildes. Eso no se toca.
+
+Tres casos nuevos en la batería (37 casos, en verde):
+
+| caso | veredicto |
+|---|---|
+| `tear-presentado-como-doctrina-del-teac` | NO_VERIFICADA |
+| `tear-citado-como-lo-que-es` | VERIFICADA |
+| `teac-degradado-a-tribunal-regional` | NO_VERIFICADA |
+
+El segundo importa tanto como el primero: **lo que se rechaza es la atribución
+falsa, no la fuente**. La misma resolución y el mismo fragmento, nombrando al
+tribunal que la dictó, valen.
+
+## Lo que hay que vigilar
+
+**Lo regional es lo primero que sobra**, por diseño: va el último en el orden de
+peso, así que cuando el presupuesto aprieta se cae. Medido sobre las 19 del
+banco: **3 llevan bloque regional** al material. Con siete criterios del TEAC
+sobre el mismo artículo (arts. 80 y 95 juntos) las dos regionales no entran, y
+eso es correcto —lo que no vincula sobra antes— pero significa que **el eje
+predictivo solo llega cuando el jurídico deja sitio**. Si algún día se quiere
+que una resolución del TEAR de Cataluña llegue siempre a un cliente de aquí,
+eso es una **cuota reservada** y es una decisión, no un ajuste.
+
+**El filtro de unidad sigue vacío.** No se ha tocado la descarga: se sigue
+bajando de todos los tribunales. Ahora al menos se etiqueta bien lo que entra.
+
+---
+
+# FASE 15 · EL PRIMER ARRANQUE INSTALA. NO SUPONE NADA.
+
+Probado en un Windows real: el `.bat` **no creaba el venv** y **obligaba a
+editar el `.env` a mano**. En una oficina eso no lo hace nadie, así que el
+agente no llegaba a arrancar.
+
+## Un solo sitio con la lógica
+
+`instalar.py` hace las librerías, la clave y el corpus. Los dos lanzadores solo
+saben hacer lo que Python **no puede hacerse a sí mismo**: encontrar un Python y
+crear el entorno virtual.
+
+Por qué así: escribir esa lógica dos veces, una en `cmd` y otra en `bash`, es
+garantizar que dentro de un mes hagan cosas distintas **y que la que se rompa
+sea la de Windows**, que es justo la que no puedo probar.
+
+| paso | quién | si falta |
+|---|---|---|
+| 1 · Python | lanzador | **para**: es lo único que necesita a una persona |
+| 2 · venv | lanzador | lo crea, sin preguntar |
+| 3 · librerías | `instalar.py` | `pip install -r requisitos.txt` |
+| 4 · clave | `instalar.py` | la **pide por pantalla** y la comprueba |
+| 5 · corpus | `instalar.py` | lo ingiere diciendo por dónde va |
+| 6 · ventana | lanzador | la abre |
+
+**Arranques siguientes:** cinco comprobaciones de fichero —venv, `.env` con
+clave, librería, y las tres normas— sin arrancar Python. Si está todo, abre.
+
+## La clave se pide, no se edita
+
+Se explica qué es, de dónde se saca (`platform.claude.com` → API keys) y que se
+queda solo en este equipo. Se teclea oculta, se guarda en el `.env` **conservando
+las explicaciones del ejemplo**, y se le pone permiso `600`.
+
+**Y se comprueba antes de seguir**, hasta 3 intentos. Que un dato mal pegado se
+descubra tres días después delante de un cliente es exactamente lo que esto
+viene a evitar. Un `.env` **creado y vacío** no cuenta como configurado: ese era
+el estado en que se quedaba el equipo antes.
+
+## Dos fallos que solo existen en Windows
+
+**1 · `if` con `&&` no se agrupa.** Lo escribí así:
+
+```bat
+if not defined BASE python -c "import sys" >nul 2>&1 && set "BASE=python"
+```
+
+En `cmd` eso se lee como `(if not defined BASE python …) && (set BASE=python)`:
+el `set` corre según el errorlevel **anterior**, aunque el `if` sea falso. El
+lanzador elegía `python` aunque `py -3` ya hubiera funcionado. Reescrito sin
+`&&` y sin paréntesis, línea a línea.
+
+**2 · `dirname` es un programa externo.** `cd "$(dirname "$0")"` necesita el
+PATH para averiguar dónde vive el script. Un lanzador que depende del PATH para
+eso se rompe justo en el equipo mal configurado, que es el único donde importa.
+Ahora usa expansión del propio shell: `cd "${0%/*}"`.
+
+El linter (`lint_bat.py`) tiene dos comprobaciones nuevas: ningún `if` con `&&`
+en la misma línea, y todo `set` con la forma entrecomillada.
+
+## Qué está probado y qué no
+
+**Ejecutado de verdad en Mac**, ocho escenarios sobre copias en temporal:
+
+| escenario | resultado |
+|---|---|
+| todo correcto | abre sin instalar nada |
+| sin venv | lo crea, instala y abre |
+| sin `.env` | pide la clave, la guarda y abre |
+| `.env` vacío | no lo da por bueno, la pide |
+| clave inválida | lo dice, reintenta 3 veces y para |
+| sin corpus | lo ingiere diciendo qué y cuánto lleva |
+| sin librería | `pip install` **real** y abre |
+| sin Python | para con las instrucciones exactas |
+
+**Sustituido por un doble** (y por eso NO probado de verdad): la comprobación de
+la clave contra la API, la descarga del BOE y la apertura de la ventana. Los
+tres salen a la red; lo que se prueba es la orquestación y los mensajes.
+
+**NO probado en Windows, y hay que decirlo:** no tengo Windows. Del `.bat` solo
+está el repaso estático. Lo que ese repaso **no** puede garantizar:
+
+- que `py -3` exista y se comporte igual en ese equipo concreto;
+- que `python -m venv` funcione contra el Python que haya instalado;
+- que `getpass` oculte la escritura en la consola de Windows (si no puede, el
+  instalador lo dice y pide la clave a la vista, en vez de caerse);
+- que el antivirus o la política de la empresa no bloqueen `pip`;
+- el aspecto real de los acentos en esa consola (por eso el `.bat` es **ASCII
+  puro y CRLF**, comprobado).

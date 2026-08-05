@@ -44,6 +44,15 @@ MARCA = {
 }
 
 
+def _cache_teac_de_prueba():
+    """La copia local de criterios del TEAC que usa la BATERIA, y solo ella.
+    Mismo motivo que la de la DGT: un criterio inventado no puede acabar donde
+    esta la doctrina de verdad."""
+    from agente_fiscal import teac as _T
+    from pathlib import Path as _P
+    return _T.CacheTEAC(_P(__file__).resolve().parent / "casos" / "teac_prueba")
+
+
 def _cache_dgt_de_prueba():
     """La copia local de consultas DGT que usa la BATERIA, y solo ella.
 
@@ -124,7 +133,8 @@ def modo_verificar(args) -> int:
     texto = ruta.read_text(encoding="utf-8")
 
     ix = Indice(CORPUS)
-    v = VF.Verificador(ix, cache_dgt=_cache_dgt_de_prueba())
+    v = VF.Verificador(ix, cache_dgt=_cache_dgt_de_prueba(),
+                       cache_teac=_cache_teac_de_prueba())
     informe = v.verificar_texto(texto, args.ejercicio, args.exigir_norma)
 
     pinta_informe(informe, ruta.name)
@@ -212,7 +222,8 @@ def modo_probar(args) -> int:
         return 1
 
     ix = Indice(CORPUS)
-    v = VF.Verificador(ix, cache_dgt=_cache_dgt_de_prueba())
+    v = VF.Verificador(ix, cache_dgt=_cache_dgt_de_prueba(),
+                       cache_teac=_cache_teac_de_prueba())
 
     titulo(f"BATERIA DE CASOS ADVERSARIOS  ·  {ruta.name}")
     print(f"{len(casos)} casos escritos a mano, cada uno con el veredicto que debe dar.\n")

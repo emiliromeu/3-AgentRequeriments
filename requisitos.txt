@@ -1,0 +1,6 @@
+# Lo unico que hace falta instalar. Todo lo demas es libreria estandar de
+# Python, y es deliberado: cada dependencia es algo que puede romperse en el
+# PC de la oficina un lunes por la manana.
+#
+# Se instala solo, en el primer arranque. Ver instalar.py.
+anthropic>=0.40

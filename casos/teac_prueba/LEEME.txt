@@ -1,0 +1,5 @@
+JUEGO DE PRUEBA DE LA BATERIA. NO ES DOCTRINA REAL.
+
+Criterio INVENTADO para los casos adversarios del TEAC. No viene del TEAC y no
+vale para contestar a nadie. Vive aqui y no en datos/teac/ a proposito: dentro
+de la cache de verdad seria indistinguible de un criterio autentico.

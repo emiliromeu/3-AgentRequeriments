@@ -1,0 +1,23 @@
+{
+  "id": "00/09002/2024/00/0/1",
+  "resolucion": "00/09002/2024/00/00",
+  "fecha": "20/03/2025",
+  "unidad": "TEAC",
+  "calificacion": "Doctrina (CRITERIO DE PRUEBA, NO REAL)",
+  "asunto": "Caso de prueba: norma REAL de DYCTEA cuyo codigo no esta en nuestro mapa (Ley 35/2006 IRPF, codigo 02:01:07:00:00).",
+  "criterio": "Texto de prueba de la bateria, no es doctrina real. Se cita el articulo 22 de una norma que no tenemos en el corpus.",
+  "referencias": [
+    {
+      "norma": "Ley 35/2006 Impuesto sobre la Renta de las Personas Físicas IRPF",
+      "preceptos": [
+        "22"
+      ]
+    }
+  ],
+  "conceptos": [
+    "Prueba"
+  ],
+  "consultas_dgt": [],
+  "unifica_criterio": false,
+  "url_navegador": "https://serviciostelematicosext.hacienda.gob.es/TEAC/DYCTEA/criterio.aspx?id=00/09002/2024/00/0/1"
+}

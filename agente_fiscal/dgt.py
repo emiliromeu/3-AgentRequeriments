@@ -412,10 +412,16 @@ def fuente_viva() -> tuple[bool, str]:
 
 @dataclass
 class Lectura:
-    """Lo que la DGT aporta a una respuesta, ya masticado para el estado."""
+    """Lo que la DGT aporta a una respuesta, ya masticado para el estado.
+
+    DOS LISTAS, DOS EJES. `senales` es DESACUERDO DE FONDO y mueve el estado a
+    DISCUTIDO; `cobertura` es lo que no se ha podido comprobar y se enseña sin
+    tocar el estado. Ver la cabecera de `estado.py`.
+    """
 
     consultas: list = field(default_factory=list)   # Consulta, verificadas
-    senales: list = field(default_factory=list)     # motivos de discusion
+    senales: list = field(default_factory=list)     # desacuerdo -> DISCUTIDO
+    cobertura: list = field(default_factory=list)   # huecos -> solo se enseñan
     antecedentes: list = field(default_factory=list)
     fuente_caida: bool = False
     motivo_fuente: str = ""
@@ -445,6 +451,13 @@ def leer_criterio(consultas: list, preceptos_verificados: list,
                   normas=None) -> Lectura:
     """Convierte las consultas citadas en señales de estado. LO CALCULA EL CODIGO.
 
+    `consultas` tienen que ser SOLO las que tienen texto en el material (ver
+    `redactor.Plan.enviadas`). No es una recomendacion: una consulta que el
+    recorte no mando no la ve el redactor, no la puede citar y no puede
+    confundir a nadie, asi que avisar de ella es ruido puro. Medido: pasando
+    todas las que devuelve el buscador local salian 2,5 avisos por consulta de
+    este tipo; pasando solo las mandadas, 0,9.
+
     IMPORTANTE, y conviene no engañarse: el codigo NO puede leer si un criterio
     «apunta en otra direccion» que la norma. Eso es semantica y aqui no hay
     quien la juzgue. Lo que si se puede medir son señales ESTRUCTURALES, que es
@@ -452,14 +465,15 @@ def leer_criterio(consultas: list, preceptos_verificados: list,
 
       1. varias consultas sobre el MISMO precepto y de años distintos
          -> el criterio ha podido evolucionar. La mas reciente manda y las
-            anteriores se citan como antecedente.
+            anteriores se citan como antecedente. Esto SI es desacuerdo de
+            fondo -dos textos de la misma casa sobre el mismo articulo- y va a
+            `senales`, que mueve el estado.
       2. una consulta cuyo campo 'normativa' NO toca ninguno de los preceptos
          que sostienen la respuesta
-         -> el criterio va de otra cosa: no se puede dar por alineado.
-
-    Ninguna de las dos afirma que haya contradiccion de fondo. Afirman que NO
-    se puede afirmar que no la haya, que es lo que corresponde a un sistema que
-    no lee, y por eso el estado que producen es DISCUTIDO y no NO ENCONTRADO.
+         -> el criterio va de otra cosa. Eso NO es desacuerdo: es criterio que
+            no se ha podido contrastar, asi que va a `cobertura` y se enseña
+            sin tocar el estado. Meterlo en el mismo cajon que el punto 1 era
+            parte de por que DISCUTIDO salia casi siempre.
     """
     lectura = Lectura(consultas=list(consultas))
     if not consultas:
@@ -512,10 +526,10 @@ def leer_criterio(consultas: list, preceptos_verificados: list,
                 continue
             if not any((p.cuerpo, p.numero.lower()) in verificados
                        for p in comparables):
-                lectura.senales.append(
+                lectura.cobertura.append(
                     f"{c.numero} da criterio sobre {c.normativa or 'otra norma'}, "
-                    f"que no es lo que sostiene esta respuesta: no se puede dar "
-                    f"por alineado con la lectura de la norma"
+                    f"que no es lo que sostiene esta respuesta: no se ha podido "
+                    f"contrastar con la lectura de la norma"
                 )
 
     return lectura

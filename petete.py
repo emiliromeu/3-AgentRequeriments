@@ -49,20 +49,19 @@ siempre.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import html as _html
-import http.cookiejar
 import json
 import re
-import ssl
 import sys
-import time
-import urllib.error
-import urllib.parse
-import urllib.request
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from agente_fiscal import fuente_web as FW
+from agente_fiscal.fuente_web import (      # noqa: F401  (los usan las pruebas)
+    ANCHO, FormaInesperada, FuenteCaida, Respuesta, aviso, titulo,
+)
 
 RAIZ = Path(__file__).resolve().parent
 DIR = RAIZ / "datos" / "dgt"
@@ -101,129 +100,21 @@ TAB_GENERALES, TAB_VINCULANTES = "1", "2"
 RE_NUM = re.compile(r"^[VC]?\d{3,5}-\d{2}$", re.I)
 
 
-# --------------------------------------------------------------------- salida
-
-
-def titulo(t: str) -> None:
-    print("=" * ANCHO)
-    print(f"  {t}")
-    print("=" * ANCHO)
-
-
-def aviso(t: str) -> None:
-    print(f"\n[!] {t}")
-
-
-class FuenteCaida(Exception):
-    """La fuente no responde o responde mal. Se dice, no se disimula.
-
-    `codigo` es el HTTP que devolvio, si llego a devolver alguno. Sirve para
-    distinguir DE QUIEN es el fallo, que es justo lo que antes no se sabia:
-    un 5xx es de su servidor y un 4xx es nuestro, por preguntar mal.
-    """
-
-    def __init__(self, mensaje: str, codigo: int | None = None):
-        super().__init__(mensaje)
-        self.codigo = codigo
-
-
-class FormaInesperada(Exception):
-    """La fuente responde, pero no tiene la forma que esperabamos.
-
-    Es un error DISTINTO de que este caida, y por eso tiene su propia clase:
-    estos endpoints son internos y sin documentar, y pueden cambiar cualquier
-    martes. Si cambian, hay que parar y mirarlo, no guardar lo que salga.
-    """
-
-
-# ------------------------------------------------------------------- la fuente
-
-
-@dataclass
-class Respuesta:
-    codigo: int
-    cuerpo: str
-    segundos: float
-    url: str
-
-
-class Fuente:
-    """El unico sitio que habla con la red. Con pausas y con tope."""
+class Fuente(FW.FuenteWeb):
+    """PETETE. De la base hereda la red, las pausas y los reintentos; aqui se
+    queda lo que es de KnoSys: la sesion, el GET con sus 27 parametros y el
+    intermedio de la FNMT que su servidor no envia."""
 
     def __init__(self, espera: int = ESPERA, reintentos: int = REINTENTOS,
                  pausa: float = PAUSA, silencioso: bool = False):
-        self.espera = espera
-        self.reintentos = reintentos
-        self.pausa = pausa
-        self.silencioso = silencioso
-        self.peticiones = 0
-        self._ultima = 0.0
-
-        ctx = ssl.create_default_context()
-        if CERT_FNMT.is_file():
-            ctx.load_verify_locations(cafile=str(CERT_FNMT))
-        self.ctx = ctx
-        self.op = urllib.request.build_opener(
-            urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()),
-            urllib.request.HTTPSHandler(context=ctx),
-        )
-        self._sesion = False
-
-    def _respirar(self) -> None:
-        """Pausa entre peticiones. No es cortesia: es no tumbarles el servicio."""
-        falta = self.pausa - (time.time() - self._ultima)
-        if falta > 0 and self._ultima:
-            time.sleep(falta)
-
-    def pedir(self, ruta: str, datos=None, metodo: str = "GET") -> Respuesta:
-        """Una peticion, con pausa y con tope.
-
-        `datos` puede ser un dict o una lista de pares. La LISTA importa: el
-        buscador recibe los campos en un orden concreto y un dict no garantiza
-        ninguno. Con GET los datos van en la URL, que es como los manda la
-        propia aplicacion.
-        """
-        url = f"{BASE}{ruta}"
-        cuerpo = None
-        if datos:
-            codificado = urllib.parse.urlencode(datos)
-            if metodo.upper() == "GET":
-                url = f"{url}?{codificado}"
-            else:
-                cuerpo = codificado.encode()
-        ultimo = ""
-        ultimo_codigo = None
-        for intento in range(1, self.reintentos + 1):
-            self._respirar()
-            req = urllib.request.Request(url, data=cuerpo, headers={
-                "User-Agent": UA,
-                "Accept-Language": "es-ES,es;q=0.9",
-                "X-Requested-With": "XMLHttpRequest",
-                "Referer": f"{BASE}/",
-            })
-            t0 = time.time()
-            try:
-                with self.op.open(req, timeout=self.espera) as r:
-                    texto = r.read().decode("utf-8", "replace")
-                self.peticiones += 1
-                self._ultima = time.time()
-                return Respuesta(200, texto, time.time() - t0, url)
-            except urllib.error.HTTPError as e:
-                ultimo = f"el servidor respondio {e.code}"
-                ultimo_codigo = e.code
-                self.peticiones += 1
-            except urllib.error.URLError as e:
-                ultimo = f"no se pudo conectar ({getattr(e, 'reason', e)})"
-            except TimeoutError:
-                ultimo = f"no contesto en {self.espera} segundos"
-            except Exception as e:  # noqa: BLE001
-                ultimo = f"{type(e).__name__}"
-            self._ultima = time.time()
-            if not self.silencioso and intento < self.reintentos:
-                print(f"    reintento {intento}/{self.reintentos - 1}: {ultimo}")
-            if intento < self.reintentos:
-                time.sleep(PAUSA_REINTENTO)
-        raise FuenteCaida(ultimo or "sin respuesta", ultimo_codigo)
+        # Los globales se leen AQUI, al construir, no en la firma: las pruebas
+        # apuntan el cliente a un PETETE de mentira cambiando `petete.BASE` y
+        # `petete.PAUSA_REINTENTO` antes de instanciar, y eso tiene que seguir
+        # funcionando igual que antes del refactor.
+        super().__init__(base=BASE, ua=UA, espera=espera, reintentos=reintentos,
+                         pausa=pausa, pausa_reintento=PAUSA_REINTENTO,
+                         silencioso=silencioso,
+                         cafile=str(CERT_FNMT) if CERT_FNMT.is_file() else "")
 
     def sesion(self) -> None:
         """Abre sesion pidiendo la pagina del buscador. Una sola vez."""
@@ -522,41 +413,19 @@ def extraer_consulta_query(crudo: str) -> str:
 # --------------------------------------------------------------------- cache
 
 
-class Cache:
-    """El crudo, los campos y el mapeo numero <-> id interno."""
+class Cache(FW.CacheDocumentos):
+    """La cache de PETETE. De la base hereda el crudo, los campos, el indice y
+    las busquedas; aqui se queda el MAPEO numero <-> id interno, que es propio
+    de KnoSys: en el TEAC el documento se pide por su numero y no hace falta.
+    """
 
     def __init__(self):
-        for d in (DIR_CRUDO, DIR_CONSULTAS, DIR_BUSQUEDAS):
-            d.mkdir(parents=True, exist_ok=True)
-        self.indice = self._leer_indice()
+        # Los directorios se leen al construir, no en la definicion: las
+        # pruebas los apuntan a un temporal antes de instanciar.
+        super().__init__(dir_crudo=DIR_CRUDO, dir_documentos=DIR_CONSULTAS,
+                         dir_busquedas=DIR_BUSQUEDAS, indice=INDICE, raiz=RAIZ)
 
-    @staticmethod
-    def _leer_indice() -> dict:
-        if INDICE.is_file():
-            try:
-                return json.loads(INDICE.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                aviso("el indice estaba corrupto; se empieza uno nuevo "
-                      "(el crudo y las consultas siguen ahi)")
-        return {"consultas": {}, "creado": _ahora()}
-
-    def _guardar_indice(self) -> None:
-        INDICE.write_text(json.dumps(self.indice, ensure_ascii=False, indent=2),
-                          encoding="utf-8")
-
-    # ------------------------------------------------------------ consultas
-
-    def tiene(self, numero: str) -> bool:
-        return (DIR_CONSULTAS / f"{numero.upper()}.json").is_file()
-
-    def leer(self, numero: str) -> dict | None:
-        f = DIR_CONSULTAS / f"{numero.upper()}.json"
-        if not f.is_file():
-            return None
-        try:
-            return json.loads(f.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            return None
+    # ------------------------------------------------------------ el mapeo
 
     def doc_id(self, numero: str) -> str:
         return self.indice["consultas"].get(numero.upper(), {}).get("doc_id", "")
@@ -572,18 +441,16 @@ class Cache:
         ficha.setdefault("visto", _ahora())
         self._guardar_indice()
 
+    # --------------------------------------------------------- guardar una
+
     def guardar(self, numero: str, crudo: str, campos: dict, doc_id: str,
                 tab: str) -> dict:
         numero = (numero or campos.get("numero") or "").upper()
         if not numero:
             raise FormaInesperada("el documento no trae numero de consulta")
 
-        # 1) el crudo, tal cual llego, que no se toca nunca
-        f_crudo = DIR_CRUDO / f"{numero}.html"
-        f_crudo.write_text(crudo, encoding="utf-8")
-        sha = hashlib.sha256(crudo.encode("utf-8")).hexdigest()
+        f_crudo, sha = self.guardar_crudo(numero, crudo)
 
-        # 2) los campos, que se pueden rehacer desde el crudo
         registro = {
             "numero": numero,
             "fecha": campos.get("fecha", ""),
@@ -599,13 +466,9 @@ class Cache:
             "url_navegador": URL_NAVEGADOR.format(num=numero),
             "descargado": _ahora(),
             "sha256_crudo": sha,
-            # Relativa si cuelga del proyecto, absoluta si no. Guardar la ruta
-            # no puede ser motivo de que se pierda una descarga.
-            "crudo": str(f_crudo.relative_to(RAIZ)
-                         if f_crudo.is_relative_to(RAIZ) else f_crudo),
+            "crudo": self.ruta_relativa(f_crudo),
         }
-        (DIR_CONSULTAS / f"{numero}.json").write_text(
-            json.dumps(registro, ensure_ascii=False, indent=2), encoding="utf-8")
+        self.guardar_documento(numero, registro)
 
         ficha = self.indice["consultas"].setdefault(numero, {})
         ficha.update({"doc_id": doc_id, "tab": tab,
@@ -613,29 +476,6 @@ class Cache:
                       "fecha": registro["fecha"]})
         self._guardar_indice()
         return registro
-
-    # ------------------------------------------------------------ busquedas
-
-    @staticmethod
-    def _clave_busqueda(terminos: str, tab: str) -> str:
-        return hashlib.sha256(f"{tab}|{terminos.strip().lower()}"
-                              .encode("utf-8")).hexdigest()[:16]
-
-    def busqueda(self, terminos: str, tab: str) -> list | None:
-        f = DIR_BUSQUEDAS / f"{self._clave_busqueda(terminos, tab)}.json"
-        if not f.is_file():
-            return None
-        try:
-            return json.loads(f.read_text(encoding="utf-8"))["resultados"]
-        except (json.JSONDecodeError, KeyError):
-            return None
-
-    def guardar_busqueda(self, terminos: str, tab: str, resultados: list) -> None:
-        f = DIR_BUSQUEDAS / f"{self._clave_busqueda(terminos, tab)}.json"
-        f.write_text(json.dumps(
-            {"terminos": terminos, "tab": tab, "cuando": _ahora(),
-             "resultados": resultados}, ensure_ascii=False, indent=2),
-            encoding="utf-8")
 
 
 def _ahora() -> str:
@@ -839,43 +679,6 @@ def modo_cache(args) -> int:
 CANARIO_NUM = "V1601-22"
 
 
-def _dias_de_certificado() -> int | None:
-    """Dias que le quedan al certificado del servidor. None si no se puede ver.
-
-    Se mira porque el 26-09-2026 caduca el actual, y al renovarlo pueden
-    arreglar la cadena incompleta... o cambiarla por otra cosa. Enterarnos por
-    el canario es barato; enterarnos porque el departamento no puede trabajar,
-    no.
-    """
-    import socket
-    from datetime import datetime as _dt
-
-    host = urllib.parse.urlparse(BASE).hostname or ""
-    try:
-        ctx = ssl.create_default_context()
-        # Solo se quiere LEER la fecha del certificado: si la cadena esta
-        # incompleta no debe impedir mirarla.
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        with socket.create_connection((host, 443), timeout=15) as s:
-            with ctx.wrap_socket(s, server_hostname=host) as ss:
-                der = ss.getpeercert(binary_form=True)
-        texto = ssl.DER_cert_to_PEM_cert(der)
-        # `getpeercert()` con validacion desactivada no da el dict, asi que se
-        # decodifica el DER con la utilidad de la propia biblioteca.
-        import tempfile
-        with tempfile.NamedTemporaryFile("w", suffix=".pem", delete=False) as f:
-            f.write(texto)
-            ruta = f.name
-        datos = ssl._ssl._test_decode_cert(ruta)  # noqa: SLF001
-        Path(ruta).unlink(missing_ok=True)
-        fin = _dt.strptime(datos["notAfter"], "%b %d %H:%M:%S %Y %Z").replace(
-            tzinfo=timezone.utc)
-        return (fin - datetime.now(timezone.utc)).days
-    except Exception:  # noqa: BLE001
-        return None
-
-
 def modo_canario(args) -> int:
     """Comprueba que la fuente sigue donde estaba y con la forma de siempre.
 
@@ -887,19 +690,18 @@ def modo_canario(args) -> int:
     print(f"\n  fuente : {BASE}")
     print(f"  patron : consulta {CANARIO_NUM}\n")
 
-    # Tres cubos distintos a proposito. Meterlos todos en "fallos" es lo que
-    # hizo que un bug nuestro se leyera como una caida de la fuente.
-    fallos = []          # es de ELLOS: su servidor no responde o se atraganta
-    culpa_nuestra = []   # es NUESTRO: preguntamos mal y nos lo rechazan
-    cambios = []         # la fuente cambio de forma: hay que mirarla
-    avisos_ = []
+    # Los tres cubos de culpa viven en la base: son los mismos para cualquier
+    # fuente. Aqui solo se rellenan con lo que es propio de PETETE.
+    can = FW.Canario()
+    fallos, culpa_nuestra = can.fallos, can.culpa_nuestra
+    cambios, avisos_ = can.cambios, can.avisos
     fuente = Fuente(silencioso=True)
 
     # 0. el certificado, que caduca y no lo mira nadie hasta que rompe
     if not CERT_FNMT.is_file():
         avisos_.append("falta el certificado intermedio de la FNMT: la "
                        "verificacion estricta va a fallar")
-    dias = _dias_de_certificado()
+    dias = FW.dias_de_certificado(BASE)
     if dias is None:
         avisos_.append("no se ha podido leer la fecha de caducidad del "
                        "certificado del servidor")
@@ -942,30 +744,7 @@ def modo_canario(args) -> int:
                 consulta_query = extraer_consulta_query(crudo)
                 print(f"SI   (id {doc_id})")
         except FuenteCaida as e:
-            # DE QUIEN ES EL FALLO. Antes esto decia siempre "la fuente no
-            # responde", y con ese mensaje estuvimos culpando a la DGT de un
-            # bug nuestro -mandabamos POST donde su aplicacion manda GET-.
-            # El codigo HTTP lo distingue sin adivinar nada:
-            #   4xx  su servidor entendio la peticion y la rechaza: es NUESTRA
-            #   5xx  su servidor se atraganta: es SUYO
-            #   sin codigo: no llego a contestar, no se puede saber de quien es
-            codigo = getattr(e, "codigo", None)
-            if codigo and 400 <= codigo < 500:
-                print("RECHAZADA")
-                culpa_nuestra.append(
-                    f"la busqueda fue RECHAZADA con {codigo}: su servidor la "
-                    f"entendio y no le gusta. El fallo es NUESTRO, no de la "
-                    f"fuente: estamos preguntando mal")
-            elif codigo and codigo >= 500:
-                print("NO")
-                fallos.append(
-                    f"la busqueda fallo con {codigo}: es un error DE SU "
-                    f"SERVIDOR. La peticion iba bien formada")
-            else:
-                print("SIN RESPUESTA")
-                fallos.append(
-                    f"la busqueda no llego a contestar ({e}). No se puede "
-                    f"saber si el fallo es suyo o nuestro")
+            print(can.clasificar(e, "la busqueda"))
         except FormaInesperada as e:
             print("CAMBIO DE FORMA")
             cambios.append(f"la lista de resultados ha cambiado: {e}")
@@ -984,71 +763,22 @@ def modo_canario(args) -> int:
             else:
                 print(f"SI   ({len(campos['contestacion'])} caracteres)")
         except FuenteCaida as e:
-            codigo = getattr(e, "codigo", None)
-            if codigo and 400 <= codigo < 500:
-                print("RECHAZADA")
-                culpa_nuestra.append(
-                    f"la peticion del documento fue rechazada con {codigo}: "
-                    f"el fallo es NUESTRO")
-            else:
-                print("NO")
-                fallos.append(f"el documento no responde: {e}")
+            print(can.clasificar(e, "la peticion del documento"))
         except FormaInesperada as e:
             print("CAMBIO DE FORMA")
             cambios.append(f"el documento ha cambiado de forma: {e}")
     else:
         print("(no se prueba)")
 
-    print()
-    print("=" * ANCHO)
-    if culpa_nuestra:
-        # Va PRIMERO porque es lo unico que podemos arreglar nosotros.
-        print("  CANARIO EN ROJO — Y EL FALLO ES NUESTRO")
-        print()
-        for f in culpa_nuestra:
-            print(f"    · {f}")
-        print()
-        print("  Que significa: la fuente esta bien. Somos nosotros los que")
-        print("  preguntamos de una forma que no acepta. Se arregla en")
-        print("  petete.py, no esperando a que la DGT arregle nada.")
-    elif cambios:
-        print("  CANARIO EN ROJO — LA FUENTE HA CAMBIADO DE FORMA")
-        print()
-        for f in cambios:
-            print(f"    · {f}")
-        print()
-        print("  Que significa: responde, pero ya no devuelve lo que")
-        print("  esperabamos. Estos endpoints son internos y sin documentar.")
-        print("  Hay que mirar la pagina a mano antes de fiarse de nada.")
-    elif fallos:
-        print("  CANARIO EN ROJO — LA FUENTE NO RESPONDE")
-        print()
-        for f in fallos:
-            print(f"    · {f}")
-        print()
-        print("  Que significa: el fallo es de su servidor, no de nuestra")
-        print("  peticion. No hay nada que arreglar aqui: hay que esperar.")
-        print("  El agente puede seguir contestando con la LEY; lo que no")
-        print("  puede es anadir criterio de la DGT, y eso tiene que verse")
-        print("  en pantalla, nunca quedarse en silencio.")
-    else:
-        print("  CANARIO EN VERDE — la fuente responde y tiene la forma de siempre")
-    for a in avisos_:
-        print(f"\n  aviso: {a}")
-    print("=" * ANCHO)
+    return can.informar(marcar=_marcar_estado_fuente)
 
-    hay_fallo = bool(fallos or culpa_nuestra or cambios)
-    # El estado queda escrito para que el agente sepa si puede contar con
-    # criterio. "Preguntamos mal" tambien es fuente NO disponible.
-    try:
-        import sys as _s
-        _s.path.insert(0, str(RAIZ))
-        from agente_fiscal import dgt as _dgt
-        motivo = (culpa_nuestra or cambios or fallos or [""])[0]
-        _dgt.marcar_fuente(not hay_fallo, motivo[:200])
-    except Exception:  # noqa: BLE001
-        pass
-    return 1 if hay_fallo else 0
+
+def _marcar_estado_fuente(viva: bool, motivo: str) -> None:
+    """Deja escrito si la fuente respondia. Lo lee la fase 9B para bajar de
+    estado cuando no hay criterio disponible."""
+    sys.path.insert(0, str(RAIZ))
+    from agente_fiscal import dgt as _dgt
+    _dgt.marcar_fuente(viva, motivo)
 
 
 # ----------------------------------------------------------------------- cli
