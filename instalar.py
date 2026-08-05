@@ -279,6 +279,40 @@ def comprobar_clave() -> tuple:
 
 
 def configurar_clave() -> int:
+    """La clave, en VENTANA si se puede y en consola si no.
+
+    La ventana es el camino normal, no el adorno. En Windows `getpass` habla
+    con la consola por `msvcrt`, saltandose stdout: el prompt puede no verse,
+    no se ve nada al escribir y Ctrl+V puede meter un caracter de control
+    DENTRO de la clave. Ver `dialogo_clave`.
+    """
+    import dialogo_clave as D
+
+    if D.hay_entorno_grafico():
+        return _clave_en_ventana(D)
+    ok("No se ha podido abrir una ventana, asi que se pide aqui.")
+    return _clave_en_consola()
+
+
+def _clave_en_ventana(D) -> int:
+    linea("        Se abre una ventana para pedirla. Si no la ves, mira si ha")
+    linea("        quedado detras de esta.")
+    clave, cancelado = D.pedir_clave(comprobar_clave, guardar_clave)
+    if clave:
+        ok("La clave funciona. Guardada.")
+        return 0
+    if cancelado:
+        return parar(
+            "Instalacion interrumpida: hace falta la clave para terminar.",
+            "Vuelve a abrir el agente cuando la tengas y seguira por aqui.\n"
+            "Lo que ya se ha instalado NO se pierde.")
+    return parar(
+        "No se ha podido configurar la clave.",
+        "Comprueba en https://platform.claude.com que la clave sigue activa\n"
+        "y que la cuenta tiene saldo. Despues vuelve a abrir el agente.")
+
+
+def _clave_en_consola() -> int:
     linea(TEXTO_CLAVE)
     for intento in range(1, INTENTOS_CLAVE + 1):
         clave = pedir_clave_por_pantalla()
@@ -319,6 +353,43 @@ def configurar_clave() -> int:
 # ----------------------------------------------------------------- 3. corpus
 
 
+class _Resultado:
+    """Lo justo de un proceso para decidir y para explicar el fallo."""
+
+    def __init__(self, returncode: int, stderr: str):
+        self.returncode = returncode
+        self.stderr = stderr
+
+
+# Cuantas lineas del final se guardan para poder explicar un fallo. La salida
+# entera de una ingesta son miles: guardarla toda para ensenar cuatro es
+# quedarse con un fichero de log que nadie va a abrir.
+COLA_DIAGNOSTICO = 25
+
+
+def _ingerir_con_progreso(norma_id: str) -> _Resultado:
+    """Lanza fase1 ENSENANDO lo que va diciendo, no al terminar.
+
+    Antes iba con `capture_output=True` y la pantalla se quedaba quieta los
+    minutos que tarda cada norma: no se perdia nada, pero parecia colgado, que
+    es justo lo que el instalador viene a evitar. Ahora se ve el avance Y se
+    guarda el final por si hay que explicar un fallo.
+    """
+    proceso = subprocess.Popen(
+        [sys.executable, "fase1.py", "ingerir", norma_id], cwd=str(RAIZ),
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+        bufsize=1, errors="replace")
+    cola: list = []
+    for l in proceso.stdout:
+        l = l.rstrip()
+        cola.append(l)
+        del cola[:-COLA_DIAGNOSTICO]
+        if l.strip():
+            linea(f"          | {l[:76]}")
+    proceso.wait()
+    return _Resultado(proceso.returncode, "\n".join(cola))
+
+
 def ingerir_corpus(pendientes: list) -> int:
     ok("El agente trabaja con el texto oficial del BOE, guardado en este")
     ok("equipo. Hay que bajarlo una vez. Tarda unos minutos.")
@@ -327,8 +398,7 @@ def ingerir_corpus(pendientes: list) -> int:
     for n, (norma_id, nombre) in enumerate(pendientes, 1):
         linea(f"        ({n} de {len(pendientes)}) bajando {nombre}...")
         try:
-            r = subprocess.run([sys.executable, "fase1.py", "ingerir", norma_id],
-                               cwd=str(RAIZ), capture_output=True, text=True)
+            r = _ingerir_con_progreso(norma_id)
         except OSError:
             return parar("No se ha podido bajar el texto de las normas.")
         if r.returncode != 0 or not (CORPUS / f"{norma_id}.jsonl").is_file():

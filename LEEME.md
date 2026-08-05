@@ -1256,3 +1256,97 @@ está el repaso estático. Lo que ese repaso **no** puede garantizar:
 - que el antivirus o la política de la empresa no bloqueen `pip`;
 - el aspecto real de los acentos en esa consola (por eso el `.bat` es **ASCII
   puro y CRLF**, comprobado).
+
+---
+
+# FASE 16 · LA CLAVE SE PIDE EN UNA VENTANA
+
+## El diagnóstico: NO era pythonw
+
+La sospecha era que `abrir_agente.bat` arrancaba con `pythonw.exe`, sin consola.
+No es eso: el `.bat` ya lanza `instalar.py` con **`python.exe`** (línea 99) y
+reserva `pythonw.exe` solo para la ventana final (línea 146).
+
+Lo que sí es distinto en Windows es `getpass`. No es una función: son tres
+implementaciones y Python elige una al importar. En Windows elige `win_getpass`,
+que **no usa stdin ni stdout**:
+
+```python
+for c in prompt:
+    msvcrt.putwch(c)        # el prompt va DIRECTO a la consola, no a stdout
+c = msvcrt.getwch()         # lee DIRECTO del teclado, no de stdin
+else: pw = pw + c           # cualquier caracter de control entra en la clave
+```
+
+De ahí salen tres fallos, y los tres encajan con «no funciona»:
+
+1. **El prompt puede no verse donde toca.** `putwch` se salta `sys.stdout`, y el
+   instalador reconfigura stdout a UTF-8 al arrancar. Son dos canales hacia la
+   misma ventana: el texto explicativo por uno y «Pega aquí la clave» por el
+   otro. Lo que ve una persona es la explicación y debajo **nada**.
+2. **No se ve nada al escribir**, por diseño. Quien pega una clave no sabe si se
+   ha pegado. Sumado a lo anterior: una pantalla quieta que parece colgada.
+3. **Ctrl+V puede entrar como carácter.** `getwch()` lee teclas crudas. Si la
+   consola no tiene el atajo activado, Ctrl+V manda `\x16`, que se añade **dentro
+   de la clave**, y el fallo aparece después.
+
+**No se ha podido reproducir**: aquí no hay Windows. Los tres se sostienen
+leyendo `Lib/getpass.py` de CPython, no ejecutándolo. Y por eso el arreglo no es
+afinar `getpass`, sino **dejar de depender de él**.
+
+## El arreglo: `dialogo_clave.py`
+
+Una ventana de tkinter —garantizado, porque la aplicación *es* tkinter— con el
+texto de dónde se saca la clave, un campo oculto con casilla «Mostrar lo que
+escribo», pegado nativo y comprobación **antes** de cerrar.
+
+- **Pegar funciona.** Se atan `Ctrl+V`, `Ctrl+Shift+V` y `Cmd+V` a mano y se
+  devuelve `"break"`, para que el atajo propio de Tk no pegue una segunda vez.
+  Y se limpian espacios y saltos de línea, que es lo que trae una clave copiada
+  de una web.
+- **Si la clave no vale, lo dice ahí mismo y no se cierra.** Se puede reintentar
+  en la misma ventana.
+- **Sin entorno gráfico cae a la consola**, como antes. Se comprueba *abriendo*
+  una ventana, no suponiendo: que `import tkinter` funcione no dice nada de si
+  hay pantalla.
+
+### El fallo que encontró la prueba
+
+La primera versión devolvía el resultado del hilo con `self.raiz.after(0, ...)`.
+**Tkinter no es reentrante**: `after` llamado desde un hilo que no es el suyo se
+pierde en silencio, y la ventana se queda con «Comprobando...» para siempre.
+Ahora el resultado vuelve por una **cola** que sondea el hilo de la ventana —el
+mismo patrón que ya usaba `interfaz.py`, y por el mismo motivo.
+
+## El resto del instalador, con la misma lupa
+
+| dónde escribe / pregunta | canal | en Windows |
+|---|---|---|
+| `linea()`, `paso()`, `ok()`, `parar()` | `print` a stdout | **bien**: hay consola |
+| `echo` del propio `.bat` | consola | **bien** |
+| instrucciones de «falta Python» | `echo` del `.bat` | **bien** |
+| pedir la clave | `msvcrt` | **estaba roto** → ahora ventana |
+| progreso de la ingesta | `capture_output=True` | **estaba flojo** → corregido |
+
+**El único canal roto era el de la clave.** Lo demás escribe por stdout con
+`flush=True` y se ve.
+
+**Lo flojo, y también corregido:** `ingerir_corpus` lanzaba `fase1.py` con
+`capture_output=True`, así que la salida se tragaba y solo se imprimía una línea
+*cuando la norma ya había terminado*. Bajar una norma tarda minutos: durante ese
+rato la pantalla no se movía. Ahora se lee línea a línea y se va enseñando,
+guardando las últimas 25 por si hay que explicar un fallo.
+
+## Qué está probado y qué no
+
+**Ejecutado de verdad en Mac:** el diálogo, manejado por código (8 bloques:
+ocultar/mostrar, pegar sin duplicar, aviso de formato, clave buena, clave mala
+con reintento en la misma ventana, cancelar) y **diez** escenarios de
+instalación, dos de ellos nuevos: con pantalla usa la ventana y no la consola, y
+si la persona cierra la ventana el instalador para sin abrir el agente.
+
+**NO probado en Windows, y hay que decirlo:** sigue sin haber Windows aquí. En
+concreto no se ha podido comprobar que el diálogo salga al frente sobre la
+consola del `.bat`, ni que `Ctrl+V` pegue en esa ventana en ese equipo, ni el
+aspecto real de la tipografía. Lo que sí se puede afirmar es que **ya no depende
+de `msvcrt`**, que es de donde salían los tres fallos.
