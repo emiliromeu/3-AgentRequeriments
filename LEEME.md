@@ -1350,3 +1350,253 @@ concreto no se ha podido comprobar que el diálogo salga al frente sobre la
 consola del `.bat`, ni que `Ctrl+V` pegue en esa ventana en ese equipo, ni el
 aspecto real de la tipografía. Lo que sí se puede afirmar es que **ya no depende
 de `msvcrt`**, que es de donde salían los tres fallos.
+
+---
+
+# FASE 17 · QUE NUNCA HAYA BUCLE, Y GASTAR MENOS
+
+## La regla de proceso, que es donde se fue el dinero
+
+> **Ninguna tarea larga se lanza esperando. Se escribe a fichero y se consulta
+> después. Nada de bucles de espera.**
+
+La mayor parte del gasto de este proyecto **no han sido las consultas del
+agente**: han sido esperas. Un proceso que tarda veinte minutos y se vigila
+mirándolo cuesta muchísimo más que el mismo proceso escribiendo a un `.log` que
+se lee cuando ha terminado. Vale para la siembra, para la ingesta del BOE y para
+cualquier cosa que tarde: se lanza al fondo, escribe a fichero, y se mira luego.
+
+## 1 · El techo duro
+
+Había un reintento controlado en `fase4`, y está bien. Pero **un tope que vive
+en el bucle solo protege mientras ese bucle esté bien escrito**. Ahora hay algo
+debajo, en `Motor`, que es el único sitio por el que se pasa siempre:
+
+| | |
+|---|---|
+| `TOPE_LLAMADAS` | 6 por consulta |
+| `TOPE_SEGUNDOS` | 300 por consulta completa |
+| `TIMEOUT_LLAMADA` | 120 s por llamada |
+| `REINTENTOS_RED` | 3, con espera creciente (la hace el SDK) |
+
+Detalles que importan:
+
+- **Se comprueba ANTES de llamar**, no después: el objetivo es no gastar la
+  llamada, no enterarse de que se ha gastado.
+- **El reloj se reinicia por consulta.** El banco reutiliza el mismo motor para
+  varias seguidas; sin eso, la quinta se pasaría de tiempo por culpa de las
+  cuatro anteriores.
+- **Vale también para el motor de ensayo.** Un tope que solo actúa cuando cuesta
+  dinero no se puede probar el día que hace falta.
+- **Una parada por tope NO es un fallo del modelo** y no se cuenta igual:
+  `fallo="tope"`, estado `PARADA POR TOPE` y un `topes.json` en la traza con
+  cuántas llamadas, cuál era el tope y por qué se paró.
+- El cliente se crea con `timeout` y `max_retries` **explícitos**. Sin ellos el
+  SDK espera 10 minutos por llamada y reintenta 2 veces por su cuenta: dos
+  números que nadie eligió y que se multiplican.
+
+**Demostrado, no afirmado** (`prueba_topes.py`): un modelo que siempre falla, y
+se comprueba que para **en** el tope y **no antes**. Las dos mitades:
+
+| tope | llamadas | quién manda |
+|---|---|---|
+| 1 | 1 | el techo |
+| 2 | 2 | el techo |
+| 3 | 3 | la lógica (1 análisis + 2 redacciones) |
+| 6 (el de hoy) | 3 | la lógica: el techo no se toca |
+
+## 2 · El umbral del corte: medido otra vez, y NO se toca
+
+El desperdicio es real: en las dos trazas con respuesta de un modelo de verdad,
+**se mandaron 5 preceptos y se citó 1**. 80%.
+
+Pero **el umbral no es la palanca**, y esto se ha medido con el mismo método que
+la primera vez —los términos que propuso el analizador, guardados en las
+trazas—, ahora con **91 consultas distintas** en vez de 65:
+
+| umbral | preceptos/consulta | se quedan con 1 |
+|---|---|---|
+| 0,65 | 4,00 | 3 |
+| **0,70** | **3,79** | **5** ← el de hoy |
+| 0,71 | 3,71 | 7 |
+| 0,73 | 3,62 | 12 |
+| 0,75 | 3,44 | 18 |
+
+**El escalón sigue exactamente donde estaba.** Con más del doble de datos, 0,70
+sigue siendo el último valor antes de que la curva se dispare. Subirlo a 0,75
+dejaría 18 de 91 consultas con un solo precepto, que es el «cortar por puesto
+mata casos buenos» que este proyecto ya rechazó una vez.
+
+Y un dato que descarta la otra sospecha: sobre las 19 del banco, **cero
+preceptos entran por remisión**. Los 2,9 extra por consulta entran todos por
+cobertura. Separarlos era necesario porque el que entra por remisión puede no
+citarse y aun así estar bien mandado; aquí no hay ninguno.
+
+**Conclusión: el desperdicio no viene de un umbral flojo, viene de que la
+cobertura empata.** Varios preceptos cubren las mismas palabras sin contestar la
+pregunta. Eso no se arregla moviendo un número.
+
+## 3 · El modelo no se cubre sobre lo que el código sabe
+
+Reglas nuevas en el prompt del redactor:
+
+- **Regla 11:** la versión que se le da ES la que aplicaba, calculada con las
+  fechas del BOE. Prohibido «conviene confirmar que no ha habido modificación
+  posterior», «según el material facilitado» o «habría que verificar la
+  vigencia». Y los avisos de vigencia, las remisiones que faltan y los límites
+  del corpus **los pone el sistema** debajo: repetirlos los saca dos veces.
+- **Regla 12:** no enumerar lo que no se usa. La respuesta del turismo gastaba
+  un párrafo entero en decir que los artículos 9, 57, 101 y 27 no resolvían la
+  duda. Esa frase no le sirve a nadie y se paga por palabra.
+- **Estructura:** desaparece el apartado de Advertencias (lo pone el sistema) y
+  el Planteamiento baja a una frase que no repita el enunciado.
+
+## 4 · La caché: estaba mal calibrada y se ha medido
+
+La caché de prompt **funciona**, y en la traza se ve:
+
+```
+20260802T122131  redaccion 1   entrada 10238  cacheE 2417   <- la escribe
+20260802T122234  redaccion 1   entrada 11121  cacheL 2417   <- la lee
+20260802T122234  redaccion 2   entrada 11492  cacheL 2417   <- y la relee
+```
+
+Pero el estimador que decide si un bloque se marca como cacheable contaba a
+**3,5 caracteres por token**, que es lo que se dice para inglés. Contrastado con
+lo que contó la propia API:
+
+```
+5.373 caracteres  ->  2.417 tokens  =  2,22 caracteres por token
+```
+
+Castellano jurídico, con tildes, comillas latinas y palabras largas. Con 3,5 se
+contaban **un 58% menos tokens de los que hay**, así que bloques que sí llegaban
+al mínimo se marcaban como que no. Es lo que le pasaba al **prompt del
+analizador**: 1.466 caracteres, unos 666 tokens, mínimo 512 — cacheable desde
+siempre, y sin cachear en cada consulta.
+
+Corregido `CARACTERES_POR_TOKEN = 2.2` y marcado el prompt del analizador. El
+riesgo es de un solo lado: si aun así un bloque no llega, la API se lo salta en
+silencio y no se cobra nada de más.
+
+## Lo que NO se ha podido medir, y hay que decirlo
+
+**La cuenta no tiene saldo.** La llamada real para medir la salida «después»
+devolvió `400: Your credit balance is too low`. Falló en la primera llamada, así
+que no se gastó ni un token, pero **el ahorro en tokens de salida de los puntos
+3 y 4 está sin medir**: está razonado y no comprobado, que no es lo mismo.
+
+Queda pendiente, en cuanto haya saldo: una consulta del turismo y comparar
+contra la traza `20260802T122234` (entrada 25.124, salida 5.433, 4 llamadas).
+
+---
+
+# FASE 19 · LA DOCTRINA, POR ASUNTO Y NO SOLO POR ARTÍCULO
+
+## El fallo
+
+`por_preceptos` elegía por coincidencia de **artículo**. Sobre el artículo 80
+—modificación de base imponible por créditos incobrables— mandaba estos tres:
+
+```
+00/01298/2004  IVA a la importación. Despacho a libre práctica
+00/03399/2023  Impuesto sobre la ELECTRICIDAD. Devolución por impagados
+00/05524/2024  Impuesto sobre la ELECTRICIDAD. Devolución por impagados
+```
+
+y dejaba fuera **los cuatro que iban justo de la pregunta** (00/02189, 00/03983,
+00/05698, 00/06614). No fue mala suerte: el orden por peso ponía delante el de
+unificación y los más recientes, y el tope de 3 se comía a los buenos. **Se
+elegían los tres peores y se descartaban los cuatro mejores.**
+
+Es la tercera vez que este proyecto tropieza con lo mismo: un aviso que casi
+nunca viene al caso se deja de leer.
+
+## El umbral por términos NO funciona, y hay que decirlo
+
+Lo primero que se midió fue cobertura de términos contra `asunto` +
+`conceptos`, como se pidió. **No discrimina:** los dos de electricidad puntúan
+**1,00**, porque sus conceptos son literalmente «Base imponible: modificación» y
+«Crédito incobrable». Tratan exactamente de eso — pero en el Impuesto Especial
+sobre la Electricidad.
+
+Lo que los separa no son los términos: es **el impuesto**. Y la fuente lo dice.
+
+## Dos filtros, y el que trabaja es el primero
+
+**1 · MATERIA** (`materia_ajena`). Los `conceptos` son vocabulario controlado de
+DYCTEA, no prosa:
+
+```
+00/03399, 00/05524 -> ['Impuesto Especial sobre la Electricidad', 'Impuestos Especiales IIEE']
+los otros siete    -> ['Impuesto sobre el Valor Añadido IVA']
+```
+
+Si el criterio nombra impuestos y **ninguno** es del corpus, fuera. Si **no
+nombra ninguno**, se le deja pasar: no se supone lo que la fuente no dice.
+
+**2 · ASUNTO** (`cobertura_asunto`). La misma máquina que para los preceptos,
+contra `asunto` + `conceptos`. Esta sí coge al de importación, que es de IVA
+pero de otra cosa: cobertura **0,00**.
+
+### El umbral, de los datos
+
+Medido sobre las 7 consultas que traen criterios, con el filtro de materia ya
+aplicado. Las coberturas que se dan son {0,00 0,20 0,40 0,50 0,60 0,75 1,00}:
+
+| umbral | criterios/consulta | consultas sin ninguno |
+|---|---|---|
+| **0,20** | **1,57** | **0** ← último escalón |
+| 0,25 | 1,14 | 1 |
+| 0,50 | 1,00 | 2 |
+
+`UMBRAL_ASUNTO = 0,20`, el último valor antes de que una consulta se quede sin
+nada. **Aviso honesto: son 7 consultas y 9 criterios, que es poco.** El número
+que de verdad hace el trabajo es el filtro de materia; este es el ajuste fino y
+habrá que remedirlo cuando la copia local crezca.
+
+## El resultado
+
+| consulta | antes | ahora | qué se manda ahora |
+|---|---|---|---|
+| prorrata | 0 | 0 | — |
+| rectificación | 1 | 1 | Rectificación de bases imponibles |
+| turismo | 2 | 2 | Alquiler de embarcaciones · Deducibilidad |
+| **art. 80** | **3** | **3** | **Modificación BI · Rectificación BI · Modificación BI (plazo)** |
+
+**El número no cambia: cambia el contenido.** En el art. 80 se mandan ahora los
+tres que hablan de base imponible, y se descartan los dos de electricidad («va
+de otro impuesto») y el de importación («coincide el artículo, no el asunto»),
+cada uno con su motivo escrito en la traza.
+
+Contraste con el juicio del propio modelo: en la prueba anterior escribió *«la
+doctrina del TEAC incorporada al material se refiere a la devolución en el
+Impuesto Especial sobre la Electricidad y no aporta criterio»* — 3 traídos, **0
+pertinentes**. Ahora los 3 son del asunto.
+
+## Si no queda ninguno, se dice
+
+> *hay 7 resolución(es) económico-administrativa(s) que citan el artículo 80,
+> pero NINGUNA es del mismo asunto que esta consulta: no se manda ninguna.*
+
+Mejor eso que traer una que no viene al caso. Y **solo sobre los artículos que
+sostienen la respuesta**: la primera versión sacaba siete avisos nombrando
+artículos que nadie había citado, porque un criterio cita varios y la mayoría no
+están en juego. De 7 avisos a 2.
+
+## Y el detector de anexos
+
+El artículo 95 define «automóvil de turismo» remitiendo al **anexo del Real
+Decreto Legislativo 339/1990**, que no está en el corpus. El escaneo solo
+buscaba «artículo N» y disposiciones: un anexo no tiene número de artículo, así
+que **no lo cogía nadie**. Lo salvaba el redactor por su cuenta, y eso no puede
+ser el plan.
+
+`_RE_ANEXO` exige **designación con número** («339/1990»). Medido: hay 28
+menciones de «anexo» en el corpus y solo una es remisión real a otra norma; sin
+exigir el número, el título del propio anexo —«ANEXO / REGLAMENTO DEL
+IMPUESTO…»— se colaba. Y si la norma está cargada no se emite nada: de las
+nuestras tenemos el articulado.
+
+Remisiones: **1704 → 1709** totales, **159 → 164** pendientes externas. Cinco
+nuevas en todo el corpus, ninguna de ruido.

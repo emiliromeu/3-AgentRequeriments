@@ -47,6 +47,25 @@ _RE_DISP = re.compile(
     re.IGNORECASE,
 )
 
+# REMISIONES A UN ANEXO DE OTRA NORMA. No las cogia nadie: el escaneo solo
+# buscaba «articulo N» y disposiciones, y un anexo no tiene numero de articulo.
+# El caso real que lo destapo: el articulo 95 de la Ley del IVA define que es un
+# «automovil de turismo» remitiendo al ANEXO del Real Decreto Legislativo
+# 339/1990, que no esta en el corpus. Sin esa definicion no se sabe si el
+# vehiculo del cliente es un turismo, y el sistema no avisaba: lo salvo el
+# redactor por su cuenta, y eso no puede ser el plan.
+#
+# SE EXIGE DESIGNACION CON NUMERO («339/1990»), y no vale un nombre a secas.
+# Medido sobre el corpus: hay 28 menciones de «anexo» y solo UNA es una
+# remision de verdad a otra norma. Sin el numero, el titulo del propio anexo
+# -«ANEXO / REGLAMENTO DEL IMPUESTO...»- se colaba como remision.
+_RE_ANEXO = re.compile(
+    r"\banexos?\b[^.;:]{0,40}?\b(?P<norma>(?:Real\s+Decreto(?:\s+Legislativo|-ley)?|"
+    r"Ley\s+Org[aá]nica|Ley|Reglamento|Directiva|Orden|Decreto)"
+    r"\s+\d+/\d{2,4})",
+    re.IGNORECASE,
+)
+
 _RE_NUMERO = re.compile(r"\s*(\d+)")
 _RE_PALABRA_SUF = re.compile(r"\s+([a-zA-ZáéíóúÁÉÍÓÚ]+)")
 
@@ -400,6 +419,27 @@ class GrafoRemisiones:
             rem = self._leer_disposicion(origen, texto, m, cuerpo_origen)
             if rem:
                 yield rem
+        for m in _RE_ANEXO.finditer(texto):
+            rem = self._leer_anexo(origen, m, cuerpo_origen)
+            if rem:
+                yield rem
+
+    def _leer_anexo(self, origen: str, m, cuerpo_origen: str = ""):
+        """Un «anexo de <norma con numero>». Ver `_RE_ANEXO`.
+
+        Si la norma esta CARGADA no se emite nada: de las normas del corpus
+        tenemos el articulado, y un anexo nuestro ya es un precepto mas. Lo que
+        importa es el anexo de una norma que NO tenemos.
+        """
+        nombre = re.sub(r"\s+", " ", m.group("norma")).strip(" .,;:")
+        clave, _motivo = self.normas.resolver(nombre, cuerpo_origen)
+        if clave:
+            return None
+        return Remision(
+            origen, m.group(0).strip(), EXTERNA, PENDIENTE,
+            etiqueta_destino="Anexo", norma_externa=nombre,
+            motivo="remite al anexo de una norma que no esta en el corpus",
+        )
 
     def _leer_articulos(
         self, origen: str, texto: str, cursor: int,

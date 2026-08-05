@@ -139,6 +139,12 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         "consumo": {},
     }
 
+    # EL TECHO DURO EMPIEZA AQUI. El motor cuenta llamadas y tiempo por
+    # consulta; el banco reutiliza el mismo motor para varias seguidas, asi que
+    # sin esto la quinta se pasaria de tiempo por culpa de las cuatro de antes.
+    if hasattr(motor, "reiniciar_reloj"):
+        motor.reiniciar_reloj()
+
     DIR_TRAZAS.mkdir(parents=True, exist_ok=True)
     tr = Traza(DIR_TRAZAS, pregunta)
     res["traza"] = str(tr.dir)
@@ -168,6 +174,8 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
             entrada = f"{pregunta}\n\n{AN.mensaje_reintento(errores)}"
         try:
             resp = motor.analizar(AN.SISTEMA, entrada, AN.ESQUEMA)
+        except MOD.TopeAlcanzado as e:
+            return _parada_por_tope(res, tr, motor, e, "analisis")
         except MOD.ErrorModelo as e:
             tr.paso("analisis", f"fallo del modelo: {e}")
             tr.cerrar({"estado": "ERROR", "detalle": str(e)})
@@ -327,7 +335,10 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         pares = [(r.get("cuerpo_clave", ""),
                   r["referencia"].replace("Articulo ", "").lower())
                  for r in registros]
-        criterios_teac = TEAC.CacheTEAC().por_preceptos(pares, ix.normas)
+        # LA PREGUNTA VA TAMBIEN: sin ella el filtro solo mira el articulo, y
+        # sobre el 80 eso mandaba doctrina del impuesto sobre la electricidad.
+        criterios_teac, descartados_teac = TEAC.CacheTEAC().seleccionar(
+            pares, ix.normas, consulta=pregunta, indice=ix)
         viva_t, motivo_t = TEAC.fuente_viva()
         print(f"   preceptos consultados: "
               f"{', '.join(n for _c, n in pares) or '(ninguno)'}")
@@ -338,9 +349,13 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
                   + ("  [UNIFICACION DE CRITERIO]" if c.unifica_criterio else ""))
         if not viva_t:
             print(f"   [AVISO] la fuente de doctrina no responde: {motivo_t}")
+        for cr, motivo in descartados_teac:
+            print(f"     · descartado {cr.resolucion}: {motivo}")
         res["teac"] = {
             "activa": True, "fuente_viva": viva_t, "motivo_fuente": motivo_t,
             "criterios": [c.resolucion for c in criterios_teac],
+            "descartados": [{"resolucion": c.resolucion, "motivo": m}
+                            for c, m in descartados_teac],
         }
 
     # ---------------------------------------------------- LLAMADA 2 + bucle
@@ -376,6 +391,8 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
              f"{f' (intento {intento})' if intento > 1 else ''}...")
         try:
             resp = motor.redactar(RED.SISTEMA, material)
+        except MOD.TopeAlcanzado as e:
+            return _parada_por_tope(res, tr, motor, e, "redaccion")
         except MOD.ErrorModelo as e:
             tr.paso("redaccion", f"fallo del modelo: {e}")
             tr.cerrar({"estado": "ERROR", "detalle": str(e)})
@@ -481,7 +498,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
                                 referencia.replace("articulo ", "").strip().lower()))
         viva_t, motivo_t = TEAC.fuente_viva()
         lectura_teac = TEAC.leer_doctrina(citados_teac, pares_v, nums_dgt,
-                                          ix.normas)
+                                          ix.normas, descartados_teac)
         lectura_teac.fuente_caida = not viva_t
         lectura_teac.motivo_fuente = motivo_t
 
@@ -536,8 +553,11 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     linea_consumo(tr)
     res["consumo"] = tr.totales()
 
+    tr.json("topes.json", motor.a_json_topes()
+            if hasattr(motor, "a_json_topes") else {})
     tr.cerrar({
         "estado": dictamen.estado, "ejercicio": ejercicio,
+        "llamadas_al_modelo": getattr(motor, "llamadas", 0),
         "veredicto": informe.veredicto, "intentos": intento,
         "motor": motor.nombre, "modelo": getattr(motor, "modelo", "(ninguno)"),
         "preceptos": dictamen.preceptos, "senales": dictamen.senales,
@@ -545,6 +565,32 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         "limites_del_corpus": dictamen.linea_estructural,
     })
     res["codigo"] = 0
+    return res
+
+
+def _parada_por_tope(res, tr, motor, error, donde: str) -> dict:
+    """Se ha llegado al techo. NO es un fallo del modelo, y no se cuenta igual.
+
+    La diferencia importa: «el modelo fallo» manda a mirar la red o la cuenta;
+    «se llego al tope» manda a mirar por que hicieron falta tantas llamadas.
+    Meterlos en el mismo saco es como se pierde un bucle durante meses.
+    """
+    topes = motor.a_json_topes() if hasattr(motor, "a_json_topes") else {}
+    tr.json("topes.json", topes)
+    tr.paso("tope", f"parada en {donde}: {topes.get('motivo_parada', '')}")
+    tr.cerrar({"estado": "PARADA POR TOPE", "detalle": str(error), **topes})
+    titulo("PARADA POR TOPE")
+    print(str(error))
+    print()
+    print(f"Llamadas hechas: {topes.get('llamadas', '?')} de "
+          f"{topes.get('tope_llamadas', '?')} · "
+          f"{topes.get('segundos', '?')} s de {topes.get('tope_segundos', '?')}")
+    print("No se muestra ninguna respuesta: no ha llegado a completarse.")
+    print(f"Traza completa: {tr.dir}")
+    res["motivo"] = str(error)
+    res["fallo"] = "tope"
+    res["topes"] = topes
+    res["codigo"] = 1
     return res
 
 

@@ -435,6 +435,82 @@ class Criterio:
                 f"{self.url}" + "}")
 
 
+# --------------------------------------------------- pertinencia por ASUNTO
+#
+# EL FALLO QUE ESTO ARREGLA. `por_preceptos` elegia por coincidencia de
+# ARTICULO. Sobre el articulo 80 -modificacion de base imponible por creditos
+# incobrables- mandaba estos tres:
+#
+#     00/01298/2004  IVA a la importacion. Despacho a libre practica
+#     00/03399/2023  Impuesto sobre la ELECTRICIDAD. Devolucion por impagados
+#     00/05524/2024  Impuesto sobre la ELECTRICIDAD. Devolucion por impagados
+#
+# y dejaba fuera los CUATRO que iban justo de la pregunta (00/02189, 00/03983,
+# 00/05698, 00/06614). No era mala suerte: el orden por peso ponia delante el
+# de unificacion y los mas recientes, y el tope de 3 se comia a los buenos.
+# Un aviso que casi nunca viene al caso se deja de leer, y esa es la tercera vez
+# que este proyecto tropieza con lo mismo.
+#
+# DOS FILTROS, Y EL QUE DE VERDAD TRABAJA ES EL PRIMERO:
+#
+#   1. MATERIA. Los dos de electricidad puntuaban 1,00 de cobertura de
+#      terminos, porque sus conceptos son literalmente «Base imponible:
+#      modificacion» y «Credito incobrable». Por terminos NO se distinguen: lo
+#      que los separa es el IMPUESTO. La fuente lo dice en `conceptos`.
+#   2. ASUNTO. Cobertura de terminos contra `asunto` + `conceptos`, la misma
+#      maquina que se usa para los preceptos. Esta si coge al de importacion,
+#      que es de IVA pero de otra cosa (cobertura 0,00).
+
+_RE_CONCEPTO_IMPUESTO = re.compile(r"impuesto", re.IGNORECASE)
+_RE_CONCEPTO_IVA = re.compile(r"valor\s+a[nñ]adido|\bIVA\b", re.IGNORECASE)
+
+# Medido sobre las 7 consultas que traen criterios, con el filtro de materia ya
+# aplicado. Las coberturas que se dan son {0,00 0,20 0,40 0,50 0,60 0,75 1,00}:
+#
+#     umbral   criterios/consulta   consultas sin ninguno
+#      0,20           1,57                    0            <-- ultimo escalon
+#      0,25           1,14                    1
+#      0,50           1,00                    2
+#
+# Se elige el ultimo valor antes de que una consulta se quede sin nada. AVISO
+# HONESTO: son 7 consultas y 9 criterios, que es POCO. El numero que de verdad
+# hace el trabajo es el filtro de materia; este es el ajuste fino y habra que
+# volver a medirlo cuando la copia local crezca.
+UMBRAL_ASUNTO = 0.20
+
+
+def materia_ajena(criterio, impuesto_del_corpus=_RE_CONCEPTO_IVA) -> bool:
+    """¿Este criterio va de un impuesto que este corpus NO cubre?
+
+    Se mira `conceptos`, que es vocabulario controlado de la propia fuente, no
+    prosa. Si el criterio NO nombra ningun impuesto, se le deja pasar: no se
+    supone lo que la fuente no dice.
+    """
+    marcas = [c for c in (criterio.conceptos or [])
+              if _RE_CONCEPTO_IMPUESTO.search(c)]
+    if not marcas:
+        return False
+    return not any(impuesto_del_corpus.search(m) for m in marcas)
+
+
+def cobertura_asunto(criterio, consulta: str, indice=None) -> float:
+    """Que parte de la consulta trata el ASUNTO de este criterio.
+
+    La misma cuenta que `estado.cobertura_de`, pero contra `asunto` y
+    `conceptos` en vez de contra el articulado.
+    """
+    from . import texto as TX
+
+    raices = TX.tokenizar(consulta or "")
+    if indice is not None:
+        raices = [r for r in raices if indice.df.get(r, 0) > 0]
+    if not raices:
+        return 0.0
+    campos = (criterio.asunto or "") + " " + " ".join(criterio.conceptos or [])
+    presentes = set(TX.tokenizar(campos))
+    return sum(1 for r in raices if r in presentes) / len(raices)
+
+
 # ------------------------------------------------------------------ el orden
 
 
@@ -518,9 +594,23 @@ class CacheTEAC:
         respuesta. Se devuelven los que citan ALGUNO de ellos, ordenados POR
         PESO JURIDICO y, dentro de cada nivel, por fecha. Ver `peso`.
         """
+        return self.seleccionar(preceptos, normas, tope)[0]
+
+    def seleccionar(self, preceptos: list, normas=None, tope: int = 3,
+                    consulta: str = "", indice=None) -> tuple:
+        """(elegidos, descartados). Por articulo, por MATERIA y por ASUNTO.
+
+        `descartados` no es un detalle: es lo que permite decir «hay N criterios
+        sobre este articulo, ninguno del mismo asunto», que informa mucho mas
+        que traer uno que no viene al caso. Ver `materia_ajena` y
+        `cobertura_asunto`.
+
+        Sin `consulta` NO se filtra por asunto y se comporta como antes: los
+        guiones de prueba que no la pasan siguen valiendo.
+        """
         objetivo = {(c, str(n).lower()) for c, n in (preceptos or []) if n}
         if not objetivo:
-            return []
+            return [], []
         candidatos = []
         for cr in self.todas():
             suyos = set(cr.preceptos(normas))
@@ -528,8 +618,22 @@ class CacheTEAC:
             # ley no es el nuestro: la leccion de la fase 6, otra vez.
             if suyos & objetivo:
                 candidatos.append(cr)
-        candidatos.sort(key=peso)
-        return candidatos[:tope]
+
+        pertinentes, descartados = [], []
+        for cr in candidatos:
+            if materia_ajena(cr):
+                descartados.append((cr, "va de otro impuesto"))
+                continue
+            if consulta and cobertura_asunto(cr, consulta, indice) < UMBRAL_ASUNTO:
+                descartados.append((cr, "coincide el articulo, no el asunto"))
+                continue
+            pertinentes.append(cr)
+
+        pertinentes.sort(key=peso)
+        # Los que no caben en el tope tambien son descartados, y por otro motivo.
+        for cr in pertinentes[tope:]:
+            descartados.append((cr, "no cabe en el tope"))
+        return pertinentes[:tope], descartados
 
 
 # ------------------------------------------------------- el estado de la fuente
@@ -601,7 +705,8 @@ class Lectura:
 
 
 def leer_doctrina(criterios: list, preceptos_verificados: list,
-                  consultas_dgt_citadas: list, normas=None) -> Lectura:
+                  consultas_dgt_citadas: list, normas=None,
+                  descartados: list | None = None) -> Lectura:
     """LAS DOS SEÑALES DE DISCUTIDO, CON PESOS DISTINTOS.
 
     ── SEÑAL FUERTE (estructural) ────────────────────────────────────────
@@ -623,6 +728,30 @@ def leer_doctrina(criterios: list, preceptos_verificados: list,
     mas que una mencionada de pasada, y se dice cuantos la citan.
     """
     lectura = Lectura(criterios=list(criterios))
+    # SI NO QUEDA NINGUNO PERTINENTE, SE DICE. Callarlo deja creer que sobre
+    # ese articulo no hay doctrina, que es distinto de que la haya y no venga
+    # al caso. El aviso cuesta una linea y evita una busqueda a mano.
+    if descartados and not criterios:
+        # SOLO los articulos que sostienen ESTA respuesta. Un criterio cita
+        # varios articulos y la mayoria no vienen al caso: sin este filtro, una
+        # consulta sacaba siete avisos nombrando articulos que nadie habia
+        # citado. Un aviso que sale siempre es decoracion; siete, ruido.
+        en_juego = {str(n).lower() for p in (preceptos_verificados or [])
+                    if isinstance(p, (tuple, list)) and len(p) == 2
+                    for n in [p[1]]}
+        por_art: dict = {}
+        for cr, _motivo in descartados:
+            for _cu, n in set(cr.preceptos(normas)):
+                if en_juego and n not in en_juego:
+                    continue
+                por_art.setdefault(n, set()).add(cr.id)
+        for num in sorted(por_art, key=_orden_articulo):
+            cuantos = len(por_art[num])
+            lectura.debiles.append(
+                f"hay {cuantos} resolucion(es) economico-administrativa(s) que "
+                f"citan el articulo {num}, pero NINGUNA es del mismo asunto que "
+                f"esta consulta: no se manda ninguna. Si quieres mirarlas, estan "
+                f"en DYCTEA")
     if not criterios:
         return lectura
 

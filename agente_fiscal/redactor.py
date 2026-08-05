@@ -109,6 +109,12 @@ REGLAS QUE NO SE NEGOCIAN
    ni de que norma es. Escribe la referencia entera aunque ya la hayas dicho en
    la frase.
 
+   EL NOMBRE DE LA NORMA SE COPIA DE LA LINEA "NORMA:" DE LA FICHA, TAL CUAL.
+   No lo acortes, no lo deduzcas del enlace y no lo cambies por el titulo largo
+   del boletin: un mismo documento del BOE puede contener dos normas distintas
+   -un real decreto y el reglamento que aprueba- y llamarlas igual atribuye el
+   articulo a la que no es.
+
 3. CADA CITA, SU REFERENCIA. TODO fragmento entrecomillado lleva pegada SU
    referencia completa -articulo + norma + enlace-, aunque sea la quinta
    seguida del mismo articulo y aunque quede repetitivo. Se comprueba cada
@@ -179,20 +185,84 @@ REGLAS QUE NO SE NEGOCIAN
 10. No califiques el resultado ("criterio claro", "sin duda", "es evidente").
     El estado de la respuesta lo calcula el sistema por reglas, no tu tono.
 
+11. NO TE CUBRAS SOBRE LO QUE EL SISTEMA YA SABE. La version que te doy ES la
+    que aplicaba al ejercicio: esta calculada con las fechas de vigencia del
+    BOE, no supuesta. Asi que NO escribas "conviene confirmar que no ha habido
+    modificacion posterior", ni "segun el material facilitado", ni "habria que
+    verificar la vigencia". Ya esta verificada; decir lo contrario le pasa al
+    lector un trabajo que el sistema ya ha hecho, y le hace desconfiar de lo
+    unico que si es seguro.
+
+    Los avisos de VIGENCIA los pone el sistema por su cuenta, debajo de tu
+    texto y calculados por reglas. No los repitas: saldrian dos veces.
+
+    PERO SI QUE TIENES QUE DECIR ESTO, en una linea al final: si el ARTICULADO
+    que estas leyendo remite a una norma que NO esta en el material, dilo.
+    Ejemplo real: el articulo 95 define «automovil de turismo» remitiendo al
+    anexo del Real Decreto Legislativo 339/1990, que no se te ha dado; sin esa
+    definicion no se sabe si el vehiculo del caso es un turismo.
+    El sistema tiene un detector de remisiones, pero NO las coge todas -esa se
+    le escapa, medido- asi que si tu la lees, la dices. Es una linea y evita
+    que el profesional de por cerrado algo que no lo esta.
+
+    ESA LINEA VA SIN COMILLAS, EN TUS PALABRAS. Es un aviso, no una cita: todo
+    lo que pongas entre « » se comprueba como cita y se le exige su referencia
+    completa, asi que entrecomillar una palabra suelta ahi -«automoviles de
+    turismo»- tumba la respuesta entera. Medido: paso.
+
+12. NO ENUMERES LOS PRECEPTOS QUE NO USAS. Si un precepto del material no
+    viene al caso, simplemente NO lo menciones. Nada de "los demas preceptos
+    recuperados (articulos 9, 57 y 101) no resuelven la duda planteada": esa
+    frase no le sirve a nadie y se paga por palabra.
+
+    OJO: esto vale para los PRECEPTOS. El criterio y la doctrina son lo
+    contrario, y va en la regla 13.
+
+13. SI EL MATERIAL TRAE CRITERIO O DOCTRINA, TIENES QUE DECIR QUE APORTAN.
+    No es opcional y no es lo mismo que la regla 12: quien pregunta necesita
+    saber si se ha mirado lo que dice Hacienda y lo que han resuelto los
+    tribunales. Callarlo deja creer que no hay nada, que es distinto de que no
+    aporte nada.
+
+    · si aporta algo, CITALO con su formato -llaves el TEAC y los tribunales
+      regionales, corchetes la DGT- en su parrafo, despues de la ley;
+    · si no aporta nada a ESTA pregunta, UNA linea diciendolo, sin citar.
+
+    Y no lo mezcles con la ley en el mismo parrafo: la ley fundamenta, el
+    criterio acompana.
+
 ESTRUCTURA
-- Planteamiento: que se pregunta, en una frase.
-- Fundamentacion: los preceptos que resuelven la duda, cada cita con su
-  referencia completa. Solo los que resuelven: los preceptos recuperados que no
-  vienen al caso se despachan en una linea o se omiten, no se citan.
-- Advertencias: si el material trae avisos de fecha o remisiones sin resolver,
-  recogelas aqui. No las escondas. En tus palabras y SIN entrecomillar: los
-  avisos y las remisiones estan en la ficha, no en el articulado.
+- Planteamiento: UNA frase. No repitas el enunciado de la pregunta con otras
+  palabras; di que hay que decidir.
+- Fundamentacion: SOLO los preceptos que resuelven la duda, cada cita con su
+  referencia completa. Los que no resuelven no se mencionan (regla 12).
+- Doctrina del TEAC, si el material la trae (regla 13). Parrafo aparte.
+- Criterio de la DGT, si el material lo trae (regla 13). Parrafo aparte.
+- Resoluciones de tribunales regionales, si las hay (regla 13). Parrafo aparte,
+  y diciendo que NO vinculan: valen por lo que anticipan, no por lo que obligan.
 - En resumen: la conclusion, en lenguaje llano.
+
+EL ORDEN DE ESOS PARRAFOS ES LA JERARQUIA y no se negocia:
+    LEY  ->  TEAC  ->  DGT  ->  tribunales regionales
+
+No hay apartado de advertencias: lo pone el sistema (regla 11).
 """
 
 
-def bloque_precepto(registro: dict, ejercicio: int | None, grafo=None) -> str:
-    """El material de UN precepto, tal como lo va a leer el modelo."""
+def bloque_precepto(registro: dict, ejercicio: int | None, grafo=None,
+                    normas=None) -> str:
+    """El material de UN precepto, tal como lo va a leer el modelo.
+
+    LA FICHA TIENE QUE DECIR EL CUERPO, NO EL DOCUMENTO. `norma_titulo` es el
+    titulo del documento del BOE, y un real decreto aprobatorio lleva DOS
+    articulados dentro: el suyo y el del reglamento que aprueba. Poniendo el
+    titulo del documento, la ficha del articulo 24 del Reglamento decia
+    «Real Decreto 1624/1992...», el redactor lo copiaba tal cual -hacia bien- y
+    el verificador lo rechazaba: en el corpus «Real Decreto 1624/1992» es otro
+    cuerpo, y ese no tiene articulo 24.
+    Medido: tumbo dos de las cuatro consultas de la primera prueba con las tres
+    fuentes. Ni una cita era falsa; el material les daba mal el nombre.
+    """
     if ejercicio is not None:
         version = V.version_aplicable(registro, V.limites(ejercicio)[1])
     else:
@@ -204,10 +274,18 @@ def bloque_precepto(registro: dict, ejercicio: int | None, grafo=None) -> str:
     # epigrafe se cae porque ya es la primera linea del articulado, palabra por
     # palabra: pagarlo dos veces en cada llamada no compra nada.
     etiqueta = registro["referencia"]
+    # El nombre del CUERPO, que es el que sabe resolver el verificador. Si no
+    # se pasa el registro de normas se cae al titulo del documento, que es lo
+    # que habia antes.
+    nombre_norma = registro["norma_titulo"]
+    if normas is not None:
+        cuerpo = normas.por_clave(registro.get("cuerpo_clave") or "")
+        if cuerpo:
+            nombre_norma = cuerpo.etiqueta
     partes = [
         f"### {etiqueta}",
         "FICHA (anotacion nuestra, NO es la ley: NO se entrecomilla nada de aqui)",
-        f"  NORMA: {registro['norma_titulo']}",
+        f"  NORMA: {nombre_norma}",
         f"  VERSION APLICABLE: en vigor desde {fecha}",
         f"  ENLACE: {registro['url']}",
     ]
@@ -625,7 +703,7 @@ def plan_de_criterio(
     que menos pesa, y queda escrito en el `Recorte` que se cayo y por que.
     """
     plan = Plan()
-    plan.ley = len("\n".join(bloque_precepto(r, ejercicio, grafo)
+    plan.ley = len("\n".join(bloque_precepto(r, ejercicio, grafo, normas)
                              for r in (registros or [])))
     disponible = plan.ley
 
@@ -859,7 +937,7 @@ def construir_material(
         "citan: delimitan, no forman parte del texto legal.",
         "",
     ]
-    cuerpo = [bloque_precepto(r, ejercicio, grafo) for r in registros]
+    cuerpo = [bloque_precepto(r, ejercicio, grafo, normas) for r in registros]
 
     cola = []
     if motivos_rechazo:

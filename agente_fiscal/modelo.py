@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from dataclasses import dataclass, field
 
 # UN MODELO POR PASO, y ninguno cableado en el codigo que orquesta: se eligen
@@ -55,6 +56,10 @@ MINIMO_CACHE = {
     "claude-haiku-4-5": 4096,
 }
 MINIMO_CACHE_POR_DEFECTO = 4096   # si no se conoce el modelo, se supone lo peor
+
+# Caracteres por token, MEDIDO contra lo que conto la API (ver `_cacheable`).
+# No es el 3,5 que se dice para ingles: el castellano juridico sale a 2,22.
+CARACTERES_POR_TOKEN = 2.2
 
 # `output_config.effort` no lo admiten todos los modelos: en Haiku 4.5 la
 # llamada se cae con un 400. Se comprueba, no se supone.
@@ -110,13 +115,37 @@ def normalizar_uso(uso: dict) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# EL TECHO DURO. No depende de que la logica de arriba este bien.
+# ---------------------------------------------------------------------------
+# Ya hay un reintento controlado en `fase4`, y esta bien. Pero un tope que vive
+# en el bucle solo protege mientras ese bucle este bien escrito, y el dia que
+# alguien meta otro bucle -o que un `while` no salga por donde deberia- no hay
+# nada debajo. Esto es lo de debajo: cuenta las llamadas y el tiempo en el
+# MOTOR, que es el unico sitio por el que se pasa siempre.
+#
+# Vale para todos los motores, tambien el de ensayo: un tope que solo actua
+# cuando cuesta dinero no se puede probar el dia que hace falta.
+TOPE_LLAMADAS = 6        # analisis (2) + redaccion (2) + margen para un futuro
+TOPE_SEGUNDOS = 300      # 5 minutos por consulta completa, de punta a punta
+
+# Nada de esperas indefinidas: si la red se queda colgada, el proceso tambien.
+TIMEOUT_LLAMADA = 120.0  # segundos que se espera UNA llamada
+REINTENTOS_RED = 3       # reintentos por fallo de red, con espera creciente
+
+
+class TopeAlcanzado(ErrorModelo):
+    """Se ha llegado al techo. No es un fallo del modelo: es la red de seguridad."""
+
+
 class Motor:
     """Interfaz comun. Permite cambiar de motor sin tocar la orquestacion."""
 
     nombre = "base"
     es_modelo_real = False
 
-    def __init__(self):
+    def __init__(self, tope_llamadas: int = TOPE_LLAMADAS,
+                 tope_segundos: float = TOPE_SEGUNDOS):
         # Cuantas llamadas se han hecho. El banco de pruebas lo publica en
         # cada ejecucion: conviene saber lo que cuesta pasar el banco.
         self.llamadas = 0
@@ -124,6 +153,57 @@ class Motor:
         # la que salen los totales de la traza y del banco. Sin esto,
         # "optimizar el consumo" seria una opinion.
         self.consumo: list[dict] = []
+        self.tope_llamadas = tope_llamadas
+        self.tope_segundos = tope_segundos
+        self.arranque = time.monotonic()
+        # Por que se paro, si se paro. Va a la traza: "se paro en el tope" y
+        # "el modelo fallo" son cosas distintas y se leen igual si no se dice.
+        self.motivo_parada = ""
+
+    # --------------------------------------------------------------- topes
+
+    def reiniciar_reloj(self) -> None:
+        """El tiempo se cuenta por CONSULTA, no por vida del motor.
+
+        El banco reutiliza el mismo motor para varias consultas seguidas; sin
+        esto, la quinta se pasaria de tiempo por culpa de las cuatro anteriores.
+        """
+        self.arranque = time.monotonic()
+        self.motivo_parada = ""
+
+    @property
+    def segundos(self) -> float:
+        return time.monotonic() - self.arranque
+
+    def _permiso(self, paso: str) -> None:
+        """Se llama ANTES de cada llamada. Si no hay permiso, para y lo dice.
+
+        Se comprueba antes y no despues a proposito: el objetivo es no gastar
+        la llamada, no enterarse de que se ha gastado.
+        """
+        if self.llamadas >= self.tope_llamadas:
+            self.motivo_parada = (
+                f"tope de {self.tope_llamadas} llamadas al modelo por consulta")
+            raise TopeAlcanzado(
+                f"Se ha alcanzado el tope de {self.tope_llamadas} llamadas al "
+                f"modelo en esta consulta (iba a hacer la {self.llamadas + 1}, "
+                f"en el paso «{paso}»). Se para aqui: no se sigue llamando.")
+        if self.segundos > self.tope_segundos:
+            self.motivo_parada = (
+                f"tope de {self.tope_segundos:.0f} s por consulta")
+            raise TopeAlcanzado(
+                f"Esta consulta lleva {self.segundos:.0f} segundos y el tope "
+                f"son {self.tope_segundos:.0f}. Se para aqui.")
+
+    def a_json_topes(self) -> dict:
+        """Lo que hay que poder leer en la traza para auditar una parada."""
+        return {
+            "llamadas": self.llamadas,
+            "tope_llamadas": self.tope_llamadas,
+            "segundos": round(self.segundos, 1),
+            "tope_segundos": self.tope_segundos,
+            "motivo_parada": self.motivo_parada,
+        }
 
     # ------------------------------------------------------------- consumo
 
@@ -319,7 +399,12 @@ class MotorAnthropic(Motor):
         try:
             # Sin argumentos: coge la credencial del entorno
             # (ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN o el perfil de `ant`).
-            self.cliente = anthropic.Anthropic()
+            # NI UNA ESPERA INDEFINIDA. Sin `timeout` el SDK espera 10
+            # minutos por llamada, y sin `max_retries` reintenta 2 veces por su
+            # cuenta: dos numeros que nadie eligio y que se multiplican. Aqui
+            # se eligen, y la espera entre reintentos la hace el SDK creciente.
+            self.cliente = anthropic.Anthropic(
+                timeout=TIMEOUT_LLAMADA, max_retries=REINTENTOS_RED)
         except Exception as e:  # noqa: BLE001 - se reenvia con contexto
             raise ErrorModelo(f"No se pudo crear el cliente de Anthropic: {e}") from e
 
@@ -369,15 +454,24 @@ class MotorAnthropic(Motor):
         vuelve a validar por reglas: el esquema garantiza la forma, no que los
         valores tengan sentido.
         """
+        self._permiso("analisis")
         self.llamadas += 1
         salida = {"format": {"type": "json_schema", "schema": esquema}}
         # El effort no lo admite Haiku: pedirselo es un 400, no una mejora.
         if admite_effort(self.modelo_analisis):
             salida["effort"] = "medium"
+        # ESTE PROMPT TAMBIEN SE CACHEA, y no se cacheaba. Es fijo y se repite
+        # en cada consulta -lo unico que cambia es la pregunta, que va en el
+        # mensaje-, asi que no habia motivo para pagarlo entero cada vez. No se
+        # cacheaba porque el estimador contaba los tokens con la constante del
+        # ingles y lo daba por corto. Ver `_cacheable`.
+        bloque_sistema = {"type": "text", "text": sistema}
+        if self._cacheable(sistema, self.modelo_analisis):
+            bloque_sistema["cache_control"] = {"type": "ephemeral"}
         r = self._llamar(
             model=self.modelo_analisis,
             max_tokens=MAX_TOKENS_ANALISIS,
-            system=sistema,
+            system=[bloque_sistema],
             output_config=salida,
             messages=[{"role": "user", "content": pregunta}],
         )
@@ -416,6 +510,7 @@ class MotorAnthropic(Motor):
         debajo, la API la ignora sin decir nada y uno se queda creyendo que
         tiene cache.
         """
+        self._permiso("redaccion")
         self.llamadas += 1
         bloque = {"type": "text", "text": sistema}
         if self._cacheable(sistema, self.modelo_redaccion):
@@ -447,11 +542,23 @@ class MotorAnthropic(Motor):
     def _cacheable(texto: str, modelo: str) -> bool:
         """Estimacion prudente de si el bloque llega al minimo de cache.
 
-        Se cuenta a 3,5 caracteres por token y se exige un 20% de margen: la
-        estimacion puede quedarse corta, y marcar un bloque que no llega no da
-        error, simplemente no cachea.
+        LA CONSTANTE ESTABA MAL Y SE HA MEDIDO. Decia 3,5 caracteres por token,
+        que es lo que se dice para ingles. En la traza 20260802T122131 la API
+        conto 2.417 tokens para un bloque de 5.373 caracteres:
+
+            5373 / 2417 = 2,22 caracteres por token
+
+        Castellano juridico, con tildes, comillas latinas y palabras largas. Con
+        3,5 se contaban un 58% menos tokens de los que hay, asi que bloques que
+        SI llegaban al minimo se marcaban como que no y no se cacheaban nunca:
+        es lo que le pasaba al prompt del analizador (1.466 caracteres, unos 660
+        tokens, minimo 512).
+
+        Se deja el 20% de margen: si aun asi el bloque no llega, la API se lo
+        salta en silencio y no se cobra nada de mas. El riesgo es de un solo
+        lado, y no es el caro.
         """
-        aprox = len(texto) / 3.5
+        aprox = len(texto) / CARACTERES_POR_TOKEN
         return aprox >= minimo_cache(modelo) * 1.2
 
 
@@ -479,6 +586,7 @@ class MotorEnsayo(Motor):
     es_modelo_real = False
 
     def analizar(self, sistema: str, pregunta: str, esquema: dict) -> Respuesta:
+        self._permiso("analisis")
         self.llamadas += 1
         self._anotar("analisis", "(ninguno)", {})
         from . import texto as T
@@ -539,6 +647,7 @@ class MotorEnsayo(Motor):
         tambien: asi se puede comprobar que el verificador lo caza y que el
         bucle acaba en NO ENCONTRADO.
         """
+        self._permiso("redaccion")
         self.llamadas += 1
         self._anotar("redaccion", "(ninguno)", {})
         bloques = self._leer_material(contenido)
