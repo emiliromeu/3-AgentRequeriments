@@ -27,8 +27,8 @@ limpio entre sesiones. Se perdieron CATORCE. Empezaron siendo guiones de usar
 y tirar y dejaron de serlo hace mucho: eran lo unico que decia si un cambio
 rompia algo.
 
-RECUPERADAS (las cuatro que protegen la entrega)
-------------------------------------------------
+RECUPERADAS
+-----------
   prueba_instalador.py    10 escenarios del primer arranque en un PC de la
                           oficina. Si esto se rompe, no hay agente.
   prueba_interfaz.py      73 comprobaciones de lo unico que ve la persona:
@@ -39,13 +39,35 @@ RECUPERADAS (las cuatro que protegen la entrega)
   prueba_topes.py         el techo duro contra bucles. Garantia de seguridad,
                           no funcionalidad: si se rompe en silencio, nadie se
                           entera hasta que una consulta se queda dando vueltas.
-  prueba_configurar.py    el interruptor unico y la negativa a abrir a medias
-                          (escrita ya aqui, en la fase 20).
+  prueba_configurar.py    el interruptor unico, los dos botones y la negativa
+                          a abrir a medias (escrita ya aqui, fase 20).
+  prueba_normativa.py     la identidad de un precepto es (norma, cuerpo,
+                          articulo). El campo `normativa` en sus formatos
+                          reales, el mapeo por codigo de DYCTEA y «ante la duda,
+                          nada».
+  prueba_unidad.py        un TEAR no es el TEAC. El rotulo se comprueba en los
+                          dos sentidos, la fuerza sale de unidad+calificacion y
+                          el orden va por peso juridico.
+  prueba_recorte.py       que los fragmentos recortados sigan siendo literales
+                          letra por letra, los huecos marcados, la cuota por
+                          consulta y que una consulta toda pertinente no se
+                          caiga entera.
+  prueba_asunto.py        que no entre doctrina de otro impuesto en una
+                          consulta de IVA. El filtro de materia, el de asunto,
+                          y el aviso cuando no queda ninguno pertinente.
+
+LAS CUATRO QUE PROTEGEN EL BOTON DE CRITERIO ESTAN HECHAS
+---------------------------------------------------------
+  normativa · unidad · recorte · asunto
+
+Son las cuatro cuyo fallo seria SILENCIOSO y que estan en el camino del segundo
+boton. Con ellas en verde se puede encender el criterio; sin ellas, no.
 
 SIN PROTECCION HASTA SEPTIEMBRE
 -------------------------------
-Estas DIEZ no se han reescrito. Queda escrito que cubrian, para saber que
-dejo de estar vigilado y no descubrirlo por un fallo en produccion:
+Quedan SEIS. Ninguna esta en el camino critico del boton de criterio, y su
+fallo seria VISIBLE -un estado raro, un aviso repetido- y no silencioso. Queda
+escrito que cubrian, para no descubrirlo en produccion:
 
   prueba_9b.py           Las señales de estado de la DGT: que varias consultas
                          de anos distintos sobre el mismo precepto dan
@@ -62,34 +84,19 @@ dejo de estar vigilado y no descubrirlo por un fallo en produccion:
                          frente a cobertura, y el criterio revocado de la
                          fuente caida.
 
-  prueba_normativa.py    El campo `normativa` de la DGT: que se compara por
-                         NORMA Y ARTICULO y nunca por numero suelto. Es la
-                         leccion de la fase 6 y la que mas caro sale si se
-                         rompe: inventa señales de discusion que no existen.
-
   prueba_petete.py       El cliente de PETETE: troceo del HTML cacheado,
                          mapeo numero<->id, el canario y sus tres cubos de
                          fallo (culpa nuestra / suya / sin respuesta).
 
-  prueba_recorte.py      El recorte del criterio: que los fragmentos que se
-                         mandan siguen siendo LITERALES letra por letra, que
-                         el tope relativo se cumple (el criterio nunca por
-                         encima de la ley), la cuota por consulta y que un
-                         articulo 80 de otra ley no selecciona parrafos.
-
   prueba_agrupado.py     Que los avisos del TEAC se agrupan por articulo y no
                          por criterio -salian seis identicos- y que la
                          unificacion de criterio va delante.
+                         (`prueba_asunto` cubre el filtrado, no el agrupado.)
 
-  prueba_unidad.py       La unidad resolutoria: que un TEAR no se presenta como
-                         TEAC, que la fuerza sale de la calificacion de la
-                         fuente y que el rotulo se comprueba en los DOS
-                         sentidos. Aqui vive el defecto mas grave que se ha
-                         encontrado en el proyecto.
-
-  prueba_asunto.py       El filtro de materia y asunto de la doctrina: que no
-                         entre doctrina del impuesto sobre la electricidad en
-                         una consulta de IVA, y el detector de anexos.
+  El DETECTOR DE ANEXOS -que el articulo 95 declare la remision al anexo del
+  RDLeg 339/1990- se quedo sin banco al repartir lo que cubria la vieja
+  `prueba_asunto`. No entra en el camino del boton de criterio, pero conviene
+  que vuelva: sin el, una remision que nadie ve se pierde en silencio.
 
   prueba_textos_guia.py  Que la ventana y GUIA.md dicen LO MISMO, letra por
                          letra. Desde la fase 20 el riesgo baja mucho -la guia
@@ -113,6 +120,29 @@ LO QUE NUNCA ESTUVO EN /tmp, Y SIGUE
 
 Y los FIXTURES tambien estaban versionados (casos/dgt_prueba, casos/teac_prueba),
 asi que reescribir las diez no exige rehacer los datos de prueba.
+
+COMO SE VERIFICAN (y no es opcional)
+-----------------------------------
+Cada suite se ha visto FALLAR rompiendo el codigo de verdad. Lo que se rompio
+y lo que cayo, para poder repetirlo:
+
+  prueba_normativa    Precepto.comparable -> return True    7 comprobaciones
+                      (comparar por numero suelto)
+  prueba_unidad       quitar la comprobacion de rotulo      3 comprobaciones
+                      del verificador                       (la cita del TEAR
+                                                             salia VERIFICADA)
+  prueba_recorte      alterar las tildes de los fragmentos  2 comprobaciones
+  prueba_asunto       quitar el filtro de MATERIA          10 comprobaciones
+                      quitar el filtro de ASUNTO           10 comprobaciones
+                      dejar de avisar si no queda ninguno   4 comprobaciones
+  prueba_topes        quitar el techo al motor de ensayo    3 comprobaciones
+  prueba_interfaz     rellenar solo el ano del caso         2 comprobaciones
+  prueba_no_encontrado pintar el borrador rechazado         3 comprobaciones
+  prueba_instalador   no crear el .env desde el ejemplo     4 comprobaciones
+
+OJO CON EL SABOTAJE QUE NO OCURRE: si el trozo que se busca para mutar no esta
+tal cual, la mutacion no pasa y la suite sale verde sin haber probado nada. Ya
+paso una vez con `interfaz.py`. Si no se puede mutar, cuenta como fallo.
 
 COMO SE CORREN
 --------------

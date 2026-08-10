@@ -88,8 +88,12 @@ PREGUNTA = "deduccion de cuotas soportadas en vehiculos turismo"
 
 
 def correr(motor):
+    # `con_criterio=False` SIEMPRE: lo que se prueba aqui es el techo, no las
+    # fuentes. Sin fijarlo, en modo con-criterio la consulta busca ademas en la
+    # copia local y tarda segundos que no son del modelo: la comprobacion de
+    # tiempo salia roja por algo que no tiene nada que ver con el tope.
     with contextlib.redirect_stdout(io.StringIO()) as buf:
-        r = fase4.consultar(PREGUNTA, 2023, motor, ix, g)
+        r = fase4.consultar(PREGUNTA, 2023, motor, ix, g, con_criterio=False)
     return r, buf.getvalue()
 
 

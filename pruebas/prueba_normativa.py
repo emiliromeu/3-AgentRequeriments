@@ -1,0 +1,189 @@
+#!/usr/bin/env python3
+"""LA IDENTIDAD DE UN PRECEPTO ES (NORMA, CUERPO, ARTICULO). Cero red, cero API.
+
+Nunca un numero suelto. Es la leccion de la fase 6 y la que mas caro sale: una
+consulta de la DGT que cita «RIRPF, RD 439/2007, art. 22» comparada con nuestro
+articulo 22 de la Ley del IVA inventa una señal de discusion que no existe, y
+un profesional lee «criterio discutido» donde no hay discusion ninguna.
+
+Perder una señal es barato. Inventarsela, no.
+
+    python pruebas/prueba_normativa.py
+"""
+import sys
+from pathlib import Path
+
+RAIZ = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(RAIZ))
+
+import fase4
+from agente_fiscal import configuracion as C
+from agente_fiscal import dgt as D
+from agente_fiscal import teac as T
+
+fallos = []
+MODO_ORIGINAL = C.modo_guardado()
+
+
+def comprobar(que, ok, obtenido=""):
+    print(f"  {'OK  ' if ok else 'FALLO'} {que}"
+          + (f"   -> {str(obtenido)[:110]}" if not ok else ""))
+    if not ok:
+        fallos.append(que)
+
+
+ix, g = fase4.cargar_corpus()
+N = ix.normas
+LIVA = next(c for c in N.cuerpos if "28740" in c)
+RIVA = next(c for c in N.cuerpos if c.endswith("28925#1"))
+LGT = next(c for c in N.cuerpos if "23186" in c)
+
+
+def consulta(numero, normativa, fecha="01/01/2023"):
+    return D.Consulta(numero=numero, fecha=fecha, normativa=normativa,
+                      contestacion="texto de prueba")
+
+
+def clave(cuerpo, num):
+    return f"{cuerpo}#articulo {num}"
+
+
+# ================================================== 1. EL CASO DE ORIGEN
+print("\n=== 1. EL CASO QUE COSTO CARO: MISMO NUMERO, OTRA NORMA ===")
+print("  Una consulta sobre el articulo 22 del REGLAMENTO DEL IRPF, contra una")
+print("  respuesta que se apoya en el articulo 22 de la Ley del IVA.\n")
+otra = consulta("V0047-24", "RIRPF, RD 439/2007, art. 22")
+lec = D.leer_criterio([otra], [clave(LIVA, 22)], N)
+print(f"    señales: {lec.senales}")
+print(f"    cobertura: {lec.cobertura}")
+comprobar("NO dispara ninguna señal de desacuerdo", not lec.hay_discusion,
+          str(lec.senales))
+comprobar("y tampoco se mete en cobertura como si fuera comparable",
+          not any("22" in c for c in lec.cobertura), str(lec.cobertura))
+
+preceptos = D.pares_de_normativa("RIRPF, RD 439/2007, art. 22", N)
+comprobar("el precepto se lee, pero NO es comparable",
+          preceptos and not preceptos[0].comparable,
+          str([(p.numero, p.estado) for p in preceptos]))
+comprobar("y se le marca como de norma EXTERNA",
+          preceptos[0].estado == "externa", preceptos[0].estado)
+
+# ================================================== 2. LOS DOS ESPEJOS
+print("\n=== 2. LOS DOS ESPEJOS: LA MISMA NORMA SI SE COMPARA ===")
+nuestra_otro = consulta("V0100-24", "Ley 37/1992 art. 91")
+lec2 = D.leer_criterio([nuestra_otro], [clave(LIVA, 22)], N)
+print(f"    misma norma, otro articulo -> cobertura: {lec2.cobertura}")
+comprobar("misma norma y OTRO articulo: SI se entera", bool(lec2.cobertura),
+          str(lec2.cobertura))
+comprobar("y lo dice como hueco, no como desacuerdo", not lec2.hay_discusion,
+          str(lec2.senales))
+
+# Misma norma y MISMO articulo: comparable, y sin señal de desalineacion.
+nuestra_igual = consulta("V0200-24", "Ley 37/1992 art. 22")
+lec3 = D.leer_criterio([nuestra_igual], [clave(LIVA, 22)], N)
+comprobar("misma norma y MISMO articulo: no hay desalineacion",
+          not lec3.cobertura and not lec3.senales,
+          f"{lec3.senales} {lec3.cobertura}")
+p22 = D.pares_de_normativa("Ley 37/1992 art. 22", N)[0]
+comprobar("y ese si es comparable", p22.comparable)
+comprobar("y su clave lleva la NORMA dentro, no solo el numero",
+          p22.clave == (LIVA, "22"), str(p22.clave))
+
+# Dos anos distintos sobre el MISMO precepto: eso si es desacuerdo.
+lec4 = D.leer_criterio([consulta("V0300-13", "Ley 37/1992 art. 80", "01/01/2013"),
+                        consulta("V0400-23", "Ley 37/1992 art. 80", "01/01/2023")],
+                       [clave(LIVA, 80)], N)
+comprobar("dos consultas de anos distintos sobre el mismo precepto: DESACUERDO",
+          lec4.hay_discusion, str(lec4.senales))
+comprobar("y la señal nombra la norma, no solo el articulo",
+          any("Ley 37/1992" in s for s in lec4.senales), str(lec4.senales))
+
+# ============================ 3. EL CAMPO «NORMATIVA» EN SUS FORMATOS REALES
+print("\n=== 3. EL CAMPO «NORMATIVA», EN SUS FORMATOS REALES ===")
+print("  Formas vistas en la copia local, incluidas las de 2026.\n")
+CASOS = [
+    ("Ley 37/1992 art. 95, 130", [(LIVA, "95"), (LIVA, "130")], "lista"),
+    ("Ley 37/1992 arts. 75, 78, 80-cuatro",
+     [(LIVA, "75"), (LIVA, "78"), (LIVA, "80")], "plural y apartado pegado"),
+    ("LIRPF, Ley 35/2006, Art. 33 a 36.", [], "rango de OTRA norma"),
+    ("Ley 38/1992;Ley 37/1992", [], "dos normas, sin articulos"),
+    ("LIVA, Ley 37/1992, Art. 27.\n\n LIVA, Ley 37/1992, Art. 95.",
+     [(LIVA, "27"), (LIVA, "95")], "SALTO DE LINEA (2026)"),
+    ("Ley 37/1992 art. 10-3", [(LIVA, "10")], "apartado con guion y numero"),
+    ("Ley 37/1992 art. 93.Cuatro", [(LIVA, "93")], "apartado con punto"),
+    ("Ley 37/1992 art. 94.Uno.1º", [(LIVA, "94")], "apartado anidado y ordinal"),
+    ("Ley 58/2003 art. 66", [(LGT, "66")], "otra norma NUESTRA"),
+]
+for texto, esperado, que in CASOS:
+    pares = [p.clave for p in D.pares_de_normativa(texto, N) if p.comparable]
+    comprobar(f"«{texto[:44]}» ({que})", pares == esperado,
+              f"{pares} != {esperado}")
+
+print("\n  Y lo que NO se sabe leer se DICE, no se pierde en silencio:")
+a = D.analizar_normativa("Ley 37/1992 arts. 8-Bis, 8-Tres y 68-Uno", N)
+print(f"    sin reconocer: {a.sin_reconocer}")
+comprobar("una forma nueva deja aviso", a.hay_formas_nuevas, str(a.sin_reconocer))
+comprobar("el aviso dice que se leyo y que quedo fuera",
+          any("quedo sin leer" in s for s in a.sin_reconocer),
+          str(a.sin_reconocer))
+
+# ==================================== 4. ANTE LA DUDA, NADA
+print("\n=== 4. SI LA NORMA NO RESUELVE, NO SE COMPARA CON NADA ===")
+for texto, que in [
+        ("Norma rarisima que no existe, art. 22", "norma inventada"),
+        ("Ley 37/1992 Ley 58/2003 art. 22", "DOS normas nuestras en el trozo"),
+        ("art. 22", "sin norma ninguna")]:
+    pares = [p for p in D.pares_de_normativa(texto, N)]
+    comparables = [p for p in pares if p.comparable]
+    comprobar(f"«{texto[:40]}» ({que}): ninguno comparable",
+              not comparables, str([(p.numero, p.estado) for p in comparables]))
+
+cuerpo, estado = D._resolver_designacion("Ley 37/1992 Ley 58/2003", N)
+comprobar("dos normas cargadas en el mismo trozo: no se elige ninguna",
+          cuerpo == "" and estado == "sin_norma", f"{cuerpo} {estado}")
+cuerpo, estado = D._resolver_designacion("LIVA Ley 37/1992", N)
+comprobar("pero «LIVA Ley 37/1992» -alias + norma- SI resuelve, es la misma",
+          cuerpo == LIVA, f"{cuerpo} {estado}")
+
+# ==================================== 5. EL CODIGO DE DYCTEA
+print("\n=== 5. EL MAPEO POR CODIGO DE DYCTEA ===")
+print("  DYCTEA llama al Reglamento «RD 1624/1992 Reglamento Impuesto sobre el")
+print("  Valor Añadido IVA»: ese nombre menciona DOS cuerpos nuestros y el")
+print("  resolutor no puede decidir. Por eso se resuelve por CODIGO.\n")
+for codigo, esperado, que in [
+        ("02:07:01:00:00", LIVA, "Ley del IVA"),
+        ("02:07:02:00:00", RIVA, "Reglamento del IVA"),
+        ("01:02:01:00:00", LGT, "Ley General Tributaria")]:
+    clave_, como = T.resolver_norma("cualquier nombre", N, codigo)
+    comprobar(f"codigo {codigo} -> {que}", clave_ == esperado,
+              f"{clave_} ({como})")
+    comprobar(f"  y dice que fue POR CODIGO", "por codigo" in como, como)
+
+clave_, como = T.resolver_norma("Impuesto sobre Sucesiones", N, "09:99:99:00:00")
+print(f"    codigo no mapeado -> clave={clave_!r} · {como}")
+comprobar("un codigo NO mapeado no resuelve a ninguna norma nuestra",
+          clave_ == "", clave_)
+comprobar("y lo dice: es una norma que no tenemos",
+          "no mapeado" in como or "no tenemos" in como, como)
+comprobar("NO se intenta adivinar por el nombre",
+          "nombre" not in como, como)
+
+# =================================== 6. CONTROL NEGATIVO
+print("\n=== 6. LA PRUEBA SABE PONERSE ROJA ===")
+print("  Se compara a mano por NUMERO SUELTO -el fallo de la fase 6- y se")
+print("  comprueba que da el falso positivo que esta suite existe para cazar.\n")
+otra = consulta("V0047-24", "RIRPF, RD 439/2007, art. 22")
+numeros_sueltos = {p.numero for p in otra.preceptos(N)}
+comprobar("por numero suelto, el 22 del IRPF «coincide» con el 22 del IVA",
+          "22" in numeros_sueltos, str(numeros_sueltos))
+comprobar("pero por (norma, articulo) NO coincide",
+          (LIVA, "22") not in {p.clave for p in otra.preceptos(N)},
+          str({p.clave for p in otra.preceptos(N)}))
+print("    (si el codigo comparase por numero, el bloque 1 saldria en rojo)")
+
+C.guardar_modo(MODO_ORIGINAL)
+print("\n" + "=" * 62)
+print(f"FALLOS: {len(fallos)}")
+for f in fallos:
+    print("  -", f)
+sys.exit(1 if fallos else 0)

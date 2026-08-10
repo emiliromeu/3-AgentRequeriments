@@ -87,6 +87,29 @@ from agente_fiscal import estado as EST
 # textos, no de lo que Hacienda vaya a hacer.
 VARIABLE_TEXTOS = "AGENTE_DGT_TEXTOS"
 
+# ------------------------------------------------------------- los botones
+#
+# DOS BOTONES, UNO POR MODO, y el texto tiene que decir en cristiano que anade
+# el segundo. Lo que NO puede parecer es una advertencia: el criterio de la DGT
+# y las resoluciones son utiles, y quien lo necesite tiene que pulsarlo sin
+# sensacion de estar haciendo algo indebido. Por eso el precio va en gris, al
+# lado, y no dentro del boton en rojo.
+#
+# El caro va DEBAJO y no al lado: con los dos en la misma fila se pulsa el que
+# queda mas a mano, no el que se queria.
+BOTON_LEY = "Consultar la ley"
+BOTON_CRITERIO = "Consultar tambien el criterio"
+PIE_CRITERIO = ("anade consultas de la DGT y resoluciones del TEAC y de los "
+                "tribunales regionales · unos 0,22 € frente a 0,13 €")
+
+# Lo que se dice arriba, junto al estado, y lo que viaja en el texto copiado.
+# Si alguien pega la respuesta en sus notas, tiene que saberse con que se hizo.
+HECHA_CON = {
+    False: "Hecha solo con la ley y sus reglamentos. Sin criterio administrativo.",
+    True: ("Hecha con la ley, el criterio de la DGT y las resoluciones "
+           "economico-administrativas de la copia local."),
+}
+
 
 def textos_con_dgt() -> bool:
     """Los textos de la ventana los decide el MODO, no una variable suelta.
@@ -276,6 +299,7 @@ class Ventana:
         self.avisos: "queue.Queue[tuple]" = queue.Queue()
         self.trabajando = False
         self.respuesta_actual = ""
+        self.con_criterio = False
         self.ix = None
         self.grafo = None
         self.motor = None
@@ -364,10 +388,33 @@ class Ventana:
         tk.Label(fila, text="obligatorio: la ley cambia cada año",
                  bg=PAPEL, fg=TINTA2, font=self.fuente_menuda).pack(side="left")
 
-        self.boton = tk.Button(fila, text="Consultar", font=self.fuente,
-                               command=self._lanzar, state="disabled",
-                               padx=18, pady=4)
-        self.boton.pack(side="right")
+        # DOS BOTONES, UNO POR MODO. El modo es de CADA CONSULTA, no del
+        # sistema: quien pregunta elige, y la respuesta dice con cual se hizo.
+        # El segundo solo existe si el despacho lo ha decidido
+        # (`configurar.py --con-criterio`): esa decision no es del que consulta.
+        from agente_fiscal import configuracion as _CONF
+        self.hay_boton_criterio = _CONF.hay_boton_criterio()
+
+        self.boton = tk.Button(fila, text=BOTON_LEY, font=self.fuente,
+                               command=lambda: self._lanzar(False),
+                               state="disabled", padx=16, pady=4)
+        self.boton_criterio = None
+        if self.hay_boton_criterio:
+            # El caro va DEBAJO y en su propia fila: con los dos al lado se
+            # pulsa el que queda mas a mano, no el que se queria.
+            self.boton.pack(side="left")
+            fila_criterio = tk.Frame(marco, bg=PAPEL)
+            fila_criterio.grid(row=5, column=0, sticky="ew", pady=(8, 0))
+            self.boton_criterio = tk.Button(
+                fila_criterio, text=BOTON_CRITERIO, font=self.fuente,
+                command=lambda: self._lanzar(True), state="disabled",
+                padx=16, pady=4)
+            self.boton_criterio.pack(side="left")
+            tk.Label(fila_criterio, text=PIE_CRITERIO, bg=PAPEL, fg=TINTA2,
+                     font=self.fuente_menuda, anchor="w",
+                     justify="left", wraplength=520).pack(side="left", padx=(12, 0))
+        else:
+            self.boton.pack(side="right")
 
         # --- progreso ---
         self.marco_progreso = tk.Frame(marco, bg=PAPEL)
@@ -395,6 +442,13 @@ class Ventana:
         self.etiqueta_explicacion = tk.Label(
             self.panel_estado, text="", font=self.fuente, anchor="w",
             justify="left", wraplength=820, padx=12, pady=0,
+        )
+        # CON QUE SE HIZO ESTA CONSULTA. Va aqui arriba, pegado al estado,
+        # porque es parte de como hay que leer la respuesta: un CRITERIO CLARO
+        # hecho solo con la ley no dice lo mismo que uno hecho con criterio.
+        self.etiqueta_hecha_con = tk.Label(
+            self.panel_estado, text="", font=self.fuente_menuda, anchor="w",
+            justify="left", wraplength=820, padx=12, pady=0, fg=TINTA2,
         )
 
         # Los avisos de fecha van ARRIBA, antes del texto: si se ponen al final
@@ -507,7 +561,11 @@ class Ventana:
     # -------------------------------------------------------------- estado
 
     def _revisar_boton(self) -> None:
-        """El boton solo se activa con duda Y ejercicio validos."""
+        """Los botones solo se activan con duda Y ejercicio validos.
+
+        Los dos van juntos: si se puede consultar, se puede con cualquiera de
+        los dos. Cual se pulsa es del que pregunta.
+        """
         if self.trabajando or self.motor is None:
             return
         duda = self.caja.get("1.0", "end").strip()
@@ -516,15 +574,21 @@ class Ventana:
             ejercicio.isdigit()
             and AN.EJERCICIO_MINIMO <= int(ejercicio) <= AN.EJERCICIO_MAXIMO
         )
-        self.boton.configure(state="normal" if (duda and valido) else "disabled")
+        estado = "normal" if (duda and valido) else "disabled"
+        self.boton.configure(state=estado)
+        if self.boton_criterio is not None:
+            self.boton_criterio.configure(state=estado)
 
     # -------------------------------------------------------------- lanzar
 
-    def _lanzar(self) -> None:
+    def _lanzar(self, con_criterio: bool = False) -> None:
         duda = self.caja.get("1.0", "end").strip()
         ejercicio = int(self.ejercicio.get().strip())
         self.trabajando = True
+        self.con_criterio = con_criterio
         self.boton.configure(state="disabled", text="Consultando...")
+        if self.boton_criterio is not None:
+            self.boton_criterio.configure(state="disabled")
         self.boton_copiar.configure(state="disabled")
         self.copiado.configure(text="")
         self.respuesta_actual = ""
@@ -539,11 +603,13 @@ class Ventana:
         self.barra.start(12)
         self.paso.configure(text="Preparando la consulta...")
 
-        hilo = threading.Thread(target=self._trabajar, args=(duda, ejercicio),
+        hilo = threading.Thread(target=self._trabajar,
+                                args=(duda, ejercicio, con_criterio),
                                 daemon=True)
         hilo.start()
 
-    def _trabajar(self, duda: str, ejercicio: int) -> None:
+    def _trabajar(self, duda: str, ejercicio: int,
+                  con_criterio: bool = False) -> None:
         """Corre FUERA del hilo de la ventana: tkinter no es reentrante."""
         import contextlib
         import io
@@ -557,7 +623,8 @@ class Ventana:
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 res = fase4.consultar(duda, ejercicio, self.motor, self.ix,
-                                      self.grafo, progreso=progreso)
+                                      self.grafo, progreso=progreso,
+                                      con_criterio=con_criterio)
             print(buf.getvalue())
             self.avisos.put(("hecho", res))
         except Exception:  # noqa: BLE001
@@ -587,7 +654,9 @@ class Ventana:
         self.barra.pack_forget()
         self.paso.pack_forget()
         self.trabajando = False
-        self.boton.configure(text="Consultar")
+        self.boton.configure(text=BOTON_LEY)
+        if self.boton_criterio is not None:
+            self.boton_criterio.configure(text=BOTON_CRITERIO)
         self._revisar_boton()
 
     def _sin_nada_que_copiar(self) -> None:
@@ -626,7 +695,12 @@ class Ventana:
             return
 
         estado = res.get("estado") or EST.NO_ENCONTRADO
+        # CON QUE SE HIZO, junto al estado. Lo dice el motor en el resultado,
+        # no la ventana por su cuenta: si algun dia no coincidieran, mandaria
+        # lo que de verdad se uso.
+        self.con_criterio = bool(res.get("con_criterio"))
         self._pintar_estado(estado, EXPLICACION.get(estado, ""), estado)
+        self.etiqueta_hecha_con.configure(text=HECHA_CON[self.con_criterio])
         self._pintar_avisos(res.get("senales") or [],
                             res.get("cobertura") or [],
                             res.get("estructural") or "")
@@ -663,10 +737,12 @@ class Ventana:
                                     highlightthickness=1,
                                     highlightbackground=FILETE)
         self.filete_estado.configure(bg=FILETE_ESTADO.get(clave, FILETE))
-        self.filete_estado.grid(row=0, column=0, rowspan=2, sticky="ns")
+        self.filete_estado.grid(row=0, column=0, rowspan=3, sticky="ns")
         self.etiqueta_estado.grid(row=0, column=1, sticky="ew")
-        self.etiqueta_explicacion.grid(row=1, column=1, sticky="ew",
-                                       pady=(0, 12))
+        self.etiqueta_explicacion.grid(row=1, column=1, sticky="ew")
+        self.etiqueta_hecha_con.configure(bg=fondo)
+        self.etiqueta_hecha_con.grid(row=2, column=1, sticky="ew",
+                                     pady=(6, 12))
 
     def _pintar_avisos(self, senales: list, cobertura: list,
                        estructural: str = "") -> None:
@@ -882,10 +958,15 @@ class Ventana:
                 return
 
     def _copiar(self) -> None:
+        """Lo copiado LLEVA CON QUE SE HIZO. Una respuesta pegada en unas notas
+        pierde la pantalla que la explicaba; sin esta linea, dentro de un mes
+        nadie sabra si aquello llevaba criterio administrativo o no."""
         if not self.respuesta_actual:
             return
         self.raiz.clipboard_clear()
-        self.raiz.clipboard_append(self.respuesta_actual)
+        self.raiz.clipboard_append(
+            f"[{HECHA_CON[getattr(self, 'con_criterio', False)]}]\n\n"
+            + self.respuesta_actual)
         self.copiado.configure(text="copiado")
         self.raiz.after(2000, lambda: self.copiado.configure(text=""))
 

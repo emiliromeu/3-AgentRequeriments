@@ -89,7 +89,7 @@ def cargar_corpus():
 
 
 def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
-              progreso=None) -> dict:
+              progreso=None, con_criterio: bool | None = None) -> dict:
     """Resuelve una duda. Imprime el proceso y DEVUELVE el resultado en dict.
 
     Devolver un dict (y no solo imprimir) es lo que permite que el banco de
@@ -103,6 +103,15 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     def paso(texto: str) -> None:
         if progreso is not None:
             progreso(texto)
+
+    # EL MODO ES DE ESTA CONSULTA, NO DEL SISTEMA. Es lo que hace que no haya
+    # estado oculto que se descuadre: la respuesta sabe con que se hizo porque
+    # se decidio aqui, no en una variable que alguien puso hace tres semanas.
+    #
+    # `None` = como siempre: lo que digan el entorno o el modo guardado. Lo usa
+    # la terminal cuando no se le pasa bandera.
+    usar_criterio = DGT.activa() if con_criterio is None else bool(con_criterio)
+    res_con_criterio = usar_criterio
 
     res = {
         "pregunta": pregunta,
@@ -134,7 +143,14 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         # aqui hay algo, es porque se puede ensenar. Quien lo lea no tiene que
         # acordarse de mirar antes el codigo.
         "respuesta": "",
+        # Si se pidio criterio y la copia local no tenia nada para esta
+        # pregunta. Se dice; no se finge que se ha mirado.
+        "sin_copia_local": "",
         "motor": motor.nombre,
+        # Con que se ha hecho ESTA consulta. Viaja al resultado, a la traza y
+        # a lo que se copia: quien pegue la respuesta en sus notas tiene que
+        # poder saber si llevaba criterio administrativo o no.
+        "con_criterio": False,
         # Tokens de esta consulta. Vacio si no se llego a llamar al modelo.
         "consumo": {},
     }
@@ -148,6 +164,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     DIR_TRAZAS.mkdir(parents=True, exist_ok=True)
     tr = Traza(DIR_TRAZAS, pregunta)
     res["traza"] = str(tr.dir)
+    res["con_criterio"] = res_con_criterio
 
     titulo("CONSULTA FISCAL")
     print(f"pregunta : {pregunta}")
@@ -305,7 +322,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     # y el resto del camino es identico al de antes de la fase 9B.
     consultas_dgt = None
     lectura_dgt = None
-    if DGT.activa():
+    if usar_criterio:
         paso("Buscando criterio de la DGT en la copia local...")
         apartado("2 bis. Criterio de la DGT (solo de la copia local)")
         viva, motivo_fuente = DGT.fuente_viva()
@@ -329,7 +346,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     # directamente por esos. Nada de inventar terminos.
     criterios_teac = None
     lectura_teac = None
-    if TEAC.activa():
+    if usar_criterio:
         paso("Buscando doctrina del TEAC en la copia local...")
         apartado("2 ter. Doctrina del TEAC (solo de la copia local)")
         pares = [(r.get("cuerpo_clave", ""),
@@ -351,6 +368,19 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
             print(f"   [AVISO] la fuente de doctrina no responde: {motivo_t}")
         for cr, motivo in descartados_teac:
             print(f"     · descartado {cr.resolucion}: {motivo}")
+
+        # SI SE PIDIO CRITERIO Y NO HAY NADA EN LA COPIA LOCAL, SE DICE.
+        # Callarlo deja creer que se ha mirado y no habia nada, que es muy
+        # distinto de que no se haya podido mirar. Alguien ha pulsado el boton
+        # caro: como minimo tiene derecho a saber que no le ha comprado nada.
+        if not consultas_dgt and not criterios_teac:
+            aviso_sin_copia = (
+                "se ha consultado con criterio administrativo, pero en la copia "
+                "local NO hay ninguna consulta de la DGT ni resolucion sobre "
+                f"{', '.join(sorted({n for _c, n in pares})) or 'estos articulos'}: "
+                "esta respuesta se sostiene SOLO en la norma")
+            print(f"   [AVISO] {aviso_sin_copia}")
+            res["sin_copia_local"] = aviso_sin_copia
         res["teac"] = {
             "activa": True, "fuente_viva": viva_t, "motivo_fuente": motivo_t,
             "criterios": [c.resolucion for c in criterios_teac],
@@ -435,7 +465,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     # ---------------------------------------------------- ESTADO (reglas)
     paso("Calculando el estado de la respuesta...")
     apartado("4. Estado (lo calcula el codigo, no el modelo)")
-    if DGT.activa():
+    if usar_criterio:
         # Solo cuenta el criterio que HA PASADO el verificador. Una consulta
         # citada y no verificada no puede mover el estado: seria dar peso a
         # algo que no hemos podido comprobar.
@@ -466,7 +496,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         lectura_dgt.fuente_caida = not viva
         lectura_dgt.motivo_fuente = motivo_fuente
 
-    if TEAC.activa():
+    if usar_criterio:
         # Solo cuenta la doctrina que se ha llegado a citar y verificar, y las
         # consultas de la DGT que esta respuesta cita: la señal fuerte es el
         # cruce de las dos cosas.
@@ -512,6 +542,8 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     res["estado"] = dictamen.estado
     res["senales"] = dictamen.senales
     res["cobertura"] = dictamen.cobertura
+    if res.get("sin_copia_local"):
+        res["cobertura"] = [res["sin_copia_local"]] + list(dictamen.cobertura)
     res["estructural"] = dictamen.linea_estructural
     res["preceptos"] = dictamen.preceptos
 
@@ -559,7 +591,8 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         "estado": dictamen.estado, "ejercicio": ejercicio,
         "llamadas_al_modelo": getattr(motor, "llamadas", 0),
         "veredicto": informe.veredicto, "intentos": intento,
-        "motor": motor.nombre, "modelo": getattr(motor, "modelo", "(ninguno)"),
+        "motor": motor.nombre, "con_criterio": res["con_criterio"],
+        "modelo": getattr(motor, "modelo", "(ninguno)"),
         "preceptos": dictamen.preceptos, "senales": dictamen.senales,
         "avisos_de_cobertura": dictamen.cobertura,
         "limites_del_corpus": dictamen.linea_estructural,
@@ -622,7 +655,8 @@ def _sin_respaldo(res, tr, ejercicio, registros, informe, motor, motivo) -> dict
     tr.cerrar({
         "estado": EST.NO_ENCONTRADO, "ejercicio": ejercicio,
         "veredicto": informe.veredicto if informe else "(sin redaccion)",
-        "motor": motor.nombre, "modelo": getattr(motor, "modelo", "(ninguno)"),
+        "motor": motor.nombre, "con_criterio": res["con_criterio"],
+        "modelo": getattr(motor, "modelo", "(ninguno)"),
         "motivo": motivo,
     })
     res["codigo"] = 2
@@ -719,7 +753,8 @@ def modo_consultar(args) -> int:
         print(f"\n[FALLO DE ARRANQUE] {err}", file=sys.stderr)
         return 1
     ix, grafo = cargar_corpus()
-    res = consultar(args.pregunta, args.ejercicio, motor, ix, grafo)
+    res = consultar(args.pregunta, args.ejercicio, motor, ix, grafo,
+                    con_criterio=getattr(args, "con_criterio", None))
     if motor.es_modelo_real:
         print(f"Llamadas al modelo en esta consulta: {motor.llamadas}")
     return res["codigo"]
@@ -805,6 +840,15 @@ def main(argv: list[str]) -> int:
     c.add_argument("pregunta")
     c.add_argument("--ejercicio", type=int, default=None)
     c.add_argument("--motor", choices=["anthropic", "ensayo"], default="anthropic")
+    # EL MODO ES DE LA CONSULTA. Sin bandera se comporta como siempre (lo que
+    # digan el entorno o el modo guardado).
+    criterio = c.add_mutually_exclusive_group()
+    criterio.add_argument("--con-criterio", dest="con_criterio",
+                          action="store_true", default=None,
+                          help="anade criterio de la DGT y resoluciones")
+    criterio.add_argument("--solo-ley", dest="con_criterio",
+                          action="store_false",
+                          help="solo la ley y sus reglamentos")
     # El modelo de cada paso se elige aqui, no se cablea en el codigo.
     c.add_argument("--modelo-analisis", default=MOD.MODELO_ANALISIS,
                    dest="modelo_analisis",

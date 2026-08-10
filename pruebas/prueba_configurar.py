@@ -59,6 +59,12 @@ def recargar():
 
 # ---------------------------------------------------- 1. IDA Y VUELTA
 print("\n=== 1. IR Y VOLVER DEJA EL SISTEMA IDENTICO ===")
+# LA PRUEBA NO PUEDE DEPENDER DE COMO ESTUVIERA EL EQUIPO. Se anota el modo que
+# habia, se parte SIEMPRE de solo-ley y al final se deja como estaba. Una suite
+# que solo pasa si la lanzas en el modo correcto no protege nada.
+MODO_ORIGINAL = C.modo_guardado()
+print(f"    (el equipo estaba en «{MODO_ORIGINAL}»; se restaura al final)")
+limpio("--solo-ley")
 partida = foto()
 print(f"    de partida : {partida}")
 
@@ -74,8 +80,8 @@ comprobar("la guia dice lo mismo que el modo",
 C2, D2, T2 = recargar()
 for v in (C.VAR_DGT, C.VAR_TEAC, C.VAR_TEXTOS):
     os.environ.pop(v, None)
-comprobar("la DGT queda encendida", D2.activa())
-comprobar("y el TEAC tambien", T2.activa())
+comprobar("aparece el segundo boton", C2.hay_boton_criterio())
+comprobar("y el valor por defecto de la terminal cambia", D2.activa())
 comprobar("y los textos de la ventana", C2.textos_con_criterio())
 
 r = limpio("--solo-ley")
@@ -86,8 +92,8 @@ comprobar("VUELVE EXACTAMENTE AL PUNTO DE PARTIDA", vuelta == partida,
           f"{partida} != {vuelta}")
 
 C2, D2, T2 = recargar()
-comprobar("la DGT vuelve a estar apagada", not D2.activa())
-comprobar("y el TEAC tambien", not T2.activa())
+comprobar("desaparece el segundo boton", not C2.hay_boton_criterio())
+comprobar("y el valor por defecto vuelve a la ley sola", not D2.activa())
 comprobar("y los textos", not C2.textos_con_criterio())
 
 # ------------------------------------------- 2. DESCOORDINAR A MANO
@@ -125,8 +131,11 @@ C2, _D, _T = recargar()
 r2 = C2.revisar()
 print(f"    (c) AGENTE_DGT=1 con modo solo-ley -> {r2.descuadres}")
 comprobar("(c) lo detecta", not r2.coherente)
-comprobar("(c) y dice que es la fuente DGT",
-          any("fuente DGT" in d for d in r2.descuadres), str(r2.descuadres))
+# El nombre cambio con los dos botones: la variable ya NO decide si una
+# consulta lleva criterio -eso lo elige el boton- pero sigue mandando en la
+# TERMINAL sin bandera, y ahi si puede descuadrar.
+comprobar("(c) y dice que es el valor por defecto de la terminal",
+          any("terminal" in d for d in r2.descuadres), str(r2.descuadres))
 os.environ.pop(C.VAR_DGT, None)
 
 # d) los textos por su cuenta
@@ -151,7 +160,7 @@ except C2.Descoordinado as e:
     print("    " + "\n    ".join(lineas))
     comprobar("dice que NO se abre", any("NO se abre" in l for l in lineas))
     comprobar("dice cual es la pieza",
-              any("fuente DGT" in l for l in lineas))
+              any("terminal" in l for l in lineas), str(lineas))
     comprobar("da la orden exacta para arreglarlo",
               any("configurar.py --solo-ley" in l for l in lineas))
     comprobar("y explica POR QUE no se abre a medias",
@@ -177,8 +186,9 @@ r = limpio("--estado")
 s = r.stdout
 comprobar("dice el modo", "MODO: solo-ley" in s, s[:120])
 comprobar("lista las cuatro piezas",
-          all(p in s for p in ("fuente DGT", "fuente TEAC",
-                               "textos de la ventana", "GUIA.md")))
+          all(x in s for x in ("boton de criterio", "textos de la ventana",
+                               "GUIA.md", "valor por defecto de la terminal")),
+          s[:200])
 comprobar("dice las normas cargadas", "722" in s)
 comprobar("y cuantas consultas de la DGT hay", "consultas de la DGT" in s)
 comprobar("y cuantas resoluciones", "resoluciones economico" in s)
@@ -196,6 +206,31 @@ comprobar("con AGENTE_DGT=1 la DGT se enciende aunque el modo sea solo-ley",
 comprobar("y el TEAC igual", T2.activa())
 os.environ.pop(C.VAR_DGT, None)
 os.environ.pop(C.VAR_TEAC, None)
+
+# --------------------- 7. EL MODO YA NO DECIDE CADA CONSULTA
+print("\n=== 7. EL MODO DECIDE SI EL BOTON EXISTE, NO QUE HACE CADA CONSULTA ===")
+print("  Es lo que quita el estado oculto: la respuesta sabe con que se hizo")
+print("  porque se decidio al pulsarla.\n")
+import fase4
+from agente_fiscal import modelo as MOD
+import contextlib, io
+ix, g = fase4.cargar_corpus()
+for pedido in (False, True):
+    m = MOD.crear_motor("ensayo")
+    with contextlib.redirect_stdout(io.StringIO()):
+        r = fase4.consultar("deduccion de cuotas soportadas", 2023, m, ix, g,
+                            con_criterio=pedido)
+    comprobar(f"con_criterio={pedido}: la respuesta lo registra",
+              r.get("con_criterio") is pedido, str(r.get("con_criterio")))
+    comprobar(f"con_criterio={pedido}: y manda sobre el modo guardado",
+              r.get("con_criterio") is pedido)
+
+# Se deja el equipo como estaba, pase lo que pase.
+limpio(f"--{MODO_ORIGINAL}")
+r_final = C.revisar()
+comprobar("el equipo queda como estaba y coherente",
+          C.modo_guardado() == MODO_ORIGINAL and r_final.coherente,
+          f"{C.modo_guardado()} · {r_final.descuadres}")
 
 print("\n" + "=" * 62)
 print(f"FALLOS: {len(fallos)}")

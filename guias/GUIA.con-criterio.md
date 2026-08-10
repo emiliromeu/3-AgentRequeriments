@@ -4,8 +4,31 @@
 # Consulta fiscal sobre el IVA — guía de uso
 
 Se abre con doble clic en **abrir_agente**. Escribes la duda como se la
-contarías a un compañero, pones el año del caso y pulsas Consultar. Tarda hasta
-un minuto y va diciendo por dónde va.
+contarías a un compañero, pones el año del caso y **eliges con qué consultar**.
+Tarda hasta un minuto y va diciendo por dónde va.
+
+## Los dos botones: tú eliges en cada consulta
+
+| botón | qué mira | cuesta |
+|---|---|---|
+| **Consultar la ley** | la Ley del IVA, el Reglamento y la Ley General Tributaria | ~0,13 € |
+| **Consultar también el criterio** | lo anterior **más** consultas de la DGT y resoluciones del TEAC y de los tribunales regionales | ~0,22 € |
+
+No hay que elegir de antemano ni configurar nada: se decide duda a duda. El
+segundo es más caro porque lee bastante más, y **no siempre hace falta**: si lo
+que preguntas lo resuelve el texto de la ley, el primero te da lo mismo por
+menos.
+
+Úsalo cuando el asunto dependa de **cómo lo interpreta Hacienda** y no solo de
+lo que dice la norma. Y si dudas, empieza por el primero: siempre puedes repetir
+con el segundo.
+
+**La respuesta dice arriba con cuál se hizo**, y esa línea viaja también cuando
+copias la respuesta a tus notas. Dentro de un mes, quien la lea sabrá si llevaba
+criterio administrativo o no.
+
+Si pulsas el segundo y la herramienta no tiene nada guardado sobre esos
+artículos, **te lo dice**. No se queda callada ni finge que ha mirado.
 
 **Qué hace:** busca el respaldo de tu duda y te lo da **con el texto exacto y el
 enlace a la fuente**. Tiene dentro tres normas —la **Ley del IVA** (37/1992), el

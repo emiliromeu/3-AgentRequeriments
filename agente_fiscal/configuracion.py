@@ -12,6 +12,18 @@ esta y la hoja de la mesa diciendo que no. Quien lea la hoja decidira con ella.
 Aqui hay UN modo, y de el salen las cuatro. Ver `configurar.py`.
 
 ----------------------------------------------------------------------------
+Y DESDE LOS DOS BOTONES, EL MODO YA NO DECIDE CADA CONSULTA
+----------------------------------------------------------------------------
+El modo decide si el SEGUNDO BOTON EXISTE -esa sigue siendo la decision del
+despacho- pero si una consulta concreta lleva criterio lo elige quien pulsa.
+Con eso desaparece casi todo el estado oculto: la respuesta sabe con que se
+hizo porque se decidio al pulsarla, no en una variable puesta hace semanas.
+
+Lo que queda por cuadrar es menos, pero sigue importando: que la guia de la
+mesa describa los botones que hay, y que la terminal sin bandera no haga otra
+cosa que la ventana.
+
+----------------------------------------------------------------------------
 POR QUE UN FICHERO Y NO SOLO VARIABLES DE ENTORNO
 ----------------------------------------------------------------------------
 Una variable de entorno vive dentro de un proceso: `configurar.py` no puede
@@ -94,8 +106,24 @@ def guardar_modo(modo: str) -> None:
     }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def hay_boton_criterio() -> bool:
+    """¿EXISTE el segundo boton en la ventana?
+
+    Esta es la decision del despacho, y sigue siendo suya: con `--solo-ley` el
+    departamento no puede gastar de mas ni ver criterio administrativo aunque
+    quiera. Lo que YA NO decide este fichero es si una consulta concreta lleva
+    criterio: eso lo elige quien pulsa, boton a boton.
+    """
+    return modo_guardado() == CON_CRITERIO
+
+
 def con_criterio() -> bool:
-    """¿Participan las fuentes de criterio? Entorno primero, fichero despues."""
+    """El valor por defecto cuando nadie dice nada. Entorno, luego fichero.
+
+    Lo usa la TERMINAL sin bandera. La ventana no pasa por aqui: cada boton
+    pasa su decision explicita, y por eso ya no hay estado oculto que se
+    descuadre.
+    """
     del_entorno = _encendida(VAR_DGT)
     if del_entorno is not None:
         return del_entorno
@@ -162,18 +190,23 @@ def revisar() -> Revision:
 
     r = Revision(modo=modo)
     r.piezas = {
-        "fuente DGT": D.activa(),
-        "fuente TEAC": T.activa(),
+        "boton de criterio": hay_boton_criterio(),
         "textos de la ventana": textos_con_criterio(),
         "GUIA.md": modo_de_la_guia(),
+        # Ya NO deciden si una consulta lleva criterio -eso lo elige el boton-
+        # pero siguen mandando en la TERMINAL sin bandera. Si alguien las ha
+        # dejado puestas, la terminal y la ventana harian cosas distintas y
+        # nadie lo notaria.
+        "valor por defecto de la terminal": D.activa() or T.activa(),
     }
 
-    for nombre in ("fuente DGT", "fuente TEAC", "textos de la ventana"):
+    for nombre in ("boton de criterio", "textos de la ventana",
+                   "valor por defecto de la terminal"):
         if r.piezas[nombre] != esperado:
             r.descuadres.append(
-                f"{nombre}: esta {'encendida' if r.piezas[nombre] else 'apagada'} "
+                f"{nombre}: esta {'encendido' if r.piezas[nombre] else 'apagado'} "
                 f"y el modo «{modo}» pide que este "
-                f"{'encendida' if esperado else 'apagada'}")
+                f"{'encendido' if esperado else 'apagado'}")
     if r.piezas["GUIA.md"] != modo:
         r.descuadres.append(
             f"GUIA.md: describe «{r.piezas['GUIA.md']}» y el modo es «{modo}». "

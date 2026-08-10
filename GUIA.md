@@ -4,7 +4,7 @@
 # Consulta fiscal sobre el IVA — guía de uso
 
 Se abre con doble clic en **abrir_agente**. Escribes la duda como se la
-contarías a un compañero, pones el año del caso y pulsas Consultar. Tarda hasta
+contarías a un compañero, pones el año del caso y pulsas **Consultar la ley**. Tarda hasta
 un minuto y va diciendo por dónde va.
 
 **Qué hace:** busca el respaldo de tu duda y te lo da **con el texto exacto y el

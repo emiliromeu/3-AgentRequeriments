@@ -252,8 +252,12 @@ comprobar("con respuesta, se puede copiar",
           str(v.boton_copiar["state"]) == "normal")
 v._copiar()
 bombear(0.2)
-comprobar("y el portapapeles la tiene",
-          raiz.clipboard_get() == "PRIMERA RESPUESTA", raiz.clipboard_get()[:40])
+pegado = raiz.clipboard_get()
+comprobar("y el portapapeles la tiene", "PRIMERA RESPUESTA" in pegado,
+          pegado[:60])
+comprobar("LO COPIADO DICE CON QUE SE HIZO",
+          "solo con la ley" in pegado, pegado[:90])
+print(f"    lo que se pega:\n      {pegado.splitlines()[0][:78]}")
 v._terminar({"codigo": 2, "estado": EST.NO_ENCONTRADO, "fallo": None,
              "senales": [], "cobertura": [], "estructural": "",
              "preceptos": [], "traza": None, "recuperado": [], "respuesta": ""})
@@ -264,7 +268,51 @@ comprobar("y la respuesta guardada se borra", not v.respuesta_actual,
           v.respuesta_actual[:40])
 
 # =====================================================================
-print("\n=== 8. LA VENTANA SE NIEGA A ABRIR DESCOORDINADA ===")
+print("\n=== 8. LOS DOS BOTONES ===")
+print("  El modo es de CADA consulta. El segundo boton solo existe si el")
+print("  despacho lo ha decidido: esa eleccion no es del que consulta.\n")
+import agente_fiscal.configuracion as CONF
+hay_dos = CONF.hay_boton_criterio()
+print(f"    modo: {CONF.modo_guardado()} · ¿hay segundo boton? {hay_dos}")
+comprobar("el primer boton existe siempre", v.boton is not None)
+comprobar("dice que consulta la ley", "ley" in v.boton.cget("text").lower(),
+          v.boton.cget("text"))
+comprobar("el segundo existe SOLO si lo permite el modo",
+          (v.boton_criterio is not None) == hay_dos)
+if hay_dos:
+    comprobar("dice que anade criterio",
+              "criterio" in v.boton_criterio.cget("text").lower(),
+              v.boton_criterio.cget("text"))
+    comprobar("y se explica QUE anade, en cristiano",
+              "DGT" in interfaz.PIE_CRITERIO and "TEAC" in interfaz.PIE_CRITERIO)
+    comprobar("con los dos precios, para poder comparar",
+              "0,22" in interfaz.PIE_CRITERIO and "0,13" in interfaz.PIE_CRITERIO,
+              interfaz.PIE_CRITERIO)
+    comprobar("el precio NO va dentro del boton, para que no parezca un aviso",
+              "€" not in v.boton_criterio.cget("text"))
+    v.caja.delete("1.0", "end"); v.caja.insert("1.0", "duda")
+    v.ejercicio.set("2023"); v._revisar_boton()
+    comprobar("los dos se encienden juntos",
+              str(v.boton["state"]) == str(v.boton_criterio["state"]) == "normal")
+    v.ejercicio.set(""); v._revisar_boton()
+    comprobar("y se apagan juntos",
+              str(v.boton["state"]) == str(v.boton_criterio["state"]) == "disabled")
+
+print("\n=== 8 bis. EL MODO SE VE JUNTO AL ESTADO ===")
+for con, marca in ((False, "solo con la ley"), (True, "criterio de la DGT")):
+    v._terminar({"codigo": 0, "estado": EST.CLARO, "fallo": None, "senales": [],
+                 "cobertura": [], "estructural": "", "preceptos": [],
+                 "traza": None, "recuperado": [], "con_criterio": con,
+                 "respuesta": "una respuesta"})
+    bombear(0.3)
+    dice = v.etiqueta_hecha_con.cget("text")
+    comprobar(f"con_criterio={con}: se dice arriba", marca in dice, dice)
+    v._copiar()
+    bombear(0.2)
+    comprobar(f"con_criterio={con}: y viaja en lo copiado",
+              marca in raiz.clipboard_get(), raiz.clipboard_get()[:70])
+
+print("\n=== 9. LA VENTANA SE NIEGA A ABRIR DESCOORDINADA ===")
 comprobar("existe la pantalla de descoordinacion",
           hasattr(interfaz, "ventana_de_descoordinacion"))
 import agente_fiscal.configuracion as CONF
@@ -272,7 +320,7 @@ r = CONF.revisar()
 comprobar("y hoy el sistema esta coherente", r.coherente, str(r.descuadres))
 
 # =====================================================================
-print("\n=== 9. LA PRUEBA SABE PONERSE ROJA ===")
+print("\n=== 10. LA PRUEBA SABE PONERSE ROJA ===")
 print("  Se rompen a proposito las dos reglas mas caras y se comprueba que")
 print("  las comprobaciones de arriba las habrian cazado.\n")
 
