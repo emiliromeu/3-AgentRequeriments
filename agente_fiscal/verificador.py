@@ -375,18 +375,28 @@ class Verificador:
         from . import teac as T
 
         numero = cita.referencia.numero
-        d.referencia_corpus = f"{T.ETIQUETA} {numero}"
         d.norma = "teac"
 
         cache = self._cache_teac if self._cache_teac is not None else T.CacheTEAC()
         criterio = cache.leer(numero)
-        if criterio is not None:
-            d.referencia_corpus = f"{criterio.etiqueta} {numero}"
+        # UNA SOLA FUNCION COMPONE LA ETIQUETA, Y ES `teac.etiqueta_de`.
+        #
+        # Aqui habia un segundo camino: se ponia la constante «Criterio TEAC» y
+        # solo se corregia SI el criterio aparecia en la copia local. O sea que
+        # a una resolucion de un TEAR que no tuvieramos guardada se la llamaba
+        # TEAC -que es exactamente el defecto de la fase 14, colandose por la
+        # rama de al lado-.
+        #
+        # Y cuando no se sabe quien la dicto, la respuesta honrada NO es «TEAC»:
+        # es la neutra. `etiqueta_de("")` da «Resolucion economico-administrativa»,
+        # que no atribuye nada a nadie.
+        d.referencia_corpus = (
+            f"{T.etiqueta_de(criterio.unidad if criterio else '')} {numero}")
         if criterio is None:
             d.estado = NO_VERIFICABLE
             d.motivo = (
-                f"el criterio {numero} del TEAC no esta en la copia local. Sin "
-                f"el documento delante no hay contra que comprobar el texto, "
+                f"la resolucion {numero} no esta en la copia local. Sin el "
+                f"documento delante no hay contra que comprobar el texto, "
                 f"asi que no se da por bueno")
             d.comprobaciones.append("criterio citado: no esta en la cache")
             return d

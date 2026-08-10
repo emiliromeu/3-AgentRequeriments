@@ -81,7 +81,11 @@ comprobar("se dice que no hay texto por no superar la comprobacion",
 
 # ------------------------------------ 2. EL BORRADOR NO LLEGA A PANTALLA
 print("\n=== 2. EL BORRADOR RECHAZADO NO LLEGA A PANTALLA ===")
-traza = Path(v.pie.cget("text").replace("Expediente guardado en ", "").strip())
+# El expediente vive en `pie_respuesta`, en la barra de arriba de la vista de
+# lectura. `v.pie` es el pie de la OTRA vista -la de preguntar- y dice cuantos
+# preceptos hay cargados: desde que hay dos vistas no son lo mismo.
+traza = Path(v.pie_respuesta.cget("text")
+             .replace("Expediente guardado en ", "").strip())
 borradores = sorted(traza.glob("borrador_*.txt")) if traza.is_dir() else []
 print(f"    borradores en la traza: {[b.name for b in borradores]}")
 comprobar("el expediente SI guarda el borrador (la traza queda intacta)",

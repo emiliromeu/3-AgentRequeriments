@@ -4,6 +4,31 @@ Sistema de consulta sobre normativa del IVA para el departamento fiscal de una
 gestoría. **No decide: decide la persona.** Busca la norma aplicable, la lee y
 devuelve la respuesta con las citas y los enlaces para comprobarla.
 
+## ⚠️ NINGÚN DATO QUE PUEDA PARECER REAL SE ESCRIBE A MANO
+
+> **Lo que se enseña sale de una traza o de la copia local. Nunca de mi cabeza.**
+> Un ejemplo inventado en material de demostración **es una cita falsa con otro
+> nombre**, y da igual que el texto que lo rodea sea auténtico: quien lo mira no
+> distingue una parte de la otra.
+
+Alcance: números de consulta de la DGT, de resolución del TEAC o de un TEAR,
+artículos, fechas, importes. En **cualquier** cosa que pueda acabar delante de
+una persona — la ventana, `GUIA.md`, los guiones de demostración, este LEEME.
+
+**Cómo se cumple:** un guion de demostración lee el `resultado.json` de un
+expediente y pinta lo que hay; **si un campo no está, no se pinta**. Nunca se
+rellena a ojo. Si hace falta un ejemplo en documentación, se coge uno que esté
+en la copia local y se comprueba que sus datos son los suyos.
+
+**Los fixtures de prueba son otra cosa**, pero tienen que estar marcados en dos
+sitios: un `LEEME.txt` en su carpeta diciendo que están inventados, y el propio
+número fuera del rango real — la serie `9xxx` (`V9001-22`, `00/09001/2024`).
+Viven en `casos/`, nunca en `datos/`: dentro de la caché de verdad serían
+indistinguibles de material auténtico.
+
+**Se incumplió el 10 de agosto de 2026** y por eso está escrito aquí arriba. Ver
+la fase 25.
+
 ## ⚠️ HOY EN PRODUCCIÓN HAY DOS ESTADOS, NO TRES
 
 > **Con la DGT y el TEAC apagados —que es como está hoy— `CRITERIO DISCUTIDO`
@@ -727,6 +752,8 @@ tribunal ha puesto las dos cosas en la misma frase, así que sabemos que se ha
 pronunciado sobre *ese* criterio y no sobre uno parecido. Se da en **4 de cada 9**
 criterios reales medidos. El aviso es afirmativo: *«el TEAC se ha pronunciado
 sobre V2092-15, que es criterio que esta respuesta cita»*.
+
+> **De dónde sale `V2092-15`:** no está en nuestra copia de la DGT. Aparece dentro del texto de dos criterios del TEAC que sí tenemos guardados —`00/03399/2023` y `00/05524/2024`—, que la citan. Es dato real de segunda mano, leído del material de trazas reales, no un número inventado. Queda anotado porque, sin esta nota, alguien podría buscarlo en `datos/dgt/` y no encontrarlo.
 
 **SEÑAL DÉBIL — coincidencia de artículos.** Hay doctrina del TEAC sobre el
 mismo artículo. Es una **aproximación**: que dos textos hablen del artículo 80 no
@@ -1605,6 +1632,15 @@ nuevas en todo el corpus, ninguna de ruido.
 
 # FASE 20 · UN SOLO INTERRUPTOR
 
+> **REVERTIDA EN PARTE POR LA FASE 21.** El interruptor global —`--solo-ley` /
+> `--con-criterio`, `modo.json`, la guía por modo— **ya no existe**: los dos
+> botones están siempre en la ventana y el modo lo elige quien pulsa. Lo que
+> sobrevive de esta fase es lo que de verdad valía: que la guía sea un fichero
+> generado con marca dentro, y que **si la hoja de la mesa no dice lo mismo que
+> la pantalla, el agente no abre**. Se deja escrito entero porque el camino
+> importa: el interruptor fue el paso intermedio necesario para descubrir que
+> lo que sobraba era el interruptor.
+
 ## El problema
 
 Encender las fuentes eran **cuatro cosas** coordinadas por la memoria de una
@@ -1709,3 +1745,798 @@ versionados, así que reescribir las suites no exige rehacer los datos.
 **Regla, a partir de ahora:** si un guion comprueba algo que no queremos que se
 rompa, va a `pruebas/` en el repositorio. Un banco de pruebas que se borra solo
 no es un banco de pruebas.
+
+
+---
+
+# FASE 21 · TODO EN LA VENTANA, SIN TERMINAL
+
+Es para enseñar el MVP. **No se puede abrir una consola delante de nadie**: una
+herramienta que necesita terminal para algo no está entregada, está en obras.
+
+## 1 · Los dos botones, siempre
+
+En la fase 20 el segundo botón existía solo si `configurar.py --con-criterio`
+lo había encendido. La idea era buena —la decisión de gastar es del despacho,
+no de quien consulta— pero **el sitio era el equivocado**: para tomarla había
+que editar un fichero, y eso es exactamente lo que no se puede hacer delante de
+nadie.
+
+Ahora **los dos botones están siempre**, y si el despacho decide que solo se use
+la ley, eso se decide **en la propia ventana**: no pulsando el segundo. La
+decisión sigue siendo suya; lo que ha cambiado es que ya no hace falta un
+informático para ejecutarla.
+
+Lo que se ha ido con ello:
+
+| se va | por qué |
+|---|---|
+| `modo.json` | un estado global que ya no decidía nada |
+| `guardar_modo` · `hay_boton_criterio` · `textos_con_criterio` | lo mismo, en funciones |
+| `guias/GUIA.solo-ley.md` · `guias/GUIA.con-criterio.md` | una sola guía: describe los dos botones **siempre** |
+| `configurar.py --solo-ley` / `--con-criterio` | no queda nada que encender |
+| `AGENTE_DGT_TEXTOS` | los textos ya no dependen de una variable, sino del botón pulsado |
+
+**Se ha quitado, no dejado sin efecto.** Un interruptor que ya no interrumpe
+nada es peor que no tenerlo: el siguiente que lo lea creerá que manda.
+
+`configurar.py` se queda, pero solo como mirador: dice qué hay dentro y
+regenera la guía. Lo mismo está en la ventana; esto es para Emili.
+
+## 2 · «Qué hay dentro»: la pantalla de estado
+
+Lo que daba `configurar.py --estado` en una consola, ahora en la ventana, en un
+botón discreto al lado del de consultar. **Es lo que se enseña para decidir si
+se enciende el criterio**, así que cabe de una vez y se lee sin explicaciones:
+
+- **normas cargadas** y cuántos artículos cada una — 722 en total;
+- **la copia local**: 241 consultas de la DGT, 7 del TEAC, 2 de tribunales
+  regionales;
+- **lo que cuesta cada botón**: 0,13 € y 0,22 €, medidos sobre trazas reales;
+- **el canario**: si Tributos y DYCTEA responden ahora mismo, con la nota de que
+  una fuente caída **no impide consultar** —las respuestas salen siempre de la
+  copia local— solo impide ampliarla.
+
+Ni una ruta de fichero, ni una variable de entorno, ni un `.json`. Comprobado en
+la suite: si se cuela cualquiera de las tres, sale rojo.
+
+## 3 · Que se vea la diferencia entre los dos botones
+
+Sin esto, comparar los dos botones exige leerse las dos respuestas enteras y
+compararlas a ojo, y eso no lo hace nadie. Así que la diferencia se dice, en una
+línea y con números, justo debajo del estado:
+
+- **el criterio ha aportado algo** → «Lo que ha añadido el criterio: 2 consultas
+  de la DGT y 1 resolución, citadas y comprobadas una a una», con las
+  referencias debajo;
+- **había criterio delante y no sostiene nada** → «Se le pusieron delante 5
+  consultas y 1 resolución, y NINGUNA sostiene la respuesta: esta duda la
+  resuelve la ley sola». Es un resultado, no un fallo, y merece decirse: el
+  segundo botón ha trabajado y la conclusión es que no hacía falta.
+
+Y el **texto del estado también cambia según el botón**. El código calcula
+`CRITERIO CLARO` igual en los dos casos, pero no significa lo mismo: uno hecho
+solo con la ley no ha mirado qué opina Hacienda, y **decirlo igual que el otro
+sería dar por mirado lo que no se ha mirado**. Son seis frases, dos por estado.
+
+## 4 · La despensa vacía no es una avería
+
+Es lo primero que le va a pasar a cualquiera que pruebe una pregunta al azar:
+**241 consultas no cubren el IVA entero**, y hay doscientas mil publicadas. Si
+eso se dice con las palabras de un fallo, se lee como un fallo, y el segundo
+botón queda marcado como «el que no funciona».
+
+> *«No hay respaldo suficiente en la ley, y en la copia guardada todavía no hay
+> criterio sobre esto. La copia se llena poco a poco: que no esté no quiere
+> decir que no exista. Abajo tienes los artículos encontrados.»*
+
+La suite comprueba que esa frase **no contiene** «error», «fallo», «avería» ni
+«no se ha podido», y que sí dice «todavía» y «no quiere decir que no exista».
+
+## 5 · Qué obliga todavía a abrir una consola
+
+**Para el despacho: nada.** Abrir, instalar en el primer arranque, meter la
+clave, consultar con o sin criterio, ver qué hay dentro, copiar la respuesta y
+comprobar el equipo cuando algo va raro — los siete tienen doble clic o botón.
+
+**Para Emili sí, y se deja a propósito**, porque son tareas de mantenimiento que
+se hacen una vez cada mucho y no delante de nadie:
+
+| tarea | cómo | ¿debería tener ventana? |
+|---|---|---|
+| llenar la despensa (`sembrar.py`) | terminal | **es la candidata seria**: es lo único de esta lista que cambia lo que ve el despacho |
+| reingerir el corpus cuando cambie la ley (`fase1`/`fase2`) | terminal | no: cambia la ley dos veces al año y hay que mirar el diff |
+| bancos y suites (`banco.py`, `fase3 probar`, `pruebas/`) | terminal | no: son de desarrollo |
+| ver qué hay dentro / regenerar la guía (`configurar.py`) | terminal | ya está en la ventana; esto es el atajo |
+
+**Un caso frontera, dicho porque lo es:** si la credencial caduca, la ventana
+dice «Falta la configuración. Avisa a Emili» y ahí se acaba para el despacho.
+Eso es deliberado —la clave no la toca el departamento— pero significa que
+**arreglarlo es de Emili y hoy no tiene doble clic**. No es un fallo de la
+entrega tal como está definida; es una decisión, y queda escrita para poder
+cambiarla si estorba.
+
+## 6 · Qué ha cambiado en la coherencia ventana/guía
+
+Esta es la parte que había que rehacer, porque `configurar.py` deja de mandar.
+
+Antes `revisar()` comparaba **cuatro piezas contra un modo**: fuentes, textos,
+guía y valor por defecto. Tres de las cuatro han dejado de existir, así que
+comparar se quedó sin objeto.
+
+Pero **la coherencia que importaba nunca fue esa**. Era: *¿dice la hoja impresa
+lo mismo que la pantalla?* El papel se imprime, se queda en la mesa y no se
+entera de que el código ha cambiado. Así que `revisar()` hace ahora **una sola
+cosa, y es la que faltaba**: comprobar que **todas** las frases de
+`interfaz.TEXTOS_DE_ESTADO` están dentro de `GUIA.md`, letra por letra
+—insensible a tildes, porque la ventana va en ASCII y la guía impresa no— y se
+ejecuta **al arrancar**, tanto en la ventana como en la terminal.
+
+Eso era justo lo que cubría `prueba_textos_guia`, una de las catorce suites
+perdidas, y que estaba anotada como **«nadie comprueba que las frases de la
+ventana estén dentro de la guía»**. Ya no es una suite que hay que acordarse de
+lanzar: es una condición de arranque.
+
+**Y encontró dos descuadres reales en cuanto se encendió.** Las variantes de
+`CRITERIO CLARO` y `CRITERIO DISCUTIDO` para el botón de ley sola no estaban en
+la guía: la guía solo describía las de tres fuentes. Alguien con la hoja delante
+habría leído una frase distinta de la que tenía en pantalla. Se reescribió la
+sección «Los tres estados» para dar **las dos variantes de cada estado, una por
+botón**.
+
+## Comprobaciones
+
+```
+9 suites .......................... verdes (438 comprobaciones)
+fase3.py probar ................... 37/37
+fase4.py comprobaciones ........... 5/5
+banco.py --motor ensayo ........... 16/19 · los 3 rojos son los de siempre,
+                                    de ordenación, sin cambio de veredicto
+llamadas a la API de Anthropic .... 0
+```
+
+`prueba_configurar` se ha reescrito entera: protegía un interruptor que ya no
+existe. Ahora protege que **los dos botones no dependan de ningún fichero** y
+que una frase de la ventana fuera de la guía impida abrir. Su control negativo
+vacía `TEXTOS_DE_ESTADO` y comprueba que, sin la comprobación, una guía rota
+pasaría por buena.
+
+**Y una trampa que casi vuelve a colar:** el control negativo mutaba el módulo
+`interfaz` que tenía la prueba en la mano, pero `revisar()` hace `import
+interfaz` por dentro y la suite había vaciado `sys.modules` tres veces por el
+camino. Eran **dos objetos distintos**: la mutación no llegaba, y la prueba
+salía en rojo diciendo «la mutación no ocurrió» — que es exactamente para lo que
+se puso ese mensaje. Se coge el módulo de `sys.modules` en el momento de mutar.
+
+---
+
+# FASE 22 · EL MODO OSCURO, Y LO QUE HACÍA QUE LA VENTANA SE VIERA MAL
+
+La maqueta traía tres modos y se había aplicado «papel claro». Se pidió el
+**oscuro —negro y lila—** desde el principio. Esta fase lo aplica y, de paso,
+arregla lo que hacía que la ventana pareciera vieja aunque los colores fueran
+buenos: **no eran los colores, era el espacio.**
+
+## 1 · La paleta
+
+El negro no es negro: `#0F0E13` lleva una gota de violeta. Un `#000000` puro
+con texto blanco encima vibra y cansa a los diez minutos, y aquí se leen
+párrafos de ley enteros. Las tres superficies se separan **por claridad, no por
+bordes**: fondo → panel → campo, cada una un escalón más clara.
+
+```
+#0F0E13  fondo de la ventana          #EDECF2  texto principal
+#17161D  panel: lectura y respuesta   #A19DB0  texto secundario
+#1F1D28  campo: la duda y el año      #8B87A0  rótulos menudos
+#2B2937  bordes                       #C0A5FF  el lila: acento y botón
+                                      #C8B0FF  enlaces y citas pinchables
+```
+
+**Los grises están medidos, no elegidos a ojo.** Sobre negro es muy fácil
+pasarse de apagado. El primer `TINTA3` daba **3,8:1** contra el panel y el
+mínimo para texto menudo es 4,5:1 — se subió hasta 5,2:1. Los diez pares:
+
+| | contraste | |
+|---|---|---|
+| texto principal sobre panel | 15,3:1 | |
+| titular sobre el fondo | 16,4:1 | |
+| texto en la caja de la duda | 14,1:1 | |
+| enlace sobre panel | 9,5:1 | el producto: el más legible después del estado |
+| tinta sobre el botón lila | 9,0:1 | |
+| estado CRITERIO CLARO | 8,6:1 | |
+| estado CRITERIO DISCUTIDO | 7,2:1 | |
+| texto secundario | 6,8:1 | |
+| estado NO ENCONTRADO | 6,3:1 | |
+| rótulos menudos | 5,2:1 | era 3,8:1 |
+
+Los tres estados **suben** de claridad respecto al modo claro —sobre negro manda
+el claro, no el oscuro— pero la relación entre ellos no cambia: **mismo brillo,
+croma decreciente**. Del lila al gris pasando por un lila apagado. Ni un rojo,
+ni un ámbar, ni un verde en toda la pantalla.
+
+## 2 · Lo que hacía que se viera mal
+
+### El espacio, que es lo que más se nota
+
+Los huecos estaban elegidos uno a uno —6 aquí, 11 allá, 14 más allá— y la falta
+de ritmo se ve aunque no se sepa nombrar. Ahora hay **una escala y todo sale de
+ella**: unidad 8, margen exterior 32, entre bloques 24, dentro de un bloque 16,
+relleno de tarjeta 24. Los botones pasan de `padx=16 pady=4` a **26×12**: un
+botón apretado parece deshabilitado aunque no lo esté.
+
+### La jerarquía: seis tamaños, no dos
+
+```
+22 titular  ·  16 estado  ·  15 cita (serif)  ·  12 respuesta
+11 interfaz ·  10 referencia (mono)  ·  9 rótulo
+```
+
+El titular pasó de 17 a 22 y el estado de 15 a 16, **pero lo que importa es la
+distancia entre escalones**. Y la cita sigue siendo lo más grande después del
+estado, en serif, porque es el producto.
+
+### Los widgets por defecto
+
+Un botón de tkinter trae relieve biselado, fondo del sistema y borde de tres
+píxeles. Se estila todo con `ttk` y se **fuerza el tema `clam`**, que es el
+único que deja cambiar fondo y borde de verdad en los tres sistemas: en Mac el
+tema `aqua` ignora el color de fondo de los botones —los pinta el sistema— y en
+Windows `vista` hace lo mismo. **Sin cambiar de tema, todo esto no habría hecho
+nada y no se habría notado hasta verlo en la otra máquina.**
+
+Tres estilos, y la diferencia entre ellos es la jerarquía: `Primario` lila
+lleno, `Segundo` con contorno, `Discreto` sin fondo ni borde. Cursor de mano en
+todo lo pinchable — es la señal más barata que existe de «esto responde», y
+tkinter no la pone sola.
+
+### El tamaño de ventana
+
+Abría en `minsize(880, 640)`, o sea **en el suelo**: enseñaba su peor caso. Ahora
+abre en 1180×880 y el mínimo baja a 920×700.
+
+### El ancho de línea
+
+Un párrafo de ley a lo ancho de un monitor de 27 pulgadas es ilegible: el ojo
+pierde el renglón al volver. **tkinter no tiene `max-width`**, así que se
+calcula: se mide cuánto ocupan 88 caracteres *con la fuente que de verdad se ha
+elegido en esta máquina* y lo que sobra se reparte a los lados como margen
+interior. La columna se queda quieta y lo que crece son los lados.
+
+| ventana | línea de lectura |
+|---|---|
+| 900 px | 724 px (la ventana no da para más) |
+| 1180 px | **744 px** |
+| 1600 px | **744 px** |
+| 2200 px | **744 px** |
+| 3000 px | **744 px** |
+
+**Dos defectos que solo aparecieron al medirlo**, y que no se habrían visto
+mirando la pantalla:
+
+1. La columna salía a **696 px en vez de 744**: no se descontaba el relleno
+   propio de la caja, que ya es margen.
+2. Había un **tope al margen** (220 px) y en un monitor de 2200 px la línea
+   volvía a irse a 1648. Un tope al margen es un tope a lo que se quiere fijar,
+   mirado del revés. Se quitó.
+
+## 3 · La expectativa que hubo que tocar, y por qué
+
+Una sola, y la digo entera porque la regla es no tocarlas:
+
+```python
+comprobar("NO ENCONTRADO va en gris, no en rojo",
+          interfaz.COLOR[EST.NO_ENCONTRADO].lower() in ("#4a4a55", "#4a4a55"))
+```
+
+Estaba atada al **hex del modo claro**. Sobre el fondo oscuro ese gris da
+**2,2:1**: ilegible. La elección era gris ilegible o tocar la prueba.
+
+Ninguna de las dos, porque **el literal no era la expectativa**. La expectativa
+es que no sea un color de alarma. Así que ahora se comprueba eso: que los tres
+canales estén casi igualados (croma ≤ 30), que no tire a rojo ni a ámbar, y que
+tenga contraste suficiente contra su fondo. Es **más estricto que antes** —caza
+un rojo, un ámbar y un verde, no solo un hex distinto— y sobrevive al siguiente
+cambio de paleta, que es lo que tiene que hacer una prueba de diseño.
+
+Verificado rompiéndola: con `#CC2222` y con `#E8A317` sale roja; con el gris
+viejo `#4A4A55` **también**, por el contraste. El umbral está puesto por encima
+de ese caso a propósito.
+
+## 4 · Lo que tkinter NO puede, y no es negociable
+
+Se pide una vez y se deja escrito para no volver a intentarlo:
+
+- **esquinas redondeadas** — no existen en widgets; solo dibujando a mano en un
+  Canvas, y entonces deja de ser un widget (sin foco, sin teclado, sin estados);
+- **sombras** y **degradados** — no hay;
+- **transiciones y animaciones** — solo moviendo a mano con `after()`, y se ve
+  a tirones;
+- **opacidad por widget** — solo la ventana entera;
+- **tipografía fina**: no hay interletraje. Las versalitas del rótulo
+  (`D E P A R T A M E N T O   F I S C A L`) están espaciadas **a mano con
+  espacios**, que es el único modo;
+- **la barra de desplazamiento** se estila pero no se puede adelgazar por
+  debajo de lo que dicta el tema.
+
+Lo que sí se ha podido: color de todo, tres superficies, bordes de un píxel,
+relieve plano, cursor de mano, tipografía por familia y tamaño, y el ancho de
+lectura calculado.
+
+## Comprobaciones
+
+```
+9 suites ............... verdes · 440 comprobaciones (136 de la ventana)
+fase3.py probar ........ 37/37
+fase4.py comprobaciones  5/5
+llamadas a la API ...... 0   (todo con --motor ensayo)
+```
+
+**No hay captura de pantalla en este informe**, y hay que decir por qué:
+`screencapture` en esta sesión devuelve solo el escritorio —le falta el permiso
+de Grabación de Pantalla— así que la foto no probaría nada. Lo que sí está
+medido es el árbol de widgets ya dibujado: tema `clam` activo, los cuatro
+botones con su estilo y su cursor, las siete fuentes resueltas
+(Helvetica Neue / Georgia / Menlo en este Mac) y la columna de lectura en las
+cinco anchuras de la tabla. Para verlo:
+
+```
+python interfaz.py --motor ensayo
+```
+
+---
+
+# FASE 23 · LA RESPUESTA NO SE PODÍA LEER
+
+Bloqueante, y lo causó el ancho de lectura de la fase anterior. Se arregla y se
+deja medido, porque **ninguno de los tres defectos se veía mirando la pantalla**:
+había que preguntarle a los widgets cuánto pedían.
+
+## El diagnóstico
+
+| lo que pasaba | la medida |
+|---|---|
+| la respuesta se quedaba en **dos líneas** | el `Text` sin medidas pide 80×24 caracteres → **816 px**; la ventana pedía **1608 px** de alto y abría en 880, así que a la respuesta le tocaban **88 px** |
+| no había forma de agrandar para verlo | la ventana ya pedía más de lo que cabe en la pantalla |
+| el ancho de lectura peleaba con el gestor de ventanas | se hacía con `padx`, y **el relleno cuenta para el tamaño que el widget pide**: más ventana → más margen → más pedía |
+| los avisos se dibujaban fuera y sin salida | con el art. 80 puesto, la columna pide **604 px** y quedaban **322**. El texto tenía barra propia; los avisos, no |
+
+Lo último es lo grave: **los avisos son justo lo que puede invalidar la
+respuesta**, y estaban donde no se podía llegar.
+
+## Los arreglos
+
+**`width=1, height=1` en el `Text`.** Pidiendo lo mínimo, la ventana pide lo que
+ocupa el formulario (1608 → **917 px**) y la respuesta se queda con lo que sobre.
+
+**El ancho de lectura pasa de `padx` a márgenes de etiqueta** (`lmargin1`,
+`lmargin2`, `rmargin`). Un margen de etiqueta es solo sangrado de dibujo: no
+cuenta para nada. La ventana se maximiza entera y el párrafo se queda quieto.
+
+```
+ventana 1000 px → margen 70 px      ventana 1400 px → margen 270 px
+ventana 1710 px → margen 425 px     el párrafo, siempre 744 px
+```
+
+Y se corrigió un segundo error ahí: el margen se calculaba con
+`texto.winfo_width()`, que durante un `<Configure>` devuelve **el ancho de
+antes**. Salía 391 px en una ventana de 1000 y 70 px en una de 1400 — al revés.
+Ahora se calcula del ancho de la ventana, que ya se sabe.
+
+**Un solo scroll para toda la columna de resultado.** Estado, aporte, avisos y
+respuesta van dentro de un lienzo desplazable. No queda nada fuera de alcance, y
+lo que se queda quieto es el formulario, que es lo que se pidió. El texto crece
+hasta ocupar lo que ocupa: se cuentan las **líneas dibujadas** —no los párrafos,
+porque importa cómo ha quedado el ajuste al ancho de ahora— y se le da ese alto.
+
+**Rueda, en los tres sistemas y sobre cada panel.** Mac `<MouseWheel>` con delta
+pequeño, Windows `<MouseWheel>` en múltiplos de 120, Linux `<Button-4>/<5>` sin
+delta. Y atada a **cada etiqueta**, no solo al lienzo: la rueda la recibe el
+widget que está debajo del ratón, y debajo del ratón casi siempre hay una
+etiqueta. Sin recorrer los hijos solo habría funcionado en los huecos.
+
+**Teclado**: flechas, AvPág/RePág, Inicio/Fin. **Respuesta nueva vuelve arriba**
+—si no, una corta detrás de una larga aparece en blanco y se lee como que no ha
+contestado—. **La barra se esconde** cuando no hay nada que desplazar.
+
+## Y los otros dos sitios, que tenían el mismo fallo
+
+Se pidió repasarlos y resultó que no era teoría:
+
+| | pedía | abría a | se salía por |
+|---|---|---|---|
+| **«Qué hay dentro»** | 949 px | 620 px | **329 px**, sin barra |
+| **Descoordinación**, peor caso (las seis frases fuera de la guía) | 643 px | 520 px | **123 px** |
+
+Los dos arreglados con el mismo patrón, sacado a `_desplazable()`. Los tres
+tenían en común que **lo que contienen no tiene tamaño fijo**: depende de
+cuántos avisos haya, cuántas normas estén cargadas o cuántas frases falten. Un
+alto fijo para contenido variable es una apuesta, y se pierde el día que hay uno
+más.
+
+## La captura que no hay
+
+`screencapture` en esta sesión devuelve el escritorio, byte a byte idéntico
+entre ejecuciones, y `System Events` **no ve ninguna ventana** del proceso de
+Python. No es el permiso de grabación: es que la ventana no llega al servidor
+gráfico desde aquí. Lo medido sobre el árbol de widgets, maximizada:
+
+```
+ventana 1710x1027 · columna de resultado 3723 px · respuesta 101 líneas
+párrafo 744 px con 425 px de margen a cada lado
+se llega al final en 10 páginas · la última línea se dibuja
+el formulario no se mueve: 83 px
+```
+
+Para verlo: `python ver_ejemplo.py`, que carga la respuesta real del art. 80 con
+las tres fuentes y lo dice en la cinta de arriba —**no es una consulta**, es un
+texto que ya pasó el verificador en su día.
+
+## Comprobaciones
+
+```
+9 suites ....... verdes · 487 comprobaciones (183 de la ventana)
+llamadas a la API .. 0
+```
+
+Bloques nuevos: **11**, la respuesta larga de verdad (rueda por sistema y por
+panel, teclado, vuelta arriba, selección, de arriba a abajo maximizada y sin
+maximizar, y que el ancho de lectura no impida maximizar); y **12**, el control
+negativo: se le devuelve al texto el alto de fábrica y se comprueba que la
+última línea deja de dibujarse.
+
+**Dos trampas de la propia prueba**, anotadas porque volverán:
+
+1. Sin ventana **activa**, Tk no entrega eventos de teclado a nadie y
+   `event_generate` se pierde en silencio. Medido: `focus_get()` vuelve a `None`
+   después de la primera tecla. Sin `focus_force()` dentro del bucle, la suite
+   habría dado por buenas cinco teclas de seis.
+2. Un `<Configure>` pendiente recuenta el alto del texto y **mueve la vista**
+   entre el evento y la comprobación. Se dejó la vista en un punto conocido
+   antes de cada medida — y de paso se arregló en el código: reajustar guarda
+   dónde se estaba leyendo y vuelve, para que arrastrar el borde no dé saltos.
+
+---
+
+# FASE 24 · DOS VISTAS, Y EL CUERPO DE TEXTO DE UNA HERRAMIENTA DE TRABAJO
+
+## 1 · El problema de fondo no era el espaciado
+
+La pregunta y la respuesta compartían pantalla. El formulario ocupaba **380 px
+fijos** que la respuesta no podía usar, así que por mucho que se afinaran los
+márgenes la respuesta se quedaba en media ventana. **Sobraba una de las dos
+cosas en cada momento.**
+
+- **Vista de consulta**: la pregunta, el año y los dos botones. Centrada, con
+  aire, y nada más. Como ya no le quita sitio a nadie, la caja de la duda
+  recupera sus cuatro líneas.
+- **Vista de respuesta**: la ventana entera. Barra fina arriba con «← Nueva
+  consulta», la pregunta y el año, y el expediente; debajo, el estado, los
+  avisos y el texto.
+
+Las dos viven en la misma celda y se turnan con `grid()`/`grid_remove()`. **Nada
+se destruye al cambiar**, y por eso «Nueva consulta» devuelve la pregunta tal
+cual con el año seleccionado: casi nunca se cambia la duda entera, se cambia el
+año. Devolver la caja en blanco obliga a reescribirla, y quien la reescriba de
+memoria no escribirá exactamente lo mismo — con lo cual ya no está comparando
+dos respuestas a la misma pregunta.
+
+## 2 · Los tamaños, en puntos
+
+| | antes | ahora |
+|---|---|---|
+| **cuerpo de la respuesta** | 12 pt | **15 pt** |
+| **citas** (serif) | 15 pt | **17 pt** |
+| referencias y URL (mono) | 10 pt | **12 pt** |
+| rótulo del estado | 16 pt | **19 pt** |
+| titular | 22 pt | **24 pt** |
+| interfaz (botones, campos) | 11 pt | **13 pt** |
+| menuda | 10 pt | **11 pt** |
+
+**Interlineado**, que en texto jurídico denso se nota más que el cuerpo: 7 px
+entre líneas del mismo párrafo (`spacing2`), 9 px antes de cada párrafo y 18 px
+detrás. Alto de línea real: **31 px** para un cuerpo de 15 pt.
+
+**Aire alrededor de las citas**: 24 px por arriba y por abajo. Una cita pegada
+al párrafo siguiente se lee como parte de él, y entonces deja de ser una cita.
+
+**Márgenes**: 24 px de relleno interior en el texto, más el margen de la columna
+de lectura, que a pantalla completa son 393 px a cada lado.
+
+## 3 · Medido, no mirado: veinte líneas
+
+El listón era ese, y llegar costó cuatro intentos. Con el art. 80 cargado y la
+ventana maximizada a 1710×1027:
+
+```
+banda de arriba   249 px   (estado 169 + aporte 70 | avisos 163)
+visor del texto   679 px
+alto de línea      31 px
+LÍNEAS VISIBLES SIN DESPLAZAR:  20
+```
+
+Se partía de **12**. Lo que las trajo, en orden de rendimiento:
+
+1. **El estado y los avisos, en dos columnas.** Apilados se comían 392 px de
+   alto mientras sobraban 900 px de ancho a los lados del párrafo sin hacer
+   nada. En dos columnas —lo encontrado a la izquierda, lo que falta por mirar
+   a la derecha— la misma información ocupa la mitad. Por debajo de 1150 px de
+   ancho se vuelven a apilar.
+2. **El texto con visor propio.** Antes toda la columna se desplazaba junta, así
+   que el estado y los avisos se llevaban los primeros 470 px de la vista.
+   Ahora el bloque de arriba es fijo —se lee una vez— y el texto se queda con
+   lo que sobra.
+3. **El expediente a la barra de arriba.** Tuvo fila propia arriba y abajo, y en
+   las dos costaba 28 px: una línea entera de respuesta por un dato que se mira
+   una vez al mes.
+
+**¿Y si hay muchos avisos?** No queda nada inalcanzable, y está medido: sobre
+**864 consultas reales el máximo son cuatro avisos**, y en 820 de ellas ninguno.
+Si algún día fueran muchos, el bloque de arriba se queda entero —grid sirve
+primero a las filas sin peso— y lo que se encoge es el visor del texto, que
+tiene barra.
+
+### Cuatro cosas que solo aparecieron midiendo
+
+- **`uniform` no es decorativo.** Sin él, `weight` reparte solo el *sobrante*
+  por encima de lo que cada columna pide, así que la columna que pide poco se
+  queda pequeña para siempre: los avisos se envolvían a **209 px** dentro de una
+  banda de 1650.
+- **El ancho se pregunta, no se calcula.** Tres intentos de deducirlo («la
+  columna es el 60 %, menos el relleno, menos el rótulo») y los tres dieron de
+  menos: 642 px cuando había 771, y una línea de más. Ahora se le pregunta al
+  panel, que ya sabe lo que mide.
+- **El rótulo del estado se partía en tres líneas** por un `wraplength` puesto a
+  ojo, y eso subía el panel 60 px.
+- **Apilado ocupa menos que en horizontal.** Con el rótulo al lado, se come
+  320 px de ancho y la explicación se parte en cuatro líneas; con el rótulo
+  encima, la explicación tiene la columna entera y se queda en tres. Justo lo
+  contrario de lo que parece.
+
+Y la columna de lectura, corregida: la fórmula seguía restando los márgenes de
+la vista antigua y daba margen cero, con el párrafo a 837 px en una ventana de
+1180. Ahora **821 px fijos** de 1180 a 1710 de ancho.
+
+## 4 · Las expectativas que hubo que reescribir
+
+Tres, todas por la misma razón —comparaban números de fila de `grid`— y las tres
+sustituidas por algo **más estricto y que no depende del montaje**:
+
+- «los avisos van arriba, antes del texto» → se compara la **posición real en
+  pantalla** (`winfo_rooty`), que es lo que ve una persona;
+- «el aporte, entre el estado y los avisos» → igual;
+- «el formulario se queda como estaba» → ya no hay formulario en esa vista: se
+  comprueba que la vista de consulta **no está**.
+
+Y `prueba_no_encontrado` leía la traza de `v.pie`, que ahora es el pie de la
+*otra* vista. Pasa a `v.pie_respuesta`.
+
+**El control negativo también es nuevo**: se le quita a la fila del texto el
+peso que la hace crecer —que es lo que la dejaba en dos líneas— y se comprueba
+que el bloque de las veinte líneas lo caza. Verificado: sin peso, **1 línea**.
+
+## Comprobaciones
+
+```
+9 suites ....... verdes · 510 comprobaciones (206 de la ventana)
+fase3 · fase4 .. 37/37 · 5/5
+llamadas a la API .. 0
+```
+
+```
+python ver_ejemplo.py     abre MAXIMIZADA y directamente en la vista de
+                          respuesta, con el art. 80 y las tres fuentes
+```
+
+**Una piedra que ya llevo tres veces:** el `pady`/`padx` de un *widget* es UNA
+distancia, no una pareja. `padx=(0, 24)` en un `Label` revienta con «expected
+screen distance but got "0 24"». La pareja va en el `grid`/`pack`, no en el
+widget. Está escrito en el código desde la fase 12 y he vuelto a caer.
+
+---
+
+# FASE 25 · UNA CITA FALSA EN EL MATERIAL DE DEMOSTRACIÓN
+
+## Lo que pasó
+
+`ver_ejemplo.py` pintaba el texto **real** del expediente 20260805T224913 —que
+sí cita V0160-23 y V0041-07— rodeado de metadatos que **escribí yo a mano**:
+
+| | el ejemplo enseñaba | el expediente dice |
+|---|---|---|
+| aporte DGT | `V2759-21` | *(no existe esa consulta)* |
+| en el material | `V2759-21`, `V0187-20` | V0160-23, V0053-13, V0041-07 |
+| resolución | `00/02195/2019` | *(no existe)* |
+| señal | «hay criterio de años distintos» | «…**V0160-23** (2023) es la que manda; **V0041-07** es anterior y puede estar superada» |
+| preceptos | 80, 89, 24 (Reglamento) | 80, 24 |
+| cobertura | una línea sobre doctrina del TEAC | ninguna |
+
+**Tres referencias con formato de cita real, las tres inventadas.** Y de paso
+tapaban las dos auténticas: la señal verdadera las nombra, la mía no. De ahí que
+pareciera que el criterio de la DGT había dejado de funcionar.
+
+## Lo que NO pasó: no hay regresión
+
+Comprobado entero, sin gastar una llamada:
+
+1. **Las tres siguen en la copia local** (241 consultas): V0160-23, V0053-13,
+   V0041-07.
+2. **La búsqueda las devuelve en los puestos 1, 2 y 3**, con cobertura 1,00
+   (5 de 5 términos). El cuarto baja a 0,80. `buscar(tope=3)` devuelve
+   exactamente esas tres.
+3. **Nadie las descarta.** Relanzada hoy con `--motor ensayo`, el
+   `recorte_criterio.json` dice `consultas_con_texto_en_el_material: V0160-23,
+   V0053-13, V0041-07`. Las mismas que el 5 de agosto.
+4. **No hay umbral contra el que comparar**: en el camino de la DGT el único
+   corte es `tope=3`. `UMBRAL_ASUNTO = 0,20` vive en `teac.py`.
+
+**Y el filtro de materia y asunto nunca tocó la DGT.** El commit que lo
+introdujo (`3b963e6`) modificó `modelo.py`, `redactor.py`, `referencias.py`,
+`teac.py` y `fase4.py` — `dgt.py` no está en la lista, y no hay ninguna llamada
+a `materia_ajena` ni a `cobertura_asunto` fuera de `teac.py`. Como `dgt.py` no
+cambió, «antes del filtro» y «ahora» son el mismo código.
+
+## El arreglo
+
+`ver_ejemplo.py` **no escribe ni un dato**. Lee el `resultado.json` del
+expediente y pinta lo que hay; si un campo no está, no se pinta y se dice por la
+terminal. Lo que el expediente no guardaba se **reconstruye de sus propias
+medidas**, no se inventa:
+
+- la **respuesta** ← el último `borrador_N.txt` cuya `verificacion_N.json` diga
+  `ACEPTADO`. Si ninguna lo dice, no se enseña texto: la regla de no mostrar
+  texto sin verificar vale igual para un ejemplo;
+- el **aporte** ← las citas `VERIFICADA` de `verificacion_N.json` y las fuentes
+  de `recorte_criterio.json`;
+- **con qué se hizo** ← si hubo `recorte_criterio.json`, hubo criterio.
+
+Comprobado: el aporte que se pinta (`V0041-07`, `V0160-23`) coincide **exactamente**
+con lo que cita el texto. Y acepta un identificador por argumento, así que sirve
+para mirar cualquier expediente.
+
+## La auditoría del resto del proyecto
+
+### Encontrado y arreglado
+
+**`GUIA.md` — la hoja que se imprime y se deja en la mesa.** El ejemplo de
+formatos de cita mostraba `{Resolucion del TEAR de Cataluña 08/02042/2022/00/00}`.
+**No existe**, y las otras dos citas de ese mismo bloque sí son reales y con sus
+fechas correctas (`00/06614/2024/00/00, de 21/05/2026` y `V1601-22, de
+01/07/2022`), lo que la hacía leerse igual de auténtica. Sustituida por
+`07/02872/2023/00/00, de 29/04/2025`, que está en la copia local.
+
+Y un defecto de paso: **el sistema no sabe escribir «TEAR de Cataluña»**.
+`etiqueta_de` no tiene mapa de unidades y produce «Resolucion del 07». El
+ejemplo enseñaba un formato que el propio agente no puede emitir.
+
+**`agente_fiscal/redactor.py`** llevaba la misma cita inventada en un docstring
+—era el origen de la de la guía—. Verificado que **no llega al prompt**: no está
+en `SISTEMA`, es documentación para quien lea el código. Corregida igual.
+
+### Encontrado y correcto, dicho para que conste
+
+- **`V1601-22`** (petete.py, LEEME, redactor, dgt, citas, FASE9): **existe**, y
+  la fecha citada `01/07/2022` es la suya. Es una consulta de IRPF y se usa como
+  ejemplo del formato de PETETE. Bien.
+- **`00/06614/2024/00/00, de 21/05/2026`** en la guía: existe, fecha correcta.
+- **`V0047-24`** en `prueba_normativa`: **es real**, con su normativa real
+  (`RIRPF, RD 439/2007, art. 22`). Es el caso que costó la fase 6 y está bien
+  que la suite use el de verdad.
+- Las cifras de la ventana —241 consultas, 7 del TEAC, 2 regionales, 722
+  preceptos, 0,13 € y 0,22 €— salen de contar la copia local y de trazas
+  medidas.
+
+### Encontrado, sin arreglar, y por qué
+
+- **`V2092-15`** aparece dos veces en el LEEME. No está en nuestra copia de la
+  DGT, pero **sí aparece en el material de trazas reales**: es una consulta que
+  citan dos criterios del TEAC, y por eso se usó como ejemplo. Es dato real de
+  segunda mano, no invención. Convendría anotar de dónde salió.
+- **La serie `9xxx` funciona como marca de fixture sintético** (`V9001-22`,
+  `V9999-99`, `00/09001/2024`, `08/09003/2022`) y las carpetas llevan su
+  `LEEME.txt` diciendo que están inventadas. **Pero la convención numérica no
+  estaba escrita en ninguna parte**: alguien podía añadir un fixture con un
+  número realista sin saltarse ninguna regla. Ahora está en la regla de arriba.
+- `prueba_recorte` y `prueba_normativa` usan números inventados fuera de la
+  serie `9xxx` (`V0001-23`, `V0100-24`…). No salen de la carpeta de pruebas y no
+  se enseñan, pero no siguen el convenio. Lo dejo dicho.
+
+## Comprobaciones
+
+```
+9 suites .......... verdes
+llamadas a la API ... 0
+```
+
+Y una trampa de la propia prueba, cazada al repetirla: `event_generate` encola
+el evento por defecto (`when="tail"`), así que **una de cada cinco veces** la
+rueda de una comprobación llegaba después de recolocar la vista y la empujaba al
+revés. Con `when="now"` se entrega en el acto. Seis ejecuciones seguidas en
+verde. Una prueba que falla una de cada cinco no protege nada.
+
+---
+
+# FASE 26 · DOS CAMINOS PARA NOMBRAR LO MISMO
+
+## Lo que dije mal
+
+Escribí que `etiqueta_de` no tiene mapa de unidades y produce «Resolucion del
+07». **Era mi error de prueba**: le pasé el `07` del número de resolución, y esa
+función recibe **el nombre** de la unidad, no el código.
+
+```
+etiqueta_de("07")                 -> «Resolucion del 07»              ← lo que probé
+etiqueta_de("TEAR de Baleares")   -> «Resolucion del TEAR de Baleares» ← lo que hace el código
+```
+
+El nombre sale de `Criterio.unidad`, que viene de **DYCTEA** en el registro, y
+por eso el 5 de agosto la cita salió bien. Sobre esa conclusión falsa cambié el
+ejemplo de `GUIA.md` a «Resolucion del 07», que es justo lo que **ningún usuario
+verá jamás**. Corregido a `{Resolucion del TEAR de Baleares 07/02872/2023/00/00}`,
+que es lo que el sistema escribe de verdad.
+
+## Pero la sospecha de fondo era buena: sí había dos caminos
+
+| | quién compone | qué escribe |
+|---|---|---|
+| **1 · el material** que lee el redactor | `Criterio.cita()` → `etiqueta_de(unidad)` | correcto siempre |
+| **2 · el verificador** (`referencia_corpus`) | la constante `T.ETIQUETA`, corregida **solo si** el criterio estaba en la copia local | **«Criterio TEAC» para un TEAR** cuando no lo tenemos guardado |
+
+Es el defecto de la fase 14 —un TEAR etiquetado como TEAC— colándose por la rama
+de al lado, la que menos se mira. Y el motivo que se enseña en pantalla llevaba
+«del TEAC» escrito a pelo: *«el criterio 08/… **del TEAC** no está en la copia
+local»*, dijera lo que dijera la resolución.
+
+**Unificado.** `teac.etiqueta_de` es la única que nombra, y el verificador la usa
+también cuando no encuentra el criterio. Ahí la respuesta honrada no es «TEAC»:
+
+```
+etiqueta_de("")  ->  «Resolucion economico-administrativa»
+```
+
+Atribuir doctrina a quien no la ha dictado es el peor error que puede cometer
+este sistema, y sale gratis no cometerlo.
+
+## Qué se escribe hoy si se cita un TEAR de Cataluña
+
+```
+en el material   {Resolucion del TEAR de Cataluña 08/…, de …/…/… — https://…}
+verificado       Resolucion del TEAR de Cataluña 08/…
+si no lo tenemos Resolucion economico-administrativa 08/…   (y NO_VERIFICABLE)
+```
+
+Sin tocar nada: el nombre sale de `unidad`, y `unidad` viene de la fuente.
+
+## El candado
+
+`prueba_unidad` gana un bloque 8 que comprueba las dos formas —y solo esas dos—
+de acabar con una etiqueta compuesta por libre: **una f-string con «Criterio
+TEAC» dentro**, y **usar `teac.ETIQUETA` fuera de `teac.py`**. Más la rama del
+criterio ausente, verificada de punta a punta.
+
+La primera versión del detector miraba líneas de texto y **daba un falso
+positivo**: `BLOQUE_TEAC` —el trozo de prompt que le enseña el formato al
+modelo— lleva «Criterio TEAC» a propósito y está bien que lo lleve. Se rehízo
+con `ast`. Un falso positivo acaba en que alguien apaga la comprobación, así que
+cuenta como fallo igual que un falso negativo. El bloque lleva su propio control
+negativo: un fichero con la etiqueta en un docstring, en un texto de prompt y en
+una f-string, y solo la tercera se caza.
+
+## Lo barato que quedaba anotado
+
+- **Los números inventados de `prueba_recorte` y `prueba_normativa` pasan a la
+  serie `9xxx`** (`V0001-23` → `V9101-23`, `V0100-24` → `V9140-24`…),
+  conservando el año de cada uno porque varias comprobaciones dependen de él.
+  Comprobado antes de tocar nada que los nueve números nuevos **no existen** en
+  la copia local. Las dos suites llevan ahora la nota de por qué.
+- **`V2092-15`**: anotada su procedencia en el LEEME. No está en nuestra copia
+  de la DGT; aparece **dentro del texto** de `00/03399/2023` y `00/05524/2024`,
+  que sí tenemos. Dato real de segunda mano, no invención.
+
+## Comprobaciones
+
+```
+9 suites .......... verdes
+fase3 · fase4 ..... 37/37 · 5/5
+guía coherente .... sí
+llamadas a la API ... 0
+```

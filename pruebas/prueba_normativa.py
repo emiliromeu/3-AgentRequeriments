@@ -22,7 +22,13 @@ from agente_fiscal import dgt as D
 from agente_fiscal import teac as T
 
 fallos = []
-MODO_ORIGINAL = C.modo_guardado()
+
+# LOS NUMEROS DE CONSULTA DE ESTA SUITE SON INVENTADOS, Y VAN EN LA SERIE 9xxx.
+# Es la marca que impide que un dato de prueba se confunda con criterio real si
+# alguien lo ve fuera de contexto -en una traza, en un pantallazo, en un
+# informe-. Ver la regla de arriba del LEEME. Antes iban en el rango normal
+# (V0001-23, V0100-24...) y no habia forma de saber a simple vista que no
+# existian.
 
 
 def comprobar(que, ok, obtenido=""):
@@ -70,7 +76,7 @@ comprobar("y se le marca como de norma EXTERNA",
 
 # ================================================== 2. LOS DOS ESPEJOS
 print("\n=== 2. LOS DOS ESPEJOS: LA MISMA NORMA SI SE COMPARA ===")
-nuestra_otro = consulta("V0100-24", "Ley 37/1992 art. 91")
+nuestra_otro = consulta("V9140-24", "Ley 37/1992 art. 91")
 lec2 = D.leer_criterio([nuestra_otro], [clave(LIVA, 22)], N)
 print(f"    misma norma, otro articulo -> cobertura: {lec2.cobertura}")
 comprobar("misma norma y OTRO articulo: SI se entera", bool(lec2.cobertura),
@@ -79,7 +85,7 @@ comprobar("y lo dice como hueco, no como desacuerdo", not lec2.hay_discusion,
           str(lec2.senales))
 
 # Misma norma y MISMO articulo: comparable, y sin señal de desalineacion.
-nuestra_igual = consulta("V0200-24", "Ley 37/1992 art. 22")
+nuestra_igual = consulta("V9150-24", "Ley 37/1992 art. 22")
 lec3 = D.leer_criterio([nuestra_igual], [clave(LIVA, 22)], N)
 comprobar("misma norma y MISMO articulo: no hay desalineacion",
           not lec3.cobertura and not lec3.senales,
@@ -90,8 +96,8 @@ comprobar("y su clave lleva la NORMA dentro, no solo el numero",
           p22.clave == (LIVA, "22"), str(p22.clave))
 
 # Dos anos distintos sobre el MISMO precepto: eso si es desacuerdo.
-lec4 = D.leer_criterio([consulta("V0300-13", "Ley 37/1992 art. 80", "01/01/2013"),
-                        consulta("V0400-23", "Ley 37/1992 art. 80", "01/01/2023")],
+lec4 = D.leer_criterio([consulta("V9160-13", "Ley 37/1992 art. 80", "01/01/2013"),
+                        consulta("V9170-23", "Ley 37/1992 art. 80", "01/01/2023")],
                        [clave(LIVA, 80)], N)
 comprobar("dos consultas de anos distintos sobre el mismo precepto: DESACUERDO",
           lec4.hay_discusion, str(lec4.senales))
@@ -181,7 +187,6 @@ comprobar("pero por (norma, articulo) NO coincide",
           str({p.clave for p in otra.preceptos(N)}))
 print("    (si el codigo comparase por numero, el bloque 1 saldria en rojo)")
 
-C.guardar_modo(MODO_ORIGINAL)
 print("\n" + "=" * 62)
 print(f"FALLOS: {len(fallos)}")
 for f in fallos:

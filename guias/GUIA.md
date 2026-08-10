@@ -1,6 +1,7 @@
-<!-- MODO: con-criterio -->
-<!-- GENERADA por configurar.py. NO se edita GUIA.md a mano: se edita
-     esta y se vuelve a lanzar `python configurar.py --con-criterio`. -->
+<!-- MODO: dos-botones -->
+<!-- GENERADA desde guias/GUIA.md. NO se edita GUIA.md a mano: se edita esta y
+     se vuelve a lanzar `python configurar.py --regenerar-guia`. Si una frase
+     de la ventana no esta aqui dentro, el agente NO ABRE. -->
 # Consulta fiscal sobre el IVA — guía de uso
 
 Se abre con doble clic en **abrir_agente**. Escribes la duda como se la
@@ -72,7 +73,7 @@ Se distinguen a simple vista por cómo va la cita:
 ```
 (artículo 95 de la Ley 37/1992, https://boe.es/...)        ← la ley: paréntesis
 {Criterio TEAC 00/06614/2024/00/00, de 21/05/2026 — ...}   ← el TEAC: llaves
-{Resolucion del TEAR de Cataluña 08/02042/2022/00/00 — ...} ← el TEAR: llaves
+{Resolucion del TEAR de Baleares 07/02872/2023/00/00 — ...} ← un TEAR: llaves
 [Consulta DGT V1601-22, de 01/07/2022 — https://petete...] ← la DGT: corchetes
 ```
 
@@ -91,18 +92,29 @@ Salen arriba, en grande. Es lo primero que hay que leer. **El estado habla solo
 de una cosa: si los textos se contradicen entre sí.** No dice si la respuesta es
 buena ni si está completa; para eso está el bloque de abajo.
 
-**CRITERIO CLARO** — *«La ley y el reglamento no se contradicen, y ni la
-doctrina del TEAC ni el criterio de la DGT que hay en la herramienta apuntan a
-otra cosa. NO incluye sentencias de los tribunales de justicia, y el criterio
-puede cambiar: comprueba las citas antes de decidir.»*
+Y **la frase cambia según el botón que hayas pulsado**, porque no significan lo
+mismo: un «criterio claro» hecho solo con la ley no dice nada de lo que opina
+Hacienda, y uno hecho con criterio sí. Debajo del estado siempre pone con cuál
+se hizo.
 
-**CRITERIO DISCUTIDO** — *«Hay textos que apuntan a soluciones distintas:
-criterio de años distintos sobre el mismo artículo, o un tribunal
-pronunciándose sobre criterio que esta respuesta cita. Lee el desacuerdo de
-arriba y comprueba las citas antes de decidir: aquí no hay un criterio único.»*
+**CRITERIO CLARO**
 
-**NO ENCONTRADO** — *«No hay respaldo suficiente. Abajo tienes los artículos
-encontrados para mirarlos tú.»*
+- con **Consultar la ley**: *«La ley y el reglamento no se contradicen. Esta respuesta se ha hecho SOLO con la ley: no se ha mirado el criterio de la DGT ni las resoluciones, que si estan en la herramienta. Para eso esta el otro boton.»*
+- con **Consultar también el criterio**: *«La ley y el reglamento no se contradicen, y ni la doctrina del TEAC ni el criterio de la DGT que hay en la herramienta apuntan a otra cosa. NO incluye sentencias de los tribunales de justicia, y el criterio puede cambiar: comprueba las citas antes de decidir.»*
+
+**CRITERIO DISCUTIDO**
+
+- con **Consultar la ley**: *«Los textos de la ley y el reglamento apuntan a soluciones distintas. Lee el desacuerdo de arriba y comprueba las citas antes de decidir: aqui no hay un criterio unico, y ademas no se ha mirado que opina Hacienda.»*
+- con **Consultar también el criterio**: *«Hay textos que apuntan a soluciones distintas: criterio de años distintos sobre el mismo articulo, o un tribunal pronunciandose sobre criterio que esta respuesta cita. Lee el desacuerdo de arriba y comprueba las citas antes de decidir: aqui no hay un criterio unico.»*
+
+**NO ENCONTRADO**
+
+- con **Consultar la ley**: *«No hay respaldo suficiente. Abajo tienes los articulos encontrados para mirarlos tu.»*
+- con **Consultar también el criterio**: *«No hay respaldo suficiente en la ley, y en la copia guardada todavia no hay criterio sobre esto. La copia se llena poco a poco: que no este no quiere decir que no exista. Abajo tienes los articulos encontrados.»*
+
+Lo segundo **no es una avería**. La copia local tiene 241 consultas de la DGT,
+no las doscientas mil que hay publicadas: que tu duda no esté todavía es lo
+normal, y se irá llenando. Los artículos de abajo siguen siendo buenos.
 
 ### Y debajo, dos bloques que no son lo mismo
 
@@ -145,7 +157,7 @@ suele bastar.
 | «Falta la configuración» | Avisa a **Emili** |
 | «No hay conexión a internet» | Mira la red; si va bien, avisa a Emili |
 | «El servicio está saturado» | Espera un minuto y reintenta |
-| «La herramienta está a medio configurar» | Avisa a **Emili**: hay que volver a lanzar `configurar.py` |
+| «La herramienta está a medio configurar» | Avisa a **Emili**: esta hoja no dice lo mismo que la pantalla y hay que regenerarla |
 
 Si la ventana ni siquiera abre, doble clic en **comprobar_equipo**: te dice en
 una frase qué falta. Y cualquier cosa rara —una cita que no está donde dice, una

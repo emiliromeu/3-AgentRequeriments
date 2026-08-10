@@ -146,6 +146,9 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         # Si se pidio criterio y la copia local no tenia nada para esta
         # pregunta. Se dice; no se finge que se ha mirado.
         "sin_copia_local": "",
+        # Que aporto el criterio: citas de la DGT y resoluciones que han
+        # llegado a usarse, y cuantas se le pusieron delante.
+        "aporte": {},
         "motor": motor.nombre,
         # Con que se ha hecho ESTA consulta. Viaja al resultado, a la traza y
         # a lo que se copia: quien pegue la respuesta en sus notas tiene que
@@ -546,6 +549,18 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         res["cobertura"] = [res["sin_copia_local"]] + list(dictamen.cobertura)
     res["estructural"] = dictamen.linea_estructural
     res["preceptos"] = dictamen.preceptos
+    # QUE APORTO EL CRITERIO, en numeros. La ventana lo enseña para que la
+    # diferencia entre los dos botones se vea sin leerse las dos respuestas
+    # enteras y compararlas a ojo.
+    if res["con_criterio"] and informe is not None:
+        res["aporte"] = {
+            "consultas_dgt": sorted({d.referencia_citada for d in informe.dictamenes
+                                     if d.estado == VF.VERIFICADA and d.norma == "dgt"}),
+            "resoluciones": sorted({d.referencia_corpus for d in informe.dictamenes
+                                    if d.estado == VF.VERIFICADA and d.norma == "teac"}),
+            "consultas_en_material": list((res.get("dgt") or {}).get("consultas") or []),
+            "resoluciones_en_material": list((res.get("teac") or {}).get("criterios") or []),
+        }
 
     if dictamen.estado == EST.NO_ENCONTRADO:
         return _sin_respaldo(res, tr, ejercicio, registros, informe, motor,

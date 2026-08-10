@@ -1,27 +1,29 @@
 #!/usr/bin/env python3
-"""EL MANDO. Un solo interruptor para las cuatro piezas.
+"""LO QUE HAY DENTRO, desde la terminal. Para Emili, no para el despacho.
 
-    python configurar.py --estado          que hay ahora, en cristiano
-    python configurar.py --con-criterio    enciende DGT y TEAC, y sus textos
-    python configurar.py --solo-ley        los apaga y vuelve a la guia de hoy
+    python configurar.py                que hay dentro y lo que cuesta
+    python configurar.py --regenerar-guia   vuelve a copiar guias/GUIA.md
 
-CERO LLAMADAS A LA API. Esto solo escribe un fichero de modo y copia la guia
-que toca.
+CERO LLAMADAS A LA API.
 
 ----------------------------------------------------------------------------
-POR QUE EXISTE
+YA NO ES UN MANDO, Y ES DELIBERADO
 ----------------------------------------------------------------------------
-Encender las fuentes eran CUATRO cosas coordinadas por la memoria de alguien:
-`AGENTE_DGT`, `AGENTE_TEAC`, `AGENTE_DGT_TEXTOS` y cambiar `GUIA.md` a mano. El
-dia que se olvidara una, la ventana diria que la DGT esta y la hoja de la mesa
-diria que no. Y quien la lea decidira con la que tenga delante.
+Esto nacio para encender y apagar las fuentes: eran cuatro cosas coordinadas
+por la memoria de alguien y habia que juntarlas en un sitio.
 
-Aqui se cambian las cuatro o no se cambia ninguna. Y se puede volver atras: los
-dos modos son simetricos, no hay ida sin vuelta.
+DESDE QUE LOS DOS BOTONES ESTAN SIEMPRE EN LA VENTANA, no hay nada que
+encender. El modo lo elige quien pulsa, consulta a consulta, y la respuesta
+dice con cual se hizo. Lo que quedaba de estado global se ha quitado en vez de
+mantenerlo: un interruptor que no interrumpe nada es una trampa para el que lo
+lea dentro de seis meses.
 
-`GUIA.md` PASA A SER UN FICHERO GENERADO. Las versiones que se editan viven en
-`guias/`; si alguien toca `GUIA.md` a mano, la comprobacion de arranque lo ve
--pierde la marca- y el agente no abre.
+LO MISMO ESTA EN LA VENTANA, en «Qué hay dentro»: el despacho no tiene que
+abrir una consola para nada. Esto se queda porque a mi me sirve para mirar el
+corpus y la despensa de un vistazo.
+
+`GUIA.md` SIGUE SIENDO UN FICHERO GENERADO desde `guias/GUIA.md`. Si alguien lo
+toca a mano y deja de decir lo que dice la ventana, el agente no abre.
 """
 
 from __future__ import annotations
@@ -44,8 +46,8 @@ ANCHO = 74
 # dolares por millon de tokens de entrada / cache escrita / cache leida /
 # salida).
 COSTE = {
-    C.SOLO_LEY: (0.14, "medido sobre la traza 20260805T221058"),
-    C.CON_CRITERIO: (0.24, "media de cuatro consultas reales, 20260805T2245-2249"),
+    "ley": (0.14, "medido sobre la traza 20260805T221058"),
+    "criterio": (0.24, "media de cuatro consultas reales, 20260805T2245-2249"),
 }
 EUROS_POR_DOLAR = 0.92
 
@@ -56,51 +58,39 @@ def titulo(t: str) -> None:
     print("=" * ANCHO)
 
 
-def aplicar(modo: str) -> int:
-    """Deja las CUATRO piezas en el mismo estado. Todo o nada."""
-    origen = C.DIR_GUIAS / f"GUIA.{modo}.md"
+def aplicar(modo: str = C.UNICO) -> int:
+    """Regenera GUIA.md desde guias/. Ya no hay modos que aplicar.
+
+    LOS DOS BOTONES ESTAN SIEMPRE EN LA VENTANA, asi que no hay nada que
+    encender ni apagar: lo unico que puede quedarse viejo es la hoja impresa.
+    """
+    origen = C.DIR_GUIAS / "GUIA.md"
     if not origen.is_file():
         print(f"\n  No encuentro {origen}, que es la guia de ese modo.")
         print("  Sin ella no se puede dejar el sistema coherente, asi que no")
         print("  se toca nada.")
         return 1
 
-    anterior = C.modo_guardado()
-    titulo(f"CAMBIANDO A MODO: {modo}")
-    print(f"\n  modo anterior: {anterior}")
-    print()
-
-    # 1 y 2. Las fuentes y los textos: los dos salen del mismo fichero.
-    C.guardar_modo(modo)
-    print(f"  [1/3] fuentes DGT y TEAC ....... "
-          f"{'ENCENDIDAS' if modo == C.CON_CRITERIO else 'apagadas'}")
-    print(f"  [2/3] textos de la ventana ..... "
-          f"{'los de tres fuentes' if modo == C.CON_CRITERIO else 'los de ley sola'}")
-
-    # 3. La guia, copiada entera. No se parchea: se sustituye.
+    titulo("REGENERANDO LA GUIA")
     shutil.copyfile(origen, C.GUIA)
-    print(f"  [3/3] GUIA.md .................. copiada de {origen.name}")
+    print(f"\n  GUIA.md copiada de {origen}")
 
     r = C.revisar()
     print()
     if r.coherente:
-        print("  Las cuatro piezas dicen lo mismo. El agente puede abrir.")
+        print("  La guia dice lo mismo que la ventana. El agente puede abrir.")
     else:
         print("  ATENCION: algo sigue sin cuadrar:")
         for d in r.descuadres:
             print(f"    · {d}")
         print()
-        print("  Suele ser una variable de entorno puesta a mano que manda")
-        print("  sobre el fichero. Mira `python configurar.py --estado`.")
+        print("  Suele ser una frase de la ventana que no esta en guias/GUIA.md.")
+        print("  Mira `python configurar.py` para verlas.")
         return 1
 
-    if modo == C.CON_CRITERIO:
-        print()
-        print("  Imprime la guia otra vez: la de la mesa ha cambiado, y ahora")
-        print("  explica que la doctrina del TEAC, la consulta de la DGT y la")
-        print("  resolucion de un TEAR NO obligan a lo mismo.")
     print()
-    print(f"  Para volver atras:  python configurar.py --{anterior}")
+    print("  Imprime la guia otra vez si ha cambiado: la de la mesa tiene que")
+    print("  decir lo mismo que la ventana.")
     return 0
 
 
@@ -115,18 +105,15 @@ def estado() -> int:
     r = C.revisar()
     titulo("COMO ESTA LA HERRAMIENTA AHORA MISMO")
 
-    print(f"\n  MODO: {r.modo}")
-    print("  " + ("Solo la ley. Sin criterio de la DGT ni resoluciones."
-                  if r.modo == C.SOLO_LEY else
-                  "Ley + criterio de la DGT + resoluciones economico-administrativas."))
+    print("\n  LA VENTANA TIENE LOS DOS BOTONES. El modo se elige al pulsar.")
 
-    print("\n  LAS CUATRO PIEZAS")
+    print("\n  LA GUIA DICE LO MISMO QUE LA VENTANA")
     for nombre, valor in r.piezas.items():
         if isinstance(valor, bool):
             valor = "encendida" if valor else "apagada"
         print(f"    {nombre:24s} {valor}")
     print(f"\n  {'COHERENTE' if r.coherente else 'DESCOORDINADO'}: "
-          + ("las cuatro dicen lo mismo" if r.coherente
+          + ("la hoja de la mesa y la pantalla coinciden" if r.coherente
              else "el agente NO abrira"))
     for d in r.descuadres:
         print(f"    · {d}")
@@ -156,18 +143,12 @@ def estado() -> int:
     print(f"    consultas de la DGT                            {consultas:4d}")
     print(f"    resoluciones economico-administrativas         {criterios:4d}"
           f"   ({centrales} del TEAC, {regionales} de tribunales regionales)")
-    if r.modo == C.SOLO_LEY and (consultas or criterios):
-        print("    (estan descargadas, pero en este modo NO se usan)")
-
-    print("\n  LO QUE CUESTA UNA CONSULTA")
-    dolares, de_donde = COSTE[r.modo]
-    print(f"    aproximadamente  ${dolares:.2f}  ·  {dolares * EUROS_POR_DOLAR:.2f} EUR")
-    print(f"    {de_donde}")
-    otro = C.CON_CRITERIO if r.modo == C.SOLO_LEY else C.SOLO_LEY
-    d2, _ = COSTE[otro]
-    print(f"    en modo «{otro}» seria ${d2:.2f} ({d2 * EUROS_POR_DOLAR:.2f} EUR), "
-          f"un {abs(d2 - dolares) / dolares:.0%} "
-          f"{'mas' if d2 > dolares else 'menos'}")
+    print("\n  LO QUE CUESTA CADA BOTON")
+    for cual, etiqueta in (("ley", "Consultar la ley"),
+                           ("criterio", "Consultar tambien el criterio")):
+        d, de_donde = COSTE[cual]
+        print(f"    {etiqueta:34s} ${d:.2f}  ·  {d * EUROS_POR_DOLAR:.2f} EUR")
+        print(f"      {de_donde}")
     print("\n  Son dos llamadas al modelo por consulta. El precio sube si la")
     print("  primera redaccion no pasa el verificador y hay que reintentar.")
     print()
@@ -182,19 +163,15 @@ def main(argv: list) -> int:
     ap = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    grupo = ap.add_mutually_exclusive_group(required=True)
-    grupo.add_argument("--estado", action="store_true",
-                       help="que hay encendido ahora, y lo que cuesta")
-    grupo.add_argument("--con-criterio", dest="con_criterio",
-                       action="store_true",
-                       help="enciende DGT y TEAC, sus textos y su guia")
-    grupo.add_argument("--solo-ley", dest="solo_ley", action="store_true",
-                       help="vuelve a la ley sola")
+    ap.add_argument("--estado", action="store_true", default=True,
+                    help="que hay dentro, y lo que cuesta (es lo unico que hace)")
+    ap.add_argument("--regenerar-guia", dest="regenerar", action="store_true",
+                    help="vuelve a copiar guias/GUIA.md sobre GUIA.md")
     args = ap.parse_args(argv)
 
-    if args.estado:
-        return estado()
-    return aplicar(C.CON_CRITERIO if args.con_criterio else C.SOLO_LEY)
+    if args.regenerar:
+        return aplicar()
+    return estado()
 
 
 if __name__ == "__main__":

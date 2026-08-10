@@ -30,7 +30,6 @@ from agente_fiscal import teac as T
 from agente_fiscal import verificador as VF
 
 fallos = []
-MODO_ORIGINAL = C.modo_guardado()
 
 
 def comprobar(que, ok, obtenido=""):
@@ -49,6 +48,9 @@ por_id = {c.resolucion: c for c in cache_real.todas()}
 # autentica.
 cache_prueba = T.CacheTEAC(RAIZ / "casos" / "teac_prueba")
 TEAR_PRUEBA = "08/09003/2022/00/00"
+# Una resolucion que NO esta en ninguna copia, para probar la rama del
+# criterio ausente. Serie 9xxx, como el resto de los fixtures.
+TEAR_AUSENTE = "08/09004/2022/00/00"
 TEAC_PRUEBA = "00/09001/2024/00/00"
 
 # =============================================== 1. LA ETIQUETA SALE DEL REGISTRO
@@ -228,7 +230,115 @@ comprobar("o sea: sin la comprobacion de rotulo, saldria VERIFICADA",
           T.rotulo_valido(cita.referencia.bruto, criterio.unidad)[0] == T.ROTULO_MAL)
 print("    (texto correcto + enlace correcto + tribunal equivocado = verde)")
 
-C.guardar_modo(MODO_ORIGINAL)
+# ============================== 8. UNA SOLA FUNCION NOMBRA LA RESOLUCION
+print("\n=== 8. UNA SOLA FUNCION COMPONE LA ETIQUETA ===")
+print("  Dos formas de escribir lo mismo divergen siempre. Esta divergio: el")
+print("  verificador ponia la constante «Criterio TEAC» y solo la corregia si")
+print("  el criterio estaba en la copia local, asi que a una resolucion de un")
+print("  TEAR que no tuvieramos guardada la llamaba TEAC.\n")
+
+comprobar("etiqueta_de recibe el NOMBRE de la unidad, no el codigo del numero",
+          T.etiqueta_de("TEAR de Baleares") == "Resolucion del TEAR de Baleares",
+          T.etiqueta_de("TEAR de Baleares"))
+comprobar("y sin unidad NO dice «TEAC»: dice la neutra",
+          "TEAC" not in T.etiqueta_de(""), T.etiqueta_de(""))
+comprobar("un TEAR nunca se nombra «criterio»",
+          "riterio" not in T.etiqueta_de("TEAR de Cataluña"),
+          T.etiqueta_de("TEAR de Cataluña"))
+comprobar("y el TEAC si", T.etiqueta_de("TEAC") == T.ETIQUETA, T.etiqueta_de("TEAC"))
+
+# El camino del verificador, con el criterio AUSENTE de la copia local: es la
+# rama que menos se mira y es justo donde estaba el fallo.
+vacia = T.CacheTEAC(RAIZ / "casos" / "no_existe_esta_carpeta")
+v = VF.Verificador(ix, cache_teac=vacia)
+texto = (f'La doctrina dice que «un fragmento» '
+         f'{{Resolucion del TEAR de Cataluña {TEAR_AUSENTE}, de 21/09/2022 — '
+         f'{ENLACE}08/09004/2022/00/0/1}}.')
+inf = v.verificar_texto(texto, 2023)
+dic = [d for d in inf.dictamenes if d.norma == "teac"]
+comprobar("se dictamina la cita del TEAR ausente", bool(dic))
+if dic:
+    d = dic[0]
+    print(f"    referencia_corpus: {d.referencia_corpus!r}")
+    print(f"    motivo           : {d.motivo[:70]}")
+    comprobar("NO la llama «Criterio TEAC» sin saber quien la dicto",
+              "Criterio TEAC" not in d.referencia_corpus, d.referencia_corpus)
+    comprobar("usa la etiqueta neutra",
+              d.referencia_corpus.startswith(T.etiqueta_de("")),
+              d.referencia_corpus)
+    comprobar("y el motivo tampoco dice «del TEAC»",
+              "del TEAC" not in d.motivo, d.motivo[:90])
+    comprobar("sigue siendo NO_VERIFICABLE, que es lo que era",
+              d.estado == VF.NO_VERIFICABLE, d.estado)
+
+print("\n  Y NO QUEDA NINGUN OTRO SITIO QUE LA COMPONGA A MANO:")
+import ast
+
+# QUE SE BUSCA, EXACTAMENTE. Dos formas de acabar con una etiqueta compuesta
+# por libre, y solo dos:
+#
+#   a) escribir «Criterio TEAC» dentro de una f-string, que es como se compone
+#      una etiqueta en tiempo de ejecucion;
+#   b) usar la constante `teac.ETIQUETA` fuera de `teac.py`, o sea colgarle la
+#      etiqueta del TEAC a algo sin preguntar de quien es.
+#
+# NO cuenta el literal suelto dentro de un texto: `BLOQUE_TEAC` -el trozo de
+# prompt que le enseña el formato al modelo- lleva «Criterio TEAC» a proposito,
+# y esta bien que lo lleve. La primera version de esta comprobacion lo cazaba y
+# era un falso positivo; un falso positivo acaba en que alguien la apaga.
+
+
+def fstrings_con(ruta, aguja):
+    salida = []
+    for nodo in ast.walk(ast.parse(ruta.read_text("utf-8"))):
+        if not isinstance(nodo, ast.JoinedStr):
+            continue
+        literal = "".join(v.value for v in nodo.values
+                          if isinstance(v, ast.Constant)
+                          and isinstance(v.value, str))
+        if aguja in literal:
+            salida.append((nodo.lineno, literal[:60]))
+    return salida
+
+
+def usa_constante(ruta, modulo, nombre):
+    salida = []
+    for nodo in ast.walk(ast.parse(ruta.read_text("utf-8"))):
+        if (isinstance(nodo, ast.Attribute) and nodo.attr == nombre
+                and isinstance(nodo.value, ast.Name)):
+            salida.append((nodo.lineno, f"{nodo.value.id}.{nombre}"))
+    return salida
+
+
+for mod in ("verificador", "redactor", "citas", "bloques", "estado", "dgt"):
+    ruta = RAIZ / "agente_fiscal" / f"{mod}.py"
+    malas = fstrings_con(ruta, "Criterio TEAC")
+    comprobar(f"{mod}.py no compone «Criterio TEAC» en ninguna f-string",
+              not malas, str(malas[:1]))
+    # `D.ETIQUETA` (la de la DGT) es legitima: solo hay una clase de consulta.
+    # La del TEAC no, porque hay dos clases de resolucion.
+    fuera = [(n, x) for n, x in usa_constante(ruta, "T", "ETIQUETA")
+             if x.startswith("T.")]
+    comprobar(f"{mod}.py no usa la constante teac.ETIQUETA por su cuenta",
+              not fuera, str(fuera[:2]))
+
+# CONTROL NEGATIVO del detector: si alguien lo escribiera a pelo, ¿lo caza?
+falso = RAIZ / "casos" / "_detector_de_etiqueta.py"
+falso.write_text(
+    '"""Un docstring con Criterio TEAC dentro, que NO cuenta."""\n'
+    'PROMPT = "formato: {Criterio TEAC 00/06614/2024/00/00}"  # tampoco cuenta\n'
+    'def f(numero):\n'
+    '    return f"Criterio TEAC {numero}"   # esto SI cuenta\n',
+    encoding="utf-8")
+try:
+    pillado = fstrings_con(falso, "Criterio TEAC")
+    comprobar("el detector caza la etiqueta compuesta en una f-string",
+              len(pillado) == 1, str(pillado))
+    comprobar("y NO se queja del docstring ni del texto del prompt",
+              len(pillado) == 1)
+finally:
+    falso.unlink(missing_ok=True)
+
 print("\n" + "=" * 62)
 print(f"FALLOS: {len(fallos)}")
 for f in fallos:

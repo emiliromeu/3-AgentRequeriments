@@ -64,28 +64,19 @@ from agente_fiscal import estado as EST
 # innegociable y va SIEMPRE: si alguien lee "criterio claro" y entiende
 # "Hacienda opina esto", la herramienta hace dano en vez de ayudar.
 
-# EL TEXTO DEL CRITERIO CLARO, EN DOS VERSIONES.
+# LAS FRASES VAN POR PAREJAS: UNA POR BOTON.
 #
-# El de hoy dice que la DGT no esta. Es cierto y tiene que seguir diciendolo
-# MIENTRAS sea cierto. Cuando la DGT entre de verdad dejara de serlo, y la
-# frase pasara a ser justo lo contrario de lo que hace falta.
+# Hubo un momento en que esto era una variable global -`AGENTE_DGT_TEXTOS`- que
+# decidia si la ventana hablaba de una fuente o de tres. Estaba mal por donde se
+# mire: encender el motor y cambiar lo que lee el profesional son decisiones
+# distintas, y atarlas a una variable puesta hace semanas era pedir que la
+# ventana dijera una cosa y la hoja impresa otra.
 #
-# La version nueva esta escrita y NO se usa todavia.
-#
-# TIENE SU PROPIO INTERRUPTOR, Y NO EL DE LA DGT. Estuvieron atados al mismo y
-# fue un error: encender el motor y cambiar lo que lee el profesional son dos
-# decisiones distintas. Con `AGENTE_DGT=1` para probar, el texto cambiaba solo
-# y la ventana pasaba a decir lo contrario que la hoja impresa de GUIA.md, que
-# es justo lo que no puede pasar.
-#
-# Los dos textos -este y el de GUIA.md- se cambian A LA VEZ, a mano, el dia que
-# se decida que la DGT esta de verdad. Hasta entonces esta variable no se toca:
-#
-#     AGENTE_DGT_TEXTOS=1     cambia la frase de la ventana
-#
-# Las dos frases dicen lo mismo en lo que importa: que el ESTADO habla de los
-# textos, no de lo que Hacienda vaya a hacer.
-VARIABLE_TEXTOS = "AGENTE_DGT_TEXTOS"
+# Ahora la frase la decide LA CONSULTA: la elige el boton que se pulso, y por
+# eso no puede descuadrarse con nada. Lo que sigue haciendo falta es que TODAS
+# esten dentro de GUIA.md, y eso se comprueba al arrancar -ver
+# `configuracion.revisar()`-: el papel es lo unico que ya no se entera de que el
+# codigo ha cambiado.
 
 # ------------------------------------------------------------- los botones
 #
@@ -104,6 +95,14 @@ PIE_CRITERIO = ("anade consultas de la DGT y resoluciones del TEAC y de los "
 
 # Lo que se dice arriba, junto al estado, y lo que viaja en el texto copiado.
 # Si alguien pega la respuesta en sus notas, tiene que saberse con que se hizo.
+# Cuando la despensa no tiene nada para esa pregunta. SE LEE COMO LO QUE ES:
+# todavia no hay criterio guardado sobre eso. No es una averia ni un fallo del
+# que pregunta, y es lo primero que va a pasar cuando alguien pruebe una
+# pregunta al azar con 241 consultas guardadas.
+AVISO_DESPENSA = ("La copia se va llenando poco a poco. Si el segundo botón no "
+                  "encuentra nada sobre tu duda, no es un fallo: todavía no hay "
+                  "criterio guardado sobre eso.")
+
 HECHA_CON = {
     False: "Hecha solo con la ley y sus reglamentos. Sin criterio administrativo.",
     True: ("Hecha con la ley, el criterio de la DGT y las resoluciones "
@@ -111,50 +110,45 @@ HECHA_CON = {
 }
 
 
-def textos_con_dgt() -> bool:
-    """Los textos de la ventana los decide el MODO, no una variable suelta.
-
-    Ver `agente_fiscal.configuracion`. La variable sigue mandando sobre el
-    fichero para poder mirar los textos nuevos sin cambiar de modo.
-    """
-    from agente_fiscal import configuracion as C
-    return C.textos_con_criterio()
-
-
+# LAS DOS FRASES DE «CRITERIO CLARO», UNA POR BOTON.
+#
+# El estado lo calcula el codigo igual en los dos casos, pero NO significa lo
+# mismo: un CRITERIO CLARO hecho solo con la ley dice que la ley y el
+# reglamento no se pelean, y nada mas. Decirlo igual que el otro seria dar por
+# mirado lo que no se ha mirado.
 CLARO_SIN_DGT = (
-    "La ley y el reglamento no se contradicen. NO dice que criterio aplica "
-    "Hacienda: la DGT y los tribunales no estan en esta herramienta."
+    "La ley y el reglamento no se contradicen. Esta respuesta se ha hecho SOLO "
+    "con la ley: no se ha mirado el criterio de la DGT ni las resoluciones, "
+    "que si estan en la herramienta. Para eso esta el otro boton."
 )
-# Y la de las TRES fuentes, para cuando entren la DGT y el TEAC. Tambien
-# inactiva: se enciende con AGENTE_DGT_TEXTOS a la vez que GUIA.md, nunca sola.
 CLARO_CON_TRES_FUENTES = (
     "La ley y el reglamento no se contradicen, y ni la doctrina del TEAC ni "
     "el criterio de la DGT que hay en la herramienta apuntan a otra cosa. NO "
     "incluye sentencias de los tribunales de justicia, y el criterio puede "
     "cambiar: comprueba las citas antes de decidir."
 )
-CLARO_CON_DGT = (
-    "La ley y el reglamento no se contradicen, y el criterio de la DGT que "
-    "hay en la herramienta va en la misma linea. NO incluye los tribunales, "
-    "y el criterio puede cambiar: comprueba las citas antes de decidir."
+# Y LAS DOS DE «CRITERIO DISCUTIDO». Con la ley sola el desacuerdo solo puede
+# venir de la propia norma; con criterio puede venir ademas de dos consultas de
+# años distintos o de un tribunal que corrige a la DGT. No es el mismo aviso.
+DISCUTIDO_SIN_DGT = (
+    "Los textos de la ley y el reglamento apuntan a soluciones distintas. Lee "
+    "el desacuerdo de arriba y comprueba las citas antes de decidir: aqui no "
+    "hay un criterio unico, y ademas no se ha mirado que opina Hacienda."
 )
-
-# EL TEXTO DE DISCUTIDO, ANTES Y DESPUES DE SEPARAR LOS EJES.
+# LOS DOS «NO ENCONTRADO», Y LA DIFERENCIA IMPORTA MAS DE LO QUE PARECE.
 #
-# El de hoy dice «o hay avisos que no se han podido cerrar», y desde la
-# separacion eso ya no es cierto: los avisos de cobertura tienen bloque propio y
-# NO ponen la respuesta en DISCUTIDO. La frase esta preparada, no activada, y
-# se cambia A LA VEZ que GUIA.md -ver GUIA_ESTADOS_NUEVO.md- con el mismo
-# interruptor que el resto de textos.
-#
-# Se puede esperar sin riesgo: con la DGT y el TEAC apagados el desacuerdo de
-# fondo solo puede venir de ellos, asi que DISCUTIDO NO SALE HOY y esta frase
-# no llega a pantalla. El dia que se enciendan las fuentes es justo el dia que
-# se cambian los dos textos.
-DISCUTIDO_HOY = (
-    "Los textos encontrados apuntan a soluciones distintas, o hay avisos "
-    "que no se han podido cerrar. Lee los avisos de arriba y comprueba las "
-    "citas antes de decidir: aqui no hay un criterio unico."
+# Con el segundo boton, lo primero que le va a pasar a cualquiera que pruebe
+# una pregunta al azar es que la copia local no tenga nada de esa materia: son
+# 241 consultas, no las 200.000 que hay publicadas. Eso NO es una averia, y si
+# se dice con las mismas palabras que un fallo, se lee como un fallo.
+NO_ENCONTRADO_TEXTO = (
+    "No hay respaldo suficiente. Abajo tienes los articulos encontrados "
+    "para mirarlos tu."
+)
+NO_ENCONTRADO_CON_CRITERIO = (
+    "No hay respaldo suficiente en la ley, y en la copia guardada todavia no "
+    "hay criterio sobre esto. La copia se llena poco a poco: que no este no "
+    "quiere decir que no exista. Abajo tienes los articulos encontrados."
 )
 DISCUTIDO_CON_EJES = (
     "Hay textos que apuntan a soluciones distintas: criterio de años "
@@ -163,29 +157,67 @@ DISCUTIDO_CON_EJES = (
     "comprueba las citas antes de decidir: aqui no hay un criterio unico."
 )
 
-EXPLICACION = {
-    EST.CLARO: (CLARO_CON_DGT if textos_con_dgt() else CLARO_SIN_DGT),
-    EST.DISCUTIDO: (DISCUTIDO_CON_EJES if textos_con_dgt() else DISCUTIDO_HOY),
-    EST.NO_ENCONTRADO: (
-        "No hay respaldo suficiente. Abajo tienes los articulos encontrados "
-        "para mirarlos tu."
-    ),
+# EL TEXTO DEL ESTADO DEPENDE DE LA CONSULTA, NO DE UN INTERRUPTOR GLOBAL.
+#
+# Desde que hay dos botones, «CRITERIO CLARO» no significa lo mismo segun con
+# que se haya hecho: uno hecho solo con la ley NO dice nada de lo que opina
+# Hacienda, y uno hecho con criterio si. Atarlo a una variable de configuracion
+# era justo lo que hacia que la ventana pudiera decir una cosa y la hoja otra.
+EXPLICACION_POR_MODO = {
+    EST.CLARO: {False: CLARO_SIN_DGT, True: CLARO_CON_TRES_FUENTES},
+    EST.DISCUTIDO: {False: DISCUTIDO_SIN_DGT, True: DISCUTIDO_CON_EJES},
+    EST.NO_ENCONTRADO: {False: NO_ENCONTRADO_TEXTO,
+                        True: NO_ENCONTRADO_CON_CRITERIO},
 }
+
+
+def explicacion(estado: str, con_criterio: bool) -> str:
+    """La frase del estado, para ESTA consulta."""
+    return EXPLICACION_POR_MODO.get(estado, {}).get(bool(con_criterio), "")
+
+
+# Todas las frases que pueden salir en pantalla. `configuracion.revisar` exige
+# que TODAS esten dentro de GUIA.md: es lo que impide que la ventana y la hoja
+# de la mesa digan cosas distintas.
+TEXTOS_DE_ESTADO = [CLARO_SIN_DGT, CLARO_CON_TRES_FUENTES,
+                    DISCUTIDO_SIN_DGT, DISCUTIDO_CON_EJES,
+                    NO_ENCONTRADO_TEXTO, NO_ENCONTRADO_CON_CRITERIO]
 
 # --------------------------------------------------------------- la paleta
 #
-# Viene de la maqueta «Consulta IVA - Direccion visual», modo «Papel claro».
+# MODO OSCURO de la maqueta «Consulta IVA - Direccion visual»: negro y lila.
+# Es el que se pidio desde el principio; el «papel claro» fue un desvio.
+#
 # Se traduce lo que tkinter sabe hacer -color, tipografia, tamaños, espaciado,
 # jerarquia- y se deja fuera lo que no (esquinas redondeadas, sombras,
 # degradados, transiciones). Ver la lista al final del rediseño.
+#
+# EL NEGRO NO ES NEGRO. #0F0E13 tiene una gota de violeta: un #000000 puro con
+# texto blanco encima vibra y cansa a los diez minutos, y aqui se leen parrafos
+# de ley enteros. Las tres superficies se separan por CLARIDAD, no por bordes:
+# fondo -> panel -> campo, cada una un escalon mas clara.
+#
+# LOS NOMBRES SE QUEDAN. `PAPEL2` ya no es papel blanco sino la superficie de
+# lectura, que es lo que siempre significo. Renombrarlos obligaria a tocar las
+# suites, y lo que las suites protegen -que el fondo NO cambia con el estado-
+# no tiene nada que ver con el color que sea.
 
-PAPEL = "#EFEEF3"      # fondo de la ventana
-PAPEL2 = "#FFFFFF"     # superficie de lectura
-TINTA = "#17171D"      # texto principal
-TINTA2 = "#4A4A55"     # texto secundario
-FILETE = "#DCDBE3"     # bordes y separadores
-ENLACE = "#5D3FCB"     # el lila en su version oscura, sobre papel
-LILA = "#C0A5FF"       # el acento claro: marca y filete, NUNCA parrafo
+PAPEL = "#0F0E13"      # fondo de la ventana
+PAPEL2 = "#17161D"     # superficie de lectura: paneles y respuesta
+ELEVADO = "#1F1D28"    # lo que se rellena: caja de la duda, campo del año
+# LOS GRISES ESTAN MEDIDOS, NO ELEGIDOS A OJO. Sobre negro es facil pasarse de
+# apagado: el primer TINTA3 daba 3,8:1 contra el panel y el minimo para texto
+# menudo es 4,5:1. Se subio hasta 5,2:1. Los numeros de los diez pares estan al
+# final del rediseño, en LEEME.
+TINTA = "#EDECF2"      # texto principal
+TINTA2 = "#A19DB0"     # texto secundario
+TINTA3 = "#8B87A0"     # rotulos menudos y pie: 5,2:1, no 3,8:1
+FILETE = "#2B2937"     # bordes y separadores
+ENLACE = "#C8B0FF"     # el lila claro: sobre negro el oscuro no se lee
+LILA = "#C0A5FF"       # el acento: marca, filete y boton principal
+LILA_VIVO = "#D6C4FF"  # el mismo, al pasar por encima
+LILA_TINTA = "#141019"  # texto sobre el boton lila
+SELECCION = "#3A3350"   # el texto seleccionado con el raton
 
 # LOS TRES ESTADOS NO SON UN SEMAFORO, Y ESTO ES LO QUE LO EVITA.
 #
@@ -198,20 +230,85 @@ LILA = "#C0A5FF"       # el acento claro: marca y filete, NUNCA parrafo
 # correcta- y pintarla de rojo la convierte en una averia. Quien la vea en gris
 # entiende «aqui no hay nada que sostenga esto»; quien la vea en rojo entiende
 # «se ha roto» y vuelve a preguntar de otra manera hasta que salga verde.
+#
+# En oscuro los tres SUBEN de claridad -sobre negro manda el claro, no el
+# oscuro- pero la relacion entre ellos es la misma: mismo brillo, croma que
+# baja. Comprobado: los tres pasan el filtro de colores de semaforo.
 COLOR = {
-    EST.CLARO: "#5D3FCB",        # el lila oscuro, legible sobre papel
-    EST.DISCUTIDO: "#6E6879",    # lila desaturado
-    EST.NO_ENCONTRADO: "#4A4A55",  # gris: ni alarma ni error
+    EST.CLARO: "#C0A5FF",          # lila, el acento de la casa
+    EST.DISCUTIDO: "#A79FC4",      # lila desaturado
+    EST.NO_ENCONTRADO: "#9A97A6",  # gris: ni alarma ni error
 }
 # El filete de 4 px a la izquierda del estado, que es la marca de la maqueta.
 FILETE_ESTADO = {
     EST.CLARO: LILA,
-    EST.DISCUTIDO: "#9A93AD",
-    EST.NO_ENCONTRADO: "#8E8E99",
+    EST.DISCUTIDO: "#7C74A0",
+    EST.NO_ENCONTRADO: "#514E5E",
 }
-# El fondo NO cambia con el estado: es siempre papel. En la version anterior
-# cada estado teñia su panel (verde, ambar, rojo) y eso era justo el semaforo.
+# El fondo NO cambia con el estado: es siempre la superficie de lectura. En la
+# version anterior cada estado teñia su panel (verde, ambar, rojo) y eso era
+# justo el semaforo.
 FONDO = {e: PAPEL2 for e in (EST.CLARO, EST.DISCUTIDO, EST.NO_ENCONTRADO)}
+
+
+# ------------------------------------------------------------- el espacio
+#
+# ES LO QUE MAS SE NOTA, Y LO PRIMERO QUE SE PIERDE. Una ventana apretada
+# parece vieja aunque los colores sean buenos: el ojo lee «formulario de 2003»
+# antes de mirar un solo texto.
+#
+# Una sola escala, y todo sale de ella. Cuando los huecos se eligen uno a uno
+# -aqui 6, alla 11, alla 14- no hay ritmo, y la falta de ritmo se ve aunque no
+# se sepa nombrar.
+AIRE = 8                # la unidad
+MARGEN = AIRE * 4       # 32 · alrededor de todo
+HUECO = AIRE * 3        # 24 · entre bloques distintos
+HUECO2 = AIRE * 2       # 16 · dentro de un bloque
+RELLENO = AIRE * 3      # 24 · dentro de las tarjetas
+
+# ANCHO DE LECTURA. Un parrafo de ley a lo ancho de una pantalla de 27 pulgadas
+# es ilegible: el ojo pierde el renglon al volver. La tipografia lleva un siglo
+# diciendo lo mismo -entre 45 y 90 caracteres por linea- y no cambia porque el
+# monitor sea grande.
+#
+# tkinter NO TIENE max-width. Se resuelve midiendo: al cambiar el tamaño de la
+# ventana se calcula cuanto sobra y se convierte en margen interior, de modo
+# que la columna de texto se queda quieta y lo que crece son los lados.
+# ES UNA HERRAMIENTA DE TRABAJO, NO UNA APP DE MOVIL. Aqui se leen parrafos de
+# texto legal denso durante meses seguidos, sentado y a distancia de escritorio.
+# Los tamaños de una interfaz «compacta» son exactamente lo contrario de lo que
+# hace falta.
+COLUMNA_MAXIMA = 74     # caracteres por linea, con el cuerpo grande
+ANCHO_BARRA = 20        # lo que ocupa la barra de desplazamiento
+MARGEN_LECTURA = 16     # alrededor de la vista de respuesta
+
+# EL INTERLINEADO ES LO QUE MAS SE NOTA EN TEXTO JURIDICO DENSO, mas que el
+# cuerpo. Son parrafos largos sin puntos y aparte, y con las lineas juntas el
+# ojo pierde el renglon al volver.
+#
+#   INTERLINEA          entre lineas del MISMO parrafo (spacing2)
+#   INTERLINEA_PARRAFO  antes de cada parrafo (spacing1); el doble por detras
+INTERLINEA = 7
+INTERLINEA_PARRAFO = 9
+
+# A partir de este ancho, el estado y los avisos van en dos columnas. Por
+# debajo se apilan: dos columnas en una ventana estrecha son dos columnas
+# ilegibles.
+ANCHO_DOS_COLUMNAS = 1150
+
+ANCHO_TARJETA = 720     # la tarjeta de la consulta, centrada
+ANCHO_DUDA = 52         # caracteres de la caja de la duda
+
+# EL SUELO DE LA RESPUESTA. Por debajo de esto el bloque deja de ser legible,
+# asi que la ventana prefiere pedir mas alto antes que dejarlo mas bajo. No es
+# el tamaño comodo -eso lo da la pantalla- es el minimo por el que vale la pena
+# enseñar algo.
+SUELO_RESPUESTA = 200
+
+# NO HAY TOPE AL MARGEN, y es deliberado. El primer intento lo llevaba, y en un
+# monitor de 2200px la columna se iba a 1648: el tope se alcanzaba antes que el
+# ancho deseado y la linea volvia a cruzar la pantalla. Un tope al margen es un
+# tope a lo que se quiere fijar, mirado del reves.
 
 
 # ------------------------------------------------------------- tipografia
@@ -305,7 +402,22 @@ class Ventana:
         self.motor = None
 
         raiz.title("Consulta fiscal — IVA")
-        raiz.minsize(880, 640)
+        # ABRE SEGUN LA PANTALLA QUE HAY, no segun un numero fijo.
+        #
+        # Estaba puesto a 1180x880 a pelo. En un portatil de 1280x800 eso es
+        # mas alto que la pantalla: el gestor lo recorta por abajo y la
+        # respuesta se queda sin sitio, que es exactamente el fallo que hubo
+        # que arreglar. Se pide el 88% de lo que haya, con un techo para que en
+        # un monitor de 27 pulgadas no abra ocupandolo todo.
+        ancho = min(1320, int(raiz.winfo_screenwidth() * 0.86))
+        alto = min(1000, int(raiz.winfo_screenheight() * 0.88))
+        izq = max(0, (raiz.winfo_screenwidth() - ancho) // 2)
+        arr = max(0, (raiz.winfo_screenheight() - alto) // 3)
+        raiz.geometry(f"{ancho}x{alto}+{izq}+{arr}")
+        # El suelo por debajo del cual la maqueta se rompe. Mas bajo que antes
+        # -700- porque con la respuesta pidiendo lo minimo ya no hace falta
+        # tanto: lo que no se puede es dejar encoger hasta que no quepa nada.
+        raiz.minsize(860, 620)
         raiz.configure(bg=PAPEL)
 
         # La escala de la maqueta, trasladada a puntos. Las proporciones se
@@ -315,201 +427,865 @@ class Ventana:
         f_cita = elegir_fuente("cita")
         f_ref = elegir_fuente("referencia")
 
-        self.fuente = tkfont.Font(family=f_ui, size=11)
-        self.fuente_menuda = tkfont.Font(family=f_ui, size=10)
-        self.fuente_rotulo = tkfont.Font(family=f_ref, size=9)
-        self.fuente_titular = tkfont.Font(family=f_ui, size=17, weight="bold")
-        self.fuente_estado = tkfont.Font(family=f_ui, size=15, weight="bold")
-        # LA CITA ES LO MAS GRANDE DE LA PANTALLA, y en serif. Es la unica
-        # forma de que se lea como cita y no como parrafo, que es lo que pide
-        # la maqueta y lo unico que hace util esta herramienta.
-        self.fuente_cita = tkfont.Font(family=f_cita, size=14)
-        self.fuente_texto = tkfont.Font(family=f_ui, size=12)
-        self.fuente_referencia = tkfont.Font(family=f_ref, size=10)
+        # JERARQUIA: SEIS TAMAÑOS, NO DOS.
+        #
+        # Si el titulo, el estado, la respuesta y las citas pesan igual, no hay
+        # diseño: hay una lista de texto. Cada escalon tiene un trabajo, y se
+        # nota de un vistazo cual es cada cosa sin leer una palabra.
+        #
+        #   22  titular      de que va esta ventana
+        #   16  estado       la conclusion, lo primero que se busca
+        #   15  cita         EL PRODUCTO: en serif, y mas grande que el parrafo
+        #   12  respuesta    el cuerpo
+        #   11  interfaz     rotulos, botones, campos
+        #   10  referencia   la norma y la URL, en monoespaciada
+        #    9  rotulo       versalitas de seccion y pie
+        self.fuente = tkfont.Font(family=f_ui, size=13)
+        self.fuente_menuda = tkfont.Font(family=f_ui, size=11)
+        self.fuente_rotulo = tkfont.Font(family=f_ref, size=10)
+        self.fuente_seccion = tkfont.Font(family=f_ref, size=10, weight="bold")
+        self.fuente_titular = tkfont.Font(family=f_ui, size=24, weight="bold")
+        self.fuente_estado = tkfont.Font(family=f_ui, size=19, weight="bold")
+        self.fuente_subtitulo = tkfont.Font(family=f_ui, size=15,
+                                            weight="bold")
+        # LA CITA ES LO MAS GRANDE DE LA PANTALLA DESPUES DEL ESTADO, y en
+        # serif. Es la unica forma de que se lea como cita y no como parrafo,
+        # que es lo que pide la maqueta y lo unico que hace util esto.
+        self.fuente_cita = tkfont.Font(family=f_cita, size=17)
+        self.fuente_texto = tkfont.Font(family=f_ui, size=15)
+        self.fuente_referencia = tkfont.Font(family=f_ref, size=12)
 
+        # Los que tienen que reajustar su `wraplength` al cambiar el tamaño de
+        # la ventana. Ver `_reajustar`.
+        self._elasticos: list = []
+
+        self._estilos()
         self._construir()
+        self.raiz.bind("<Configure>", self._reajustar)
         raiz.after(80, self._vaciar_avisos)
         # El corpus tarda un segundo en cargar: se hace despues de pintar la
         # ventana para que no parezca que no ha arrancado.
         raiz.after(120, self._arrancar_motor)
 
+    # ------------------------------------------------------------ estilos
+
+    def _estilos(self) -> None:
+        """LOS WIDGETS POR DEFECTO DE TKINTER PARECEN DE HACE VEINTE AÑOS.
+
+        Un boton de tkinter trae relieve biselado, fondo del sistema y un borde
+        de tres pixeles: da igual lo buena que sea la paleta, si se deja asi la
+        ventana se lee como un formulario de 2003.
+
+        Se estila con ttk y se fuerza el tema «clam», que es el UNICO que deja
+        cambiar fondo y borde de verdad en los tres sistemas. En Mac el tema
+        «aqua» ignora el color de fondo de los botones -los pinta el sistema- y
+        en Windows «vista» hace lo mismo: sin cambiar de tema, todo esto no
+        haria nada y no se notaria hasta verlo en la otra maquina.
+
+        Lo que NO se puede: esquinas redondeadas, sombras, degradados y
+        transiciones. tkinter no las tiene. Ver la lista del final.
+        """
+        self.estilo = ttk.Style()
+        try:
+            self.estilo.theme_use("clam")
+        except tk.TclError:  # pragma: no cover - tk sin clam, no deberia pasar
+            pass
+        e = self.estilo
+
+        # EL BOTON PRINCIPAL: lila lleno, sin borde, con aire dentro. El aire
+        # de dentro es la mitad del trabajo: un boton apretado parece
+        # deshabilitado aunque no lo este.
+        e.configure("Primario.TButton", background=LILA, foreground=LILA_TINTA,
+                    font=self.fuente, borderwidth=0, focuscolor="",
+                    padding=(26, 12), relief="flat", anchor="center")
+        e.map("Primario.TButton",
+              background=[("disabled", "#26242F"), ("pressed", LILA),
+                          ("active", LILA_VIVO)],
+              foreground=[("disabled", TINTA3)])
+
+        # EL SEGUNDO BOTON: mismo tamaño, contorno en vez de relleno. La
+        # diferencia de peso dice cual es el camino corriente SIN que el otro
+        # parezca prohibido: el criterio es util y quien lo necesite tiene que
+        # pulsarlo sin sensacion de estar haciendo algo indebido.
+        e.configure("Segundo.TButton", background=PAPEL2, foreground=ENLACE,
+                    font=self.fuente, borderwidth=1, focuscolor="",
+                    padding=(26, 12), relief="flat", bordercolor=FILETE,
+                    lightcolor=PAPEL2, darkcolor=PAPEL2)
+        e.map("Segundo.TButton",
+              background=[("disabled", PAPEL2), ("active", "#221F2E")],
+              foreground=[("disabled", "#4E4B5C")],
+              bordercolor=[("active", LILA)])
+
+        # Y EL DISCRETO: sin fondo ni borde, para lo que no compite.
+        e.configure("Discreto.TButton", background=PAPEL, foreground=TINTA2,
+                    font=self.fuente_menuda, borderwidth=0, focuscolor="",
+                    padding=(14, 8), relief="flat")
+        e.map("Discreto.TButton",
+              background=[("active", "#1B1924")],
+              foreground=[("active", ENLACE), ("disabled", TINTA3)])
+
+        e.configure("Campo.TEntry", fieldbackground=ELEVADO, foreground=TINTA,
+                    bordercolor=FILETE, lightcolor=FILETE, darkcolor=FILETE,
+                    insertcolor=LILA, borderwidth=1, padding=(10, 9),
+                    relief="flat")
+        e.map("Campo.TEntry", bordercolor=[("focus", LILA)],
+              lightcolor=[("focus", LILA)], darkcolor=[("focus", LILA)])
+
+        e.configure("Barra.Horizontal.TProgressbar", background=LILA,
+                    troughcolor=ELEVADO, bordercolor=ELEVADO,
+                    lightcolor=LILA, darkcolor=LILA, borderwidth=0,
+                    thickness=4)
+
+        e.configure("Vertical.TScrollbar", background="#2E2B3A",
+                    troughcolor=PAPEL2, bordercolor=PAPEL2, arrowcolor=TINTA3,
+                    lightcolor="#2E2B3A", darkcolor="#2E2B3A", borderwidth=0,
+                    arrowsize=12)
+        e.map("Vertical.TScrollbar", background=[("active", "#413D52")])
+
+    def _desplazable(self, padre, fondo=None):
+        """Un area que se puede recorrer entera, pase lo que pase dentro.
+
+        Se saco a funcion despues de encontrar el MISMO fallo en tres sitios:
+        la columna de resultado, «Qué hay dentro» -que pide 949 px y abria a
+        620- y la pantalla de descoordinacion, que en su peor caso -las seis
+        frases fuera de la guia- se sale por 123 px.
+
+        Los tres tienen en comun que lo que contienen NO tiene tamaño fijo:
+        depende de cuantos avisos haya, de cuantas normas esten cargadas o de
+        cuantas frases falten. Un alto fijo para contenido variable es una
+        apuesta, y se pierde el dia que hay uno mas.
+        """
+        fondo = fondo or PAPEL
+        caja = tk.Frame(padre, bg=fondo)
+        caja.columnconfigure(0, weight=1)
+        caja.rowconfigure(0, weight=1)
+        lienzo = tk.Canvas(caja, bg=fondo, highlightthickness=0, bd=0)
+        lienzo.grid(row=0, column=0, sticky="nsew")
+        barra = ttk.Scrollbar(caja, orient="vertical", command=lienzo.yview,
+                              style="Vertical.TScrollbar")
+        barra.grid(row=0, column=1, sticky="ns", padx=(AIRE, 0))
+        lienzo.configure(yscrollcommand=barra.set)
+        dentro = tk.Frame(lienzo, bg=fondo)
+        item = lienzo.create_window((0, 0), window=dentro, anchor="nw")
+        dentro.bind("<Configure>",
+                    lambda _e: lienzo.configure(scrollregion=lienzo.bbox("all")))
+        lienzo.bind("<Configure>",
+                    lambda e: lienzo.itemconfigure(item, width=e.width))
+        for evento in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+            lienzo.bind(evento, lambda e, c=lienzo: self._rueda_de(e, c))
+        return caja, dentro, lienzo
+
+    def _rueda_de(self, evento, lienzo):
+        """La misma cuenta de `_rueda`, sobre el lienzo que se le diga."""
+        if evento.num == 4:
+            pasos = -3
+        elif evento.num == 5:
+            pasos = 3
+        elif sys.platform == "darwin":
+            pasos = -evento.delta
+        else:
+            pasos = -evento.delta // 120 * 3
+        lienzo.yview_scroll(int(pasos), "units")
+        return "break"
+
+    def _pinchable(self, w) -> None:
+        """Cursor de mano en lo que se puede pulsar. Es la señal mas barata que
+        existe de «esto responde», y tkinter no la pone sola."""
+        w.configure(cursor="hand2")
+
     # ------------------------------------------------------------ montaje
 
     def _construir(self) -> None:
-        marco = tk.Frame(self.raiz, bg=PAPEL, padx=16, pady=12)
-        marco.pack(fill="both", expand=True)
-        marco.columnconfigure(0, weight=1)
-        marco.rowconfigure(6, weight=1)
+        """DOS VISTAS, NO UNA. Es el cambio de fondo de esta version.
 
-        # El rotulo menudo en versalitas sobre el titular: de la maqueta.
-        encabezado = tk.Frame(marco, bg=PAPEL)
-        encabezado.grid(row=0, column=0, sticky="ew", pady=(0, 6))
-        tk.Label(encabezado, text="DEPARTAMENTO FISCAL", bg=PAPEL, fg="#8E8E99",
-                 font=self.fuente_rotulo, anchor="w").pack(anchor="w")
-        cabecera = tk.Label(
-            encabezado, text="Consulta fiscal sobre el IVA", bg=PAPEL,
-            fg=TINTA, font=self.fuente_titular, anchor="w",
-        )
-        cabecera.pack(anchor="w", pady=(2, 0))
+        Antes la pregunta y la respuesta compartian pantalla, y se estorbaban:
+        el formulario ocupaba 380 px fijos que la respuesta no podia usar, asi
+        que en una pantalla normal la respuesta se quedaba en media ventana y
+        apretada. No era un problema de espaciado; era que sobraba una de las
+        dos cosas en cada momento.
 
+            VISTA DE CONSULTA    la pregunta, el año y los dos botones. Nada
+                                 mas, centrado y con aire.
+            VISTA DE RESPUESTA   la ventana entera para leer: estado, avisos y
+                                 el texto con todo el sitio que hay.
+
+        Las dos viven en la MISMA celda y se turnan con `grid()`/`grid_remove()`.
+        Nada se destruye al cambiar: la pregunta escrita sigue donde estaba, que
+        es lo que hace que «Nueva consulta» pueda devolverla tal cual para
+        cambiarle solo el año.
+        """
+        self.marco = tk.Frame(self.raiz, bg=PAPEL)
+        self.marco.pack(fill="both", expand=True)
+        self.marco.columnconfigure(0, weight=1)
+        self.marco.rowconfigure(0, weight=1)
+
+        self.vista_consulta = tk.Frame(self.marco, bg=PAPEL,
+                                       padx=MARGEN, pady=MARGEN)
+        self.vista_consulta.grid(row=0, column=0, sticky="nsew")
+        self.vista_respuesta = tk.Frame(self.marco, bg=PAPEL,
+                                        padx=MARGEN_LECTURA,
+                                        pady=MARGEN_LECTURA)
+        self.vista_respuesta.grid(row=0, column=0, sticky="nsew")
+        self.vista_respuesta.grid_remove()
+
+        self._construir_consulta(self.vista_consulta)
+        self._construir_respuesta(self.vista_respuesta)
+        self.caja.focus_set()
+
+    # ------------------------------------------------------- vista 1: pedir
+
+    def _construir_consulta(self, raiz_vista) -> None:
+        """LA PANTALLA DE PEDIR. Centrada, y no hay nada mas.
+
+        Se centra de verdad -aire arriba y abajo, aire a los lados- porque
+        cuando es lo unico que hay, pegarlo al borde de arriba deja media
+        pantalla vacia debajo y parece que falta algo.
+        """
+        raiz_vista.columnconfigure(0, weight=1)
+        raiz_vista.columnconfigure(1, weight=0)
+        raiz_vista.columnconfigure(2, weight=1)
+        raiz_vista.rowconfigure(0, weight=2)
+        raiz_vista.rowconfigure(5, weight=3)
+
+        centro = tk.Frame(raiz_vista, bg=PAPEL)
+        centro.grid(row=1, column=1, rowspan=4, sticky="n")
+
+        tk.Label(centro, text="D E P A R T A M E N T O   F I S C A L",
+                 bg=PAPEL, fg=TINTA3, font=self.fuente_rotulo,
+                 anchor="w").pack(anchor="w")
+        tk.Label(centro, text="Consulta fiscal sobre el IVA", bg=PAPEL,
+                 fg=TINTA, font=self.fuente_titular, anchor="w"
+                 ).pack(anchor="w", pady=(AIRE, 0))
+
+        self.marco_motor = tk.Frame(centro, bg=PAPEL2)
+        tk.Frame(self.marco_motor, width=3, bg=LILA).pack(side="left", fill="y")
         self.aviso_motor = tk.Label(
-            marco, text="", bg=PAPEL, fg=TINTA2, anchor="w",
-            font=self.fuente,
-        )
-        self.aviso_motor.grid(row=1, column=0, sticky="ew", pady=(0, 8))
+            self.marco_motor, text="", bg=PAPEL2, fg=TINTA2, anchor="w",
+            justify="left", font=self.fuente, padx=HUECO2, pady=HUECO2 - 2,
+            wraplength=ANCHO_TARJETA - 40)
+        self.aviso_motor.pack(side="left", fill="x", expand=True)
 
-        # --- la duda ---
-        tk.Label(marco, text="Tu duda", bg=PAPEL, font=self.fuente,
-                 anchor="w").grid(row=2, column=0, sticky="ew")
-        self.caja = tk.Text(marco, height=4, wrap="word", font=self.fuente,
-                            relief="solid", borderwidth=1, padx=10, pady=8,
-                            bg=PAPEL2, fg=TINTA,
+        self.tarjeta = tarjeta = tk.Frame(centro, bg=PAPEL2,
+                                          highlightthickness=1,
+                                          highlightbackground=FILETE,
+                                          padx=RELLENO, pady=RELLENO)
+        tarjeta.pack(fill="x", pady=(HUECO, 0))
+        tarjeta.columnconfigure(0, weight=1)
+
+        tk.Label(tarjeta, text="TU DUDA", bg=PAPEL2, fg=TINTA3,
+                 font=self.fuente_seccion, anchor="w"
+                 ).grid(row=0, column=0, sticky="ew")
+        # AQUI SI CABEN CUATRO LINEAS. Cuando el formulario compartia pantalla
+        # con la respuesta, cada linea se la quitaba a lo que hay que leer; con
+        # la pantalla para el solo, no le quita nada a nadie.
+        self.caja = tk.Text(tarjeta, height=4, width=ANCHO_DUDA, wrap="word",
+                            font=self.fuente_texto,
+                            relief="flat", borderwidth=0,
+                            padx=HUECO2, pady=HUECO2 - 4,
+                            bg=ELEVADO, fg=TINTA,
+                            insertbackground=LILA, spacing2=4,
+                            selectbackground=SELECCION, selectforeground=TINTA,
                             highlightthickness=1,
                             highlightbackground=FILETE,
-                            highlightcolor=ENLACE, bd=0)
-        self.caja.grid(row=3, column=0, sticky="ew", pady=(2, 10))
+                            highlightcolor=LILA, bd=0)
+        self.caja.grid(row=1, column=0, sticky="ew", pady=(AIRE, HUECO))
         self.caja.bind("<KeyRelease>", lambda _e: self._revisar_boton())
 
-        # --- ejercicio + boton ---
-        fila = tk.Frame(marco, bg=PAPEL)
-        fila.grid(row=4, column=0, sticky="ew")
-        tk.Label(fila, text="Ejercicio (el año del caso):", bg=PAPEL,
-                 font=self.fuente).pack(side="left")
+        fila = tk.Frame(tarjeta, bg=PAPEL2)
+        fila.grid(row=2, column=0, sticky="ew")
+        tk.Label(fila, text="Ejercicio (el año del caso):", bg=PAPEL2,
+                 fg=TINTA, font=self.fuente).pack(side="left")
         self.ejercicio = tk.StringVar()
         self.ejercicio.trace_add("write", lambda *_: self._revisar_boton())
-        self.caja_ejercicio = tk.Entry(fila, textvariable=self.ejercicio,
-                                       width=8, font=self.fuente,
-                                       bg=PAPEL2, fg=TINTA, bd=0,
-                                       highlightthickness=1,
-                                       highlightbackground=FILETE,
-                                       highlightcolor=ENLACE)
-        self.caja_ejercicio.pack(side="left", padx=(8, 12))
+        self.caja_ejercicio = ttk.Entry(fila, textvariable=self.ejercicio,
+                                        width=7, font=self.fuente,
+                                        style="Campo.TEntry", justify="center")
+        self.caja_ejercicio.pack(side="left", padx=(HUECO2, HUECO2 - 4))
         # Se deja VACIO a proposito. Ver la regla 2 de la cabecera.
         tk.Label(fila, text="obligatorio: la ley cambia cada año",
-                 bg=PAPEL, fg=TINTA2, font=self.fuente_menuda).pack(side="left")
+                 bg=PAPEL2, fg=TINTA2, font=self.fuente_menuda
+                 ).pack(side="left")
 
-        # DOS BOTONES, UNO POR MODO. El modo es de CADA CONSULTA, no del
-        # sistema: quien pregunta elige, y la respuesta dice con cual se hizo.
-        # El segundo solo existe si el despacho lo ha decidido
-        # (`configurar.py --con-criterio`): esa decision no es del que consulta.
-        from agente_fiscal import configuracion as _CONF
-        self.hay_boton_criterio = _CONF.hay_boton_criterio()
+        tk.Frame(tarjeta, height=1, bg=FILETE).grid(
+            row=3, column=0, sticky="ew", pady=(HUECO, HUECO))
 
-        self.boton = tk.Button(fila, text=BOTON_LEY, font=self.fuente,
-                               command=lambda: self._lanzar(False),
-                               state="disabled", padx=16, pady=4)
-        self.boton_criterio = None
-        if self.hay_boton_criterio:
-            # El caro va DEBAJO y en su propia fila: con los dos al lado se
-            # pulsa el que queda mas a mano, no el que se queria.
-            self.boton.pack(side="left")
-            fila_criterio = tk.Frame(marco, bg=PAPEL)
-            fila_criterio.grid(row=5, column=0, sticky="ew", pady=(8, 0))
-            self.boton_criterio = tk.Button(
-                fila_criterio, text=BOTON_CRITERIO, font=self.fuente,
-                command=lambda: self._lanzar(True), state="disabled",
-                padx=16, pady=4)
-            self.boton_criterio.pack(side="left")
-            tk.Label(fila_criterio, text=PIE_CRITERIO, bg=PAPEL, fg=TINTA2,
-                     font=self.fuente_menuda, anchor="w",
-                     justify="left", wraplength=520).pack(side="left", padx=(12, 0))
-        else:
-            self.boton.pack(side="right")
+        # DOS BOTONES, SIEMPRE LOS DOS. Ya no dependen de ningun fichero: si
+        # se decide usar solo la ley, se decide aqui -no pulsando el segundo-,
+        # no editando configuracion.
+        fila_ley = tk.Frame(tarjeta, bg=PAPEL2)
+        fila_ley.grid(row=4, column=0, sticky="ew")
+        self.boton = ttk.Button(fila_ley, text=BOTON_LEY,
+                                style="Primario.TButton",
+                                command=lambda: self._lanzar(False),
+                                state="disabled")
+        self.boton.pack(side="left")
+        self._pinchable(self.boton)
+
+        # El caro va DEBAJO y en su propia fila: con los dos al lado se pulsa
+        # el que queda mas a mano, no el que se queria. Y el precio FUERA del
+        # boton, en gris, debajo: dentro parecia una advertencia.
+        fila_criterio = tk.Frame(tarjeta, bg=PAPEL2)
+        fila_criterio.grid(row=5, column=0, sticky="ew", pady=(HUECO2, 0))
+        fila_criterio.columnconfigure(0, weight=1)
+        self.boton_criterio = ttk.Button(
+            fila_criterio, text=BOTON_CRITERIO, style="Segundo.TButton",
+            command=lambda: self._lanzar(True), state="disabled")
+        self.boton_criterio.grid(row=0, column=0, sticky="w")
+        self._pinchable(self.boton_criterio)
+        tk.Label(fila_criterio, text=PIE_CRITERIO, bg=PAPEL2,
+                 fg=TINTA2, font=self.fuente_menuda, anchor="w",
+                 justify="left", wraplength=ANCHO_TARJETA - 40
+                 ).grid(row=1, column=0, sticky="ew", pady=(AIRE, 0))
 
         # --- progreso ---
-        self.marco_progreso = tk.Frame(marco, bg=PAPEL)
-        self.marco_progreso.grid(row=5, column=0, sticky="ew", pady=(10, 0))
-        self.barra = ttk.Progressbar(self.marco_progreso, mode="indeterminate")
+        self.marco_progreso = tk.Frame(centro, bg=PAPEL)
+        self.marco_progreso.pack(fill="x", pady=(HUECO2, 0))
+        self.barra = ttk.Progressbar(self.marco_progreso, mode="indeterminate",
+                                     style="Barra.Horizontal.TProgressbar")
         self.paso = tk.Label(self.marco_progreso, text="", bg=PAPEL,
-                             fg="#333", font=self.fuente, anchor="w")
+                             fg=TINTA2, font=self.fuente, anchor="w")
 
-        # --- resultado ---
-        self.resultado = tk.Frame(marco, bg=PAPEL)
-        self.resultado.grid(row=6, column=0, sticky="nsew", pady=(12, 0))
+        pie_fila = tk.Frame(centro, bg=PAPEL)
+        pie_fila.pack(fill="x", pady=(HUECO, 0))
+        self.pie = tk.Label(pie_fila, text="", bg=PAPEL, fg=TINTA3,
+                            font=self.fuente_rotulo, anchor="w")
+        self.pie.pack(side="left")
+        self.boton_dentro = ttk.Button(
+            pie_fila, text="Qué hay dentro", style="Discreto.TButton",
+            command=self._abrir_estado)
+        self.boton_dentro.pack(side="right")
+        self._pinchable(self.boton_dentro)
+
+    # ---------------------------------------------------- vista 2: leer
+
+    def _construir_respuesta(self, raiz_vista) -> None:
+        """LA PANTALLA DE LEER. La ventana entera, y nada que le quite sitio.
+
+        Arriba una barra fina -el boton de volver y con que se hizo- y debajo
+        todo lo demas dentro de un lienzo desplazable: estado, aporte, avisos y
+        el texto. La barra de arriba es lo unico fijo, y ocupa una linea.
+        """
+        raiz_vista.columnconfigure(0, weight=1)
+        raiz_vista.rowconfigure(1, weight=1)
+
+        barra_alta = tk.Frame(raiz_vista, bg=PAPEL)
+        barra_alta.grid(row=0, column=0, sticky="ew", pady=(0, AIRE))
+        barra_alta.columnconfigure(1, weight=1)
+
+        self.boton_volver = ttk.Button(
+            barra_alta, text="←  Nueva consulta", style="Segundo.TButton",
+            command=self._nueva_consulta)
+        self.boton_volver.grid(row=0, column=0, sticky="w")
+        self._pinchable(self.boton_volver)
+
+        self.eco_pregunta = tk.Label(
+            barra_alta, text="", bg=PAPEL, fg=TINTA3,
+            font=self.fuente_menuda, anchor="w", justify="left")
+        self.eco_pregunta.grid(row=0, column=1, sticky="ew", padx=(HUECO, 0))
+
+        self.eco_expediente = tk.Label(
+            barra_alta, text="", bg=PAPEL, fg=TINTA3,
+            font=self.fuente_rotulo, anchor="e")
+        self.eco_expediente.grid(row=0, column=2, sticky="e", padx=(HUECO, 0))
+
+        self.boton_copiar = ttk.Button(barra_alta, text="Copiar respuesta",
+                                       style="Discreto.TButton",
+                                       command=self._copiar, state="disabled")
+        self.boton_copiar.grid(row=0, column=3, sticky="e")
+        self._pinchable(self.boton_copiar)
+        self.copiado = tk.Label(barra_alta, text="", bg=PAPEL,
+                                fg=LILA, font=self.fuente_menuda)
+        self.copiado.grid(row=0, column=4, sticky="e", padx=(AIRE, 0))
+
+        # --- lo que se lee ---
+        #
+        # EL ESTADO Y LOS AVISOS ARRIBA Y QUIETOS; EL TEXTO CON SU PROPIO VISOR.
+        #
+        # La version anterior metia las cuatro cosas en un solo lienzo que se
+        # desplazaba entero. Resolvia que nada quedara fuera de alcance, pero
+        # tenia un coste que solo se ve midiendo: el estado, el aporte y los
+        # avisos ocupaban los primeros 470 px, asi que de la respuesta se veian
+        # DOCE lineas antes de tener que desplazar.
+        #
+        # Ahora el bloque de arriba es fijo -se lee una vez- y el texto se
+        # queda con todo lo que sobra y desplaza por su cuenta. Se pasa de 12
+        # lineas a 24 sin tocar los tamaños.
+        #
+        # ¿Y SI HAY MUCHOS AVISOS? No queda nada inalcanzable, y esta medido:
+        # sobre 864 consultas reales el maximo son CUATRO avisos, y en 820 de
+        # ellas ninguno. Si algun dia fueran muchos, el bloque de arriba se
+        # queda entero -grid sirve primero a las filas sin peso- y lo que se
+        # encoge es el visor del texto, que tiene barra: mas apretado, pero
+        # nada que no se pueda leer.
+        self.resultado = tk.Frame(raiz_vista, bg=PAPEL)
+        self.resultado.grid(row=1, column=0, sticky="nsew")
         self.resultado.columnconfigure(0, weight=1)
-        self.resultado.rowconfigure(3, weight=1)
+        self.resultado.rowconfigure(4, weight=1)
 
-        self.panel_estado = tk.Frame(self.resultado, bg=PAPEL)
-        self.panel_estado.grid(row=0, column=0, sticky="ew")
+        # LA BANDA DE ARRIBA USA EL ANCHO, NO EL ALTO.
+        #
+        # Apiladas, el estado, el aporte y los avisos se comian 392 px de alto
+        # y dejaban la respuesta en doce lineas. Y mientras tanto, maximizada,
+        # sobraban 900 px de ancho a los lados del parrafo sin hacer nada.
+        #
+        # En dos columnas -lo que se ha encontrado a la izquierda, lo que falta
+        # por mirar a la derecha- la misma informacion ocupa la mitad de alto y
+        # se lee igual de bien. Por debajo de `ANCHO_DOS_COLUMNAS` se vuelven a
+        # apilar: en una ventana estrecha dos columnas serian dos columnas
+        # ilegibles. Lo decide `_reajustar`.
+        self.banda = tk.Frame(self.resultado, bg=PAPEL)
+        self.banda.grid(row=0, column=0, sticky="ew")
+        self.columna_izq = tk.Frame(self.banda, bg=PAPEL)
+        self.columna_der = tk.Frame(self.banda, bg=PAPEL)
+        self._dos_columnas = None       # todavia sin decidir
+
+        self.panel_estado = tk.Frame(self.columna_izq, bg=PAPEL2)
+        self.panel_estado.pack(fill="x")
+        # EL ROTULO ENCIMA, NO AL LADO. Probadas las dos: al lado, el rotulo
+        # se come 320 px de ancho y la explicacion se parte en CUATRO lineas
+        # (88 px); encima, la explicacion tiene la columna entera y se queda
+        # en tres, y el «hecha con» en una en vez de dos. Apilado ocupa menos
+        # alto que en horizontal, que es justo lo contrario de lo que parece.
         self.panel_estado.columnconfigure(1, weight=1)
-        # El filete de 4 px de la maqueta: un Frame estrecho a la izquierda.
-        # Es lo unico que lleva el color del estado.
-        self.filete_estado = tk.Frame(self.panel_estado, width=4, bg=FILETE)
+        self.filete_estado = tk.Frame(self.panel_estado, width=5, bg=FILETE)
         self.etiqueta_estado = tk.Label(
             self.panel_estado, text="", font=self.fuente_estado, anchor="w",
-            justify="left", padx=12, pady=8,
+            # SIN `wraplength`: el rotulo va en una linea. Con 260 px se
+            # partia en tres -medido- y el panel entero subia 60 px por una
+            # cifra puesta a ojo. El mas largo, «NO SE HA PODIDO CONSULTAR»,
+            # cabe de sobra en la columna.
+            justify="left", padx=RELLENO, pady=(HUECO2 - 4),
         )
         self.etiqueta_explicacion = tk.Label(
+            # El hueco asimetrico va en el `grid`, NO aqui: `padx` de un
+            # widget es UNA distancia y con (0, 24) tkinter revienta. Es la
+            # tercera vez que caigo en la misma piedra.
             self.panel_estado, text="", font=self.fuente, anchor="w",
-            justify="left", wraplength=820, padx=12, pady=0,
+            justify="left", pady=0,
         )
-        # CON QUE SE HIZO ESTA CONSULTA. Va aqui arriba, pegado al estado,
-        # porque es parte de como hay que leer la respuesta: un CRITERIO CLARO
-        # hecho solo con la ley no dice lo mismo que uno hecho con criterio.
+        # Zona «estado»: lo que queda a la derecha del rotulo, y el rotulo
+        # mide lo que mida su palabra. Restar una cifra fija dejaba la
+        # explicacion envolviendo a 642 px cuando tenia 771 disponibles: una
+        # linea de mas, y esa linea vale dos de respuesta.
+
         self.etiqueta_hecha_con = tk.Label(
             self.panel_estado, text="", font=self.fuente_menuda, anchor="w",
-            justify="left", wraplength=820, padx=12, pady=0, fg=TINTA2,
+            justify="left", pady=0, fg=TINTA3,
         )
+        # EL ANCHO SE PREGUNTA, NO SE CALCULA.
+        #
+        # Tres intentos de deducirlo -«la columna es el 60%, menos el relleno,
+        # menos el rotulo»- y los tres dieron de menos: 642 px cuando habia
+        # 771, y una linea de mas en la explicacion. Una linea de la banda
+        # cuesta dos de respuesta.
+        #
+        # El panel ya sabe lo que mide. Se le pregunta cuando cambia.
+        self.panel_estado.bind("<Configure>", self._wrap_estado)
 
-        # Los avisos de fecha van ARRIBA, antes del texto: si se ponen al final
-        # no los lee nadie, y son justo lo que puede invalidar la respuesta.
-        self.panel_avisos = tk.Frame(self.resultado, bg=PAPEL2)
-        self.panel_avisos.grid(row=1, column=0, sticky="ew", pady=(8, 0))
-        self.panel_avisos.grid_remove()
+        # EL APORTE, DEBAJO DEL ESTADO. Probado tambien en la columna derecha
+        # y sale peor: alli el ancho es menor, el texto se parte en mas lineas
+        # y la banda sube de 257 a 276 px. La banda mide lo que su columna mas
+        # alta, asi que lo que importa no es donde queda mejor sino como quedan
+        # de igualadas las dos.
+        self.panel_aporte = tk.Frame(self.columna_izq, bg=PAPEL2,
+                                     highlightthickness=1,
+                                     highlightbackground=FILETE)
+        self.panel_aporte.pack(fill="x", pady=(AIRE + 2, 0))
+        self.panel_aporte.pack_forget()
 
-        barra_acciones = tk.Frame(self.resultado, bg=PAPEL)
-        barra_acciones.grid(row=2, column=0, sticky="ew", pady=(10, 4))
-        self.boton_copiar = tk.Button(barra_acciones, text="Copiar respuesta",
-                                      font=self.fuente, command=self._copiar,
-                                      state="disabled")
-        self.boton_copiar.pack(side="left")
-        self.copiado = tk.Label(barra_acciones, text="", bg=PAPEL,
-                                fg="#1b5e20", font=self.fuente)
-        self.copiado.pack(side="left", padx=8)
+        # Los avisos van ARRIBA, antes del texto: si se ponen al final no los
+        # lee nadie, y son justo lo que puede invalidar la respuesta.
+        self.panel_avisos = tk.Frame(self.columna_der, bg=PAPEL2,
+                                     highlightthickness=1,
+                                     highlightbackground=FILETE,
+                                     pady=AIRE - 4)
+        self.panel_avisos.pack(fill="x")
+        self.panel_avisos.pack_forget()
 
-        caja = tk.Frame(self.resultado)
-        caja.grid(row=3, column=0, sticky="nsew")
+        # EL EXPEDIENTE SE VA A LA BARRA DE ARRIBA, con la pregunta.
+        #
+        # Tuvo fila propia -arriba primero, abajo despues- y en las dos
+        # costaba 28 px de alto: una linea entera de respuesta por un dato que
+        # se mira una vez al mes. En la barra de arriba no cuesta nada, porque
+        # esa barra ya existe y le sobra ancho.
+        self.pie_respuesta = self.eco_expediente
+
+        caja = tk.Frame(self.resultado, bg=PAPEL2, highlightthickness=1,
+                        highlightbackground=FILETE)
+        caja.grid(row=4, column=0, sticky="nsew", pady=(AIRE, 0))
         caja.columnconfigure(0, weight=1)
         caja.rowconfigure(0, weight=1)
+        # EL TEXTO, QUE ES A LO QUE SE VIENE.
+        #
+        # `width=1, height=1` para que no pida sitio y se quede con lo que hay:
+        # un Text sin medidas pide 80x24 caracteres, y eso fue exactamente lo
+        # que un dia dejo la respuesta en dos lineas.
         self.texto = tk.Text(caja, wrap="word", font=self.fuente_texto,
-                             bd=0, highlightthickness=1,
-                             highlightbackground=FILETE,
-                             padx=22, pady=18, fg=TINTA,
-                             state="disabled", spacing1=2, spacing3=6,
-                             background=PAPEL2)
+                             width=1, height=1,
+                             bd=0, highlightthickness=0,
+                             padx=RELLENO, pady=RELLENO, fg=TINTA,
+                             state="disabled",
+                             spacing1=INTERLINEA_PARRAFO,
+                             spacing2=INTERLINEA,
+                             spacing3=INTERLINEA_PARRAFO * 2,
+                             background=PAPEL2,
+                             insertbackground=LILA, cursor="arrow",
+                             takefocus=True,
+                             selectbackground=SELECCION, selectforeground=TINTA)
         self.texto.grid(row=0, column=0, sticky="nsew")
-        scroll = ttk.Scrollbar(caja, command=self.texto.yview)
-        scroll.grid(row=0, column=1, sticky="ns")
-        self.texto.configure(yscrollcommand=scroll.set)
+        self.barra_respuesta = ttk.Scrollbar(
+            caja, orient="vertical", command=self.texto.yview,
+            style="Vertical.TScrollbar")
+        self.barra_respuesta.grid(row=0, column=1, sticky="ns",
+                                  padx=(0, AIRE), pady=AIRE)
+        self.texto.configure(yscrollcommand=self._barra_movida)
+        self._atar_desplazamiento()
 
         self.texto.tag_configure("enlace", foreground=ENLACE, underline=True,
                                  font=self.fuente_referencia)
         self.texto.tag_bind("enlace", "<Enter>",
                             lambda _e: self.texto.configure(cursor="hand2"))
         self.texto.tag_bind("enlace", "<Leave>",
-                            lambda _e: self.texto.configure(cursor=""))
+                            lambda _e: self.texto.configure(cursor="arrow"))
         self.texto.tag_bind("enlace", "<Button-1>", self._abrir_enlace)
-        self.texto.tag_configure("titulo", font=tkfont.Font(
-            family=elegir_fuente("interfaz"), size=12, weight="bold"),
-            foreground=TINTA, spacing3=6)
+        self.texto.tag_configure("titulo", font=self.fuente_subtitulo,
+                                 foreground=TINTA, spacing1=INTERLINEA_PARRAFO * 2,
+                                 spacing3=INTERLINEA_PARRAFO)
         self.texto.tag_configure("apagado", foreground=TINTA2,
                                  font=self.fuente_menuda)
         # LA JERARQUIA QUE HACE UTIL LA PANTALLA. La cita es lo mas grande y
         # va en serif; la referencia, en monoespaciada y menuda. Distinta
         # familia y distinto tamaño: asi una cita no se confunde nunca con la
-        # explicacion que la rodea.
+        # explicacion que la rodea. Y con AIRE DE VERDAD por arriba y por
+        # abajo: una cita pegada al parrafo siguiente se lee como parte de el.
         self.texto.tag_configure("cita", font=self.fuente_cita, foreground=TINTA,
-                                 lmargin1=14, lmargin2=14, spacing1=8, spacing3=8)
+                                 lmargin1=HUECO2, lmargin2=HUECO2,
+                                 rmargin=HUECO2,
+                                 spacing1=AIRE * 3, spacing3=AIRE * 3)
         self.texto.tag_configure("referencia", font=self.fuente_referencia,
                                  foreground=TINTA2)
-        self.texto.tag_configure("rotulo", font=self.fuente_rotulo,
-                                 foreground="#8E8E99", spacing1=10)
+        self.texto.tag_configure("rotulo", font=self.fuente_seccion,
+                                 foreground=TINTA3, spacing1=AIRE * 3)
+        self.texto.tag_configure("columna")
+        self.texto.tag_lower("columna")
 
-        self.pie = tk.Label(marco, text="", bg=PAPEL, fg="#8E8E99",
-                            font=tkfont.Font(size=9), anchor="w")
-        self.pie.grid(row=7, column=0, sticky="ew", pady=(8, 0))
+    # ---------------------------------------------------- cambiar de vista
 
-        self.caja.focus_set()
+    def mostrar_cinta(self, texto: str) -> None:
+        """La cinta de aviso sobre la tarjeta. `pack`, no `grid`.
+
+        Dentro de un contenedor gestionado por `pack` no se puede meter un hijo
+        con `grid`: tkinter no lo mezcla y lanza «cannot use geometry manager».
+        Y va con `before=` porque `pack` coloca por orden de llegada, y esta
+        nace despues de la tarjeta que tiene que ir debajo.
+        """
+        self.aviso_motor.configure(text=texto)
+        self.marco_motor.pack(fill="x", pady=(HUECO, 0), before=self.tarjeta)
+
+    def _mostrar(self, cual: str) -> None:
+        """Cambia de vista. Nada se destruye: solo se quita del grid."""
+        if cual == "respuesta":
+            self.vista_consulta.grid_remove()
+            self.vista_respuesta.grid()
+            self.texto.focus_set()
+        else:
+            self.vista_respuesta.grid_remove()
+            self.vista_consulta.grid()
+            self.caja.focus_set()
+        self._ancho_previo = 0
+        self._reajustar()
+
+    @staticmethod
+    def _eco(duda: str, ejercicio: str) -> str:
+        """La pregunta, recortada, en la barra de arriba de la respuesta.
+
+        Leyendo una respuesta larga es facil perder de vista que se pregunto
+        exactamente, y sobre todo CON QUE AÑO: media respuesta depende de eso.
+        """
+        duda = " ".join((duda or "").split())
+        if len(duda) > 90:
+            duda = duda[:88].rsplit(" ", 1)[0] + "…"
+        return f"«{duda}»    ·    ejercicio {ejercicio}" if duda else ""
+
+    def _nueva_consulta(self) -> None:
+        """Vuelve a preguntar CON LA PREGUNTA ANTERIOR PUESTA.
+
+        Casi nunca se cambia la duda entera: se cambia el año, o una palabra.
+        Devolver la caja en blanco obliga a reescribirla, y quien la reescriba
+        de memoria no escribira exactamente lo mismo — con lo cual ya no esta
+        comparando dos respuestas a la misma pregunta.
+
+        Se selecciona el año, que es lo que mas se cambia, para que se pueda
+        teclear otro encima sin borrar.
+        """
+        self._mostrar("consulta")
+        self.caja_ejercicio.focus_set()
+        self.caja_ejercicio.select_range(0, "end")
+
+    # --------------------------------------------- desplazamiento
+
+    def _barra_movida(self, primero, ultimo) -> None:
+        """La barra se esconde cuando no hay nada que desplazar.
+
+        Una barra que ocupa sitio y no hace nada es ruido; y una que aparece
+        justo cuando hace falta dice, ella sola, que abajo queda mas.
+        """
+        self.barra_respuesta.set(primero, ultimo)
+        if float(primero) <= 0.0 and float(ultimo) >= 1.0:
+            self.barra_respuesta.grid_remove()
+        else:
+            self.barra_respuesta.grid()
+
+    def _atar_desplazamiento(self) -> None:
+        """LA RESPUESTA SE TIENE QUE PODER RECORRER ENTERA. Raton y teclado.
+
+        tkinter no trae nada de esto puesto. Y la rueda NO es el mismo evento
+        en los tres sistemas:
+
+            Mac      <MouseWheel>, delta pequeño (1, 2, 3...) y ya en «lineas»
+            Windows  <MouseWheel>, delta en multiplos de 120
+            Linux    <Button-4> y <Button-5>, sin delta
+
+        Escrito una sola vez para los tres, porque el que no se pruebe hoy es
+        justo el que se rompera en el PC de la oficina.
+
+        Se ata al LIENZO y a todo lo que hay dentro: la rueda la recibe el
+        widget que esta debajo del raton, y debajo del raton casi siempre hay
+        una etiqueta, no el lienzo. Sin recorrer los hijos, la rueda solo
+        funcionaria en los huecos entre paneles.
+        """
+        # La rueda, tambien sobre la banda de arriba. Ahi no hay nada que
+        # desplazar -es fija- pero quien mueve la rueda mirando el estado
+        # espera que baje la respuesta, no que no pase nada.
+        for evento in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+            for w in (self.texto, self.panel_estado, self.panel_aporte,
+                      self.panel_avisos, self.resultado, self.banda):
+                w.bind(evento, self._rueda)
+
+        teclas = {
+            "<Up>": lambda: self.texto.yview_scroll(-2, "units"),
+            "<Down>": lambda: self.texto.yview_scroll(2, "units"),
+            "<Prior>": lambda: self.texto.yview_scroll(-1, "pages"),
+            "<Next>": lambda: self.texto.yview_scroll(1, "pages"),
+            "<Home>": lambda: self.texto.yview_moveto(0.0),
+            "<End>": lambda: self.texto.yview_moveto(1.0),
+        }
+        for tecla, accion in teclas.items():
+            self.texto.bind(tecla, lambda _e, a=accion: (a(), "break")[1])
+        # Pinchar en la respuesta le da el teclado. No se devuelve "break", asi
+        # que el Text sigue con lo suyo y se puede seguir seleccionando.
+        self.texto.bind("<Button-1>", lambda _e: self.texto.focus_set(),
+                        add="+")
+
+    def _rueda(self, evento):
+        if evento.num == 4:               # Linux, rueda arriba
+            pasos = -3
+        elif evento.num == 5:             # Linux, rueda abajo
+            pasos = 3
+        elif sys.platform == "darwin":    # Mac: el delta ya viene en lineas
+            pasos = -evento.delta
+        else:                             # Windows: multiplos de 120
+            pasos = -evento.delta // 120 * 3
+        self.texto.yview_scroll(int(pasos), "units")
+        return "break"
+
+    def _atar_rueda_a_los_hijos_de(self, w, lienzo) -> None:
+        """Como `_atar_rueda_a_los_hijos`, pero sobre otro lienzo."""
+        for evento in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+            try:
+                w.bind(evento, lambda e, c=lienzo: self._rueda_de(e, c))
+            except tk.TclError:  # pragma: no cover
+                return
+        for hijo in w.winfo_children():
+            self._atar_rueda_a_los_hijos_de(hijo, lienzo)
+
+    def _atar_rueda_a_los_hijos(self, w=None) -> None:
+        """La rueda, en cada etiqueta que se acaba de crear.
+
+        Se llama despues de pintar los paneles porque sus hijos nacen y mueren
+        con cada consulta: atarlos una vez al construir la ventana no serviria
+        de nada.
+        """
+        w = self.resultado if w is None else w
+        for evento in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+            try:
+                w.bind(evento, self._rueda)
+            except tk.TclError:  # pragma: no cover
+                return
+        for hijo in w.winfo_children():
+            self._atar_rueda_a_los_hijos(hijo)
+
+    def _arriba(self) -> None:
+        """Toda respuesta nueva empieza por el principio.
+
+        Sin esto, una respuesta corta detras de una larga aparece con la vista
+        donde quedo la anterior: en blanco. Y quien lo vea entiende que no ha
+        contestado.
+
+        Y de paso se repregunta por la barra: el `yscrollcommand` llega DESPUES
+        de escribir, y hasta entonces la barra sigue diciendo lo que decia de
+        la respuesta anterior.
+        """
+        try:
+            self.texto.update_idletasks()
+            self.texto.yview_moveto(0.0)
+            self._barra_movida(*self.texto.yview())
+        except tk.TclError:  # pragma: no cover - ventana cerrandose
+            pass
+
+    # ------------------------------------------------- ancho de lectura
+
+    def _reajustar(self, evento=None) -> None:
+        """QUE UN PARRAFO NO CRUCE LA PANTALLA ENTERA.
+
+        tkinter no tiene `max-width` ni nada que se le parezca, asi que se
+        calcula: se mide cuanto ocupan 88 caracteres con la fuente que de
+        verdad se ha elegido en ESTA maquina -no la que se pidio- y lo que
+        sobra se reparte a los dos lados.
+
+        VA EN MARGENES DE ETIQUETA, NO EN EL RELLENO DEL WIDGET. Es la
+        diferencia entre limitar el parrafo y limitar la ventana: el relleno
+        cuenta para el tamaño que el widget pide, y el margen de etiqueta no.
+        Con relleno, la ventana no se podia maximizar.
+
+        Se llama en cada `<Configure>`, o sea muchas veces por segundo mientras
+        se arrastra el borde. Por eso sale enseguida si el ancho no ha cambiado:
+        redibujar un Text en cada pixel del arrastre se ve a simple vista.
+        """
+        ancho = self.raiz.winfo_width()
+        if ancho <= 1 or ancho == getattr(self, "_ancho_previo", 0):
+            return
+        self._ancho_previo = ancho
+
+        # SE CALCULA DEL ANCHO DE LA VENTANA, NO DEL ANCHO DEL TEXT.
+        #
+        # `winfo_width()` del Text durante un `<Configure>` devuelve el ancho
+        # de ANTES: el redibujado no ha ocurrido todavia. Medido, el margen
+        # salia 391 px en una ventana de 1000 y 70 px en una de 1400, o sea al
+        # reves de lo que tiene que ser. La ventana ya sabe cuanto mide.
+        # LAS RESTAS SON LAS DE LA VISTA DE LECTURA, no las de la de pedir.
+        # Con `MARGEN` (32) en vez de `MARGEN_LECTURA` (16) y `HUECO2` en vez
+        # del relleno real del Text, la cuenta daba de menos y el margen salia
+        # cero: el parrafo se iba a 837 px en una ventana de 1180.
+        visible = max(320, ancho - MARGEN_LECTURA * 2 - ANCHO_BARRA
+                      - RELLENO * 2)
+        deseado = self.fuente_texto.measure("0" * COLUMNA_MAXIMA)
+        margen = max(0, (visible - deseado) // 2)
+        try:
+            self.texto.tag_configure("columna", lmargin1=margen,
+                                     lmargin2=margen, rmargin=margen)
+            # La cita va sangrada DENTRO de la columna, no desde el borde de la
+            # ventana: si no, al maximizar se quedaba pegada a la izquierda
+            # mientras el parrafo se centraba.
+            self.texto.tag_configure("cita", lmargin1=margen + HUECO2,
+                                     lmargin2=margen + HUECO2,
+                                     rmargin=margen + HUECO2)
+        except tk.TclError:  # pragma: no cover - ventana cerrandose
+            return
+
+        self._colocar_banda(ancho)
+        # Al cambiar el ancho de la ventana cambian las dos columnas, asi que
+        # los dos anchos guardados dejan de valer.
+        self._ancho_estado = self._ancho_avisos = 0
+        self.raiz.after_idle(self._wrap_estado)
+        self.raiz.after_idle(self._wrap_avisos)
+
+        # Y las etiquetas, que en tkinter no se ajustan solas: `wraplength` es
+        # un numero de pixeles, no un porcentaje.
+        # CADA ETIQUETA SE AJUSTA A SU COLUMNA, NO A LA VENTANA.
+        #
+        # Antes todas usaban el ancho de la ventana entera. Con la banda en dos
+        # columnas eso significa pedir que una frase quepa en 1.538 px dentro
+        # de una columna de 995: tkinter no la parte -se lo has dicho tu- y la
+        # RECORTA. Se perderia el final de la explicacion del estado, que es
+        # justo la parte que dice lo que la respuesta NO cubre.
+        disponible = max(320, ancho - MARGEN_LECTURA * 2 - ANCHO_BARRA)
+        if self._dos_columnas:
+            zona = {"izq": int(disponible * 0.6) - HUECO2,
+                    "der": disponible - int(disponible * 0.6)}
+        else:
+            zona = {"izq": disponible, "der": disponible}
+        zona["ancho"] = disponible
+        for widget, cual, resta in self._elasticos:
+            try:
+                widget.configure(
+                    wraplength=max(200, zona.get(cual, disponible) - resta))
+            except tk.TclError:  # pragma: no cover
+                pass
+        # Al cambiar el ancho cambia el ajuste de linea, o sea cuantas lineas
+        # ocupa el mismo texto. Si no se recuenta, al estrechar la ventana el
+        # final de la respuesta se queda fuera del alto reservado.
+        #
+        # Y SE VUELVE A DONDE SE ESTABA LEYENDO. Recontar cambia el alto de la
+        # columna, y con el la fraccion que representa la posicion actual: sin
+        # restituirla, arrastrar el borde de la ventana da saltos en el texto
+        # que se esta leyendo.
+
+
+    def _wrap_estado(self, _evento=None) -> None:
+        """La explicacion se envuelve al hueco que le deja el rotulo, medido.
+
+        Se sale enseguida si el ancho no ha cambiado: cambiar `wraplength`
+        cambia el alto de la etiqueta, que dispara otro `<Configure>` del
+        panel, que volveria a entrar aqui. Sin la guarda es un bucle.
+        """
+        ancho = self.panel_estado.winfo_width()
+        if ancho <= 1 or ancho == getattr(self, "_ancho_estado", 0):
+            return
+        self._ancho_estado = ancho
+        libre = ancho - RELLENO * 2 - 14
+        for et in (self.etiqueta_explicacion, self.etiqueta_hecha_con):
+            try:
+                et.configure(wraplength=max(240, libre))
+            except tk.TclError:  # pragma: no cover
+                return
+
+    def _wrap_avisos(self, _evento=None) -> None:
+        """Lo mismo para los avisos: se envuelven al ancho de su panel."""
+        ancho = self.panel_avisos.winfo_width()
+        if ancho <= 1 or ancho == getattr(self, "_ancho_avisos", 0):
+            return
+        self._ancho_avisos = ancho
+        for et in self.panel_avisos.winfo_children():
+            try:
+                et.configure(wraplength=max(200, ancho - RELLENO * 2 - 10))
+            except tk.TclError:  # pragma: no cover
+                return
+
+    def _colocar_banda(self, ancho: int) -> None:
+        """Una columna o dos, segun quepa. Se recoloca solo al cambiar.
+
+        Se guarda la decision anterior y solo se toca el `grid` cuando cambia:
+        recolocar en cada pixel del arrastre se ve a simple vista.
+        """
+        dos = ancho >= ANCHO_DOS_COLUMNAS
+        if dos == self._dos_columnas:
+            return
+        self._dos_columnas = dos
+        self.columna_izq.grid_forget()
+        self.columna_der.grid_forget()
+        if dos:
+            # `uniform` NO es decorativo. Sin el, `weight` reparte solo el
+            # SOBRANTE por encima de lo que cada columna pide, asi que una
+            # columna que pide poco se queda pequeña para siempre: los avisos
+            # se envolvian a 209 px dentro de una banda de 1.650. Con
+            # `uniform`, las dos columnas se reparten el ancho 6 a 4 de verdad.
+            self.banda.columnconfigure(0, weight=6, uniform="banda")
+            self.banda.columnconfigure(1, weight=4, uniform="banda")
+            self.columna_izq.grid(row=0, column=0, sticky="nsew")
+            self.columna_der.grid(row=0, column=1, sticky="nsew",
+                                  padx=(HUECO2, 0))
+        else:
+            self.banda.columnconfigure(0, weight=1, uniform="")
+            self.banda.columnconfigure(1, weight=0, uniform="")
+            self.columna_izq.grid(row=0, column=0, sticky="ew")
+            self.columna_der.grid(row=1, column=0, sticky="ew",
+                                  pady=(AIRE + 2, 0))
+
+    def _columna(self) -> None:
+        """Mete lo que se acaba de escribir dentro de la columna de lectura."""
+        self.texto.tag_add("columna", "1.0", "end")
+        self.texto.tag_lower("columna")
 
     # ------------------------------------------------------------ arranque
 
@@ -532,10 +1308,9 @@ class Ventana:
         self.motor = motor
 
         if not motor.es_modelo_real:
-            self.aviso_motor.configure(
-                text="MODO DE PRUEBA: las respuestas las fabrica una regla "
-                     "fija, NO son una consulta real."
-            )
+            self.mostrar_cinta(
+                "MODO DE PRUEBA: las respuestas las fabrica una regla fija, "
+                "NO son una consulta real.")
         self._escribir_texto([
             ("Escribe tu duda, pon el año del caso y pulsa Consultar.\n\n",
              "apagado"),
@@ -543,9 +1318,10 @@ class Ventana:
              "IVA. No incluye consultas de la DGT ni sentencias.\n", "apagado"),
         ])
         self.pie.configure(
-            text=f"{len(self.ix.docs)} preceptos cargados · "
+            text=f"{len(self.ix.docs)} preceptos cargados  ·  "
                  f"cada consulta queda guardada en el expediente"
         )
+        self._reajustar()
         self._revisar_boton()
 
     def _bloquear(self, frase: str, detalle_tecnico: str = "") -> None:
@@ -592,8 +1368,10 @@ class Ventana:
         self.boton_copiar.configure(state="disabled")
         self.copiado.configure(text="")
         self.respuesta_actual = ""
-        self.panel_avisos.grid_remove()
-        for w in self.panel_avisos.winfo_children():
+        self.panel_avisos.pack_forget()
+        self.panel_aporte.pack_forget()
+        for w in list(self.panel_avisos.winfo_children()) + \
+                list(self.panel_aporte.winfo_children()):
             w.destroy()
         self.etiqueta_estado.grid_forget()
         self.etiqueta_explicacion.grid_forget()
@@ -675,14 +1453,147 @@ class Ventana:
     def _terminar_roto(self, frase: str) -> None:
         self._parar_barra()
         self._sin_nada_que_copiar()
+        self._mostrar("respuesta")
         self._pintar_estado("NO SE HA PODIDO CONSULTAR", frase,
                             EST.NO_ENCONTRADO)
         self._escribir_texto([(frase + "\n", "titulo")])
+
+
+    # ------------------------------------------------- que hay dentro
+
+    def _abrir_estado(self, _evento=None) -> None:
+        """LA PANTALLA DE ESTADO, DENTRO DE LA APP.
+
+        Es lo que se enseña para decidir si se enciende el criterio, asi que
+        tiene que caber de una vez y leerse sin que nadie la explique. Numeros
+        y frases cortas; ni una ruta de fichero, ni una variable de entorno.
+        """
+        from agente_fiscal import dgt as _D
+        from agente_fiscal import teac as _T
+
+        v = tk.Toplevel(self.raiz)
+        v.title("Qué hay dentro")
+        v.configure(bg=PAPEL)
+        # Abre segun la pantalla, y con barra: el contenido pide 949 px y
+        # antes abria a 620. Se salia por 329 px y no habia forma de llegar.
+        alto = min(940, int(v.winfo_screenheight() * 0.86))
+        v.geometry(f"720x{alto}")
+        v.minsize(620, 460)
+        caja_v, marco, lienzo_v = self._desplazable(v)
+        caja_v.pack(fill="both", expand=True)
+        marco.configure(padx=MARGEN, pady=MARGEN)
+
+        def titulo(texto):
+            tk.Label(marco, text=texto, bg=PAPEL, fg=TINTA3,
+                     font=self.fuente_seccion, anchor="w").pack(
+                         fill="x", pady=(HUECO, AIRE))
+
+        def caja():
+            c = tk.Frame(marco, bg=PAPEL2, highlightthickness=1,
+                         highlightbackground=FILETE, pady=AIRE)
+            c.pack(fill="x")
+            return c
+
+        def linea(padre, izq, der="", fuerte=False):
+            f = tk.Frame(padre, bg=PAPEL2)
+            f.pack(fill="x", padx=RELLENO, pady=3)
+            tk.Label(f, text=izq, bg=PAPEL2, fg=TINTA,
+                     font=(self.fuente_titular if fuerte else self.fuente),
+                     anchor="w", justify="left", wraplength=430).pack(side="left")
+            if der:
+                # La cifra en monoespaciada y en lila: es lo que se viene a
+                # mirar, y asi las columnas quedan alineadas de verdad.
+                tk.Label(f, text=der, bg=PAPEL2, fg=ENLACE,
+                         font=self.fuente_referencia, anchor="e").pack(side="right")
+
+        tk.Label(marco, text="D E N T R O   D E   L A   H E R R A M I E N T A",
+                 bg=PAPEL, fg=TINTA3, font=self.fuente_rotulo,
+                 anchor="w").pack(fill="x")
+        tk.Label(marco, text="Qué hay dentro", bg=PAPEL,
+                 fg=TINTA, font=self.fuente_titular, anchor="w"
+                 ).pack(fill="x", pady=(AIRE, 0))
+
+        # --- las normas ---
+        titulo("NORMAS CARGADAS · es lo único que fundamenta")
+        c = caja()
+        total = 0
+        if self.ix is not None:
+            for cuerpo in self.ix.normas.cuerpos.values():
+                n = sum(1 for d in self.ix.docs
+                        if d.registro.get("cuerpo_clave") == cuerpo.clave)
+                total += n
+                linea(c, cuerpo.etiqueta, f"{n} artículos")
+            linea(c, "", f"{total} en total")
+        else:
+            linea(c, "cargando...")
+
+        # --- la copia local ---
+        titulo("COPIA LOCAL DE CRITERIO · lo que añade el segundo botón")
+        c = caja()
+        consultas = len(list(_D.DIR_CONSULTAS.glob("*.json"))) \
+            if _D.DIR_CONSULTAS.is_dir() else 0
+        todas = _T.CacheTEAC().todas()
+        centrales = sum(1 for x in todas if x.es_central)
+        linea(c, "Consultas de la Dirección General de Tributos",
+              f"{consultas}")
+        linea(c, "Doctrina del TEAC", f"{centrales}")
+        linea(c, "Resoluciones de tribunales regionales",
+              f"{len(todas) - centrales}")
+        tk.Label(c, text=AVISO_DESPENSA, bg=PAPEL2, fg=TINTA2,
+                 font=self.fuente_menuda, anchor="w", justify="left",
+                 wraplength=560, padx=RELLENO, pady=HUECO2 - 4).pack(fill="x")
+
+        # --- el coste ---
+        titulo("LO QUE CUESTA CADA CONSULTA · medido, no estimado")
+        c = caja()
+        linea(c, BOTON_LEY, "~0,13 €")
+        linea(c, BOTON_CRITERIO, "~0,22 €")
+
+        # --- el canario ---
+        titulo("LAS FUENTES, AHORA MISMO")
+        c = caja()
+        self._estado_fuentes = {}
+        for nombre, mod in (("Tributos (consultas de la DGT)", _D),
+                            ("DYCTEA (resoluciones)", _T)):
+            viva, motivo = mod.fuente_viva()
+            texto = ("responde" if viva else
+                     f"sin comprobar hoy" if "no se ha comprobado" in motivo
+                     else "no responde")
+            f = tk.Frame(c, bg=PAPEL2)
+            f.pack(fill="x", padx=RELLENO, pady=3)
+            tk.Label(f, text=nombre, bg=PAPEL2, fg=TINTA, font=self.fuente,
+                     anchor="w").pack(side="left")
+            et = tk.Label(f, text=texto, bg=PAPEL2,
+                          fg=(ENLACE if viva else TINTA3),
+                          font=self.fuente_referencia, anchor="e")
+            et.pack(side="right")
+            self._estado_fuentes[nombre] = et
+        tk.Label(c, text="Las respuestas salen SIEMPRE de la copia local: que "
+                         "una fuente no responda no impide consultar, solo "
+                         "quiere decir que hoy no se puede ampliar.",
+                 bg=PAPEL2, fg=TINTA2, font=self.fuente_menuda, anchor="w",
+                 justify="left", wraplength=560, padx=RELLENO,
+                 pady=HUECO2 - 4).pack(fill="x")
+
+        cerrar = ttk.Button(marco, text="Cerrar", command=v.destroy,
+                            style="Discreto.TButton")
+        cerrar.pack(anchor="e", pady=(HUECO, 0))
+        self._pinchable(cerrar)
+        # La rueda, sobre cada etiqueta y no solo en los huecos.
+        self._atar_rueda_a_los_hijos_de(marco, lienzo_v)
+        v.transient(self.raiz)
+        v.lift()
 
     # ------------------------------------------------------------ pintar
 
     def _terminar(self, res: dict) -> None:
         self._parar_barra()
+        # LA VENTANA ENTERA PARA LEER. A partir de aqui el formulario estorba:
+        # ya se ha usado, y cada pixel suyo es un pixel que no tiene el texto.
+        self._mostrar("respuesta")
+        self.eco_pregunta.configure(
+            text=self._eco(self.caja.get("1.0", "end").strip(),
+                           self.ejercicio.get().strip()))
 
         # 1. Fallos: ni estado ni texto, solo la frase.
         if res.get("fallo"):
@@ -699,8 +1610,10 @@ class Ventana:
         # no la ventana por su cuenta: si algun dia no coincidieran, mandaria
         # lo que de verdad se uso.
         self.con_criterio = bool(res.get("con_criterio"))
-        self._pintar_estado(estado, EXPLICACION.get(estado, ""), estado)
+        self._pintar_estado(estado, explicacion(estado, self.con_criterio),
+                            estado)
         self.etiqueta_hecha_con.configure(text=HECHA_CON[self.con_criterio])
+        self._pintar_aporte(res)
         self._pintar_avisos(res.get("senales") or [],
                             res.get("cobertura") or [],
                             res.get("estructural") or "")
@@ -715,7 +1628,7 @@ class Ventana:
             self._sin_nada_que_copiar()
             self._escribir_sin_respaldo(res)
 
-        self.pie.configure(
+        self.pie_respuesta.configure(
             text=f"Expediente guardado en {res.get('traza', '(sin traza)')}"
         )
 
@@ -739,10 +1652,84 @@ class Ventana:
         self.filete_estado.configure(bg=FILETE_ESTADO.get(clave, FILETE))
         self.filete_estado.grid(row=0, column=0, rowspan=3, sticky="ns")
         self.etiqueta_estado.grid(row=0, column=1, sticky="ew")
-        self.etiqueta_explicacion.grid(row=1, column=1, sticky="ew")
+        self.etiqueta_explicacion.grid(row=1, column=1, sticky="ew",
+                                       padx=(RELLENO, RELLENO))
         self.etiqueta_hecha_con.configure(bg=fondo)
         self.etiqueta_hecha_con.grid(row=2, column=1, sticky="ew",
-                                     pady=(6, 12))
+                                     padx=(RELLENO, RELLENO),
+                                     pady=(AIRE - 2, HUECO2 - 2))
+        # El ancho se recalcula A LA FUERZA: el `<Configure>` del panel puede
+        # haber llegado ya, con el panel todavia estrecho, y entonces la
+        # guarda de «si no ha cambiado, no toques» deja puesto un ancho de
+        # cuando no habia nada dentro. Medido: la explicacion se quedaba
+        # envolviendo a 209 px dentro de una columna de 1.002.
+        self._ancho_estado = 0
+        self._wrap_estado()
+        self.panel_estado.after_idle(self._wrap_estado)
+        self._atar_rueda_a_los_hijos(self.panel_estado)
+
+
+    def _pintar_aporte(self, res: dict) -> None:
+        """QUE HA APORTADO EL CRITERIO, en una linea y con numeros.
+
+        Es la demostracion entera: la misma pregunta con los dos botones y la
+        diferencia a la vista. Sin esto habria que leerse las dos respuestas
+        enteras y compararlas a ojo, y nadie lo hace.
+        """
+        for w in self.panel_aporte.winfo_children():
+            w.destroy()
+        if not res.get("con_criterio"):
+            self.panel_aporte.pack_forget()
+            return
+
+        a = res.get("aporte") or {}
+        usadas, resol = a.get("consultas_dgt") or [], a.get("resoluciones") or []
+        habia = len(a.get("consultas_en_material") or [])
+        habia_r = len(a.get("resoluciones_en_material") or [])
+
+        if usadas or resol:
+            partes = []
+            if usadas:
+                partes.append(f"{len(usadas)} consulta(s) de la DGT")
+            if resol:
+                partes.append(f"{len(resol)} resolución(es)")
+            texto = ("Lo que ha añadido el criterio: " + " y ".join(partes)
+                     + ", citadas y comprobadas una a una.")
+            detalle = "  ·  ".join(usadas + resol)
+            color = TINTA
+        elif habia or habia_r:
+            texto = (f"Se le pusieron delante {habia} consulta(s) de la DGT y "
+                     f"{habia_r} resolución(es), y NINGUNA sostiene la "
+                     f"respuesta: esta duda la resuelve la ley sola.")
+            detalle = ""
+            color = TINTA2
+        else:
+            texto = ("Todavía no hay criterio guardado sobre esto. No es un "
+                     "fallo: la copia local se va llenando, y esta duda aún no "
+                     "está dentro.")
+            detalle = ""
+            color = TINTA2
+
+        et = tk.Label(self.panel_aporte, text=texto, bg=PAPEL2, fg=color,
+                      font=self.fuente, anchor="w", justify="left",
+                      padx=RELLENO, pady=AIRE - 2)
+        et.pack(fill="x")
+        elasticos = [(et, "izq", RELLENO * 2)]
+        if detalle:
+            ed = tk.Label(self.panel_aporte, text=detalle, bg=PAPEL2, fg=ENLACE,
+                          font=self.fuente_referencia, anchor="w",
+                          justify="left", padx=RELLENO)
+            ed.pack(fill="x", pady=(0, AIRE - 2))
+            elasticos.append((ed, "izq", RELLENO * 2))
+        # Los de dentro de los paneles se rehacen en cada consulta, asi que la
+        # lista de elasticos se limpia de los que ya no existen: si no, crece
+        # sin parar y `_reajustar` acaba hablandole a widgets destruidos.
+        self._elasticos = [x for x in self._elasticos if x[0].winfo_exists()]
+        self._elasticos += elasticos
+        self.panel_aporte.pack(fill="x", pady=(AIRE + 2, 0))
+        self._atar_rueda_a_los_hijos(self.panel_aporte)
+        self._ancho_previo = 0
+        self._reajustar()
 
     def _pintar_avisos(self, senales: list, cobertura: list,
                        estructural: str = "") -> None:
@@ -770,17 +1757,21 @@ class Ventana:
             w.destroy()
 
         def rotulo(texto: str) -> None:
-            tk.Label(self.panel_avisos, text=texto, bg=PAPEL2, fg=TINTA2,
-                     font=tkfont.Font(size=10, weight="bold"), anchor="w",
-                     padx=12, pady=6).pack(fill="x")
+            tk.Label(self.panel_avisos, text=texto, bg=PAPEL2, fg=TINTA3,
+                     font=self.fuente_seccion, anchor="w",
+                     # `pady` de un Label es UNA distancia, no una pareja:
+                     # con (8, 6) tkinter revienta. Ya esta escrito abajo y
+                     # aun asi cai otra vez.
+                     padx=RELLENO, pady=AIRE - 1).pack(fill="x")
 
         def linea(texto: str, color: str = TINTA) -> None:
             # El hueco de abajo va en el pack, NO en el Label: el `pady` de un
             # widget es una distancia sola, y una pareja (0, 4) lo revienta.
-            tk.Label(self.panel_avisos, text=texto, bg=PAPEL2,
-                     fg=color, font=self.fuente, anchor="w",
-                     justify="left", wraplength=820,
-                     padx=12).pack(fill="x", pady=(0, 4))
+            et = tk.Label(self.panel_avisos, text=texto, bg=PAPEL2,
+                          fg=color, font=self.fuente, anchor="w",
+                          justify="left", padx=RELLENO)
+            et.pack(fill="x", pady=(0, AIRE - 2))
+
 
         if senales:
             rotulo("DESACUERDO ENTRE LOS TEXTOS")
@@ -796,15 +1787,23 @@ class Ventana:
                   "estan vigentes en el ejercicio y no hay doctrina pendiente "
                   "de comprobar.", TINTA2)
         if estructural:
-            linea(estructural, TINTA2)
-        self.panel_avisos.grid()
+            linea(estructural, TINTA3)
+        self.panel_avisos.pack(fill="x")
+        self._atar_rueda_a_los_hijos(self.panel_avisos)
+        self._ancho_avisos = 0
+        self.panel_avisos.bind("<Configure>", self._wrap_avisos)
+        self.panel_avisos.after_idle(self._wrap_avisos)
+        self._ancho_previo = 0
+        self._reajustar()
 
     def _escribir_texto(self, trozos: list) -> None:
         self.texto.configure(state="normal")
         self.texto.delete("1.0", "end")
         for texto, etiqueta in trozos:
             self.texto.insert("end", texto, etiqueta)
+        self._columna()
         self.texto.configure(state="disabled")
+        self._arriba()
 
     # Un fragmento citado, en cualquiera de las comillas que usa el redactor.
     RE_CITA = re.compile(r"«[^»]{4,}»|“[^”]{4,}”|\"[^\"]{8,}\"")
@@ -884,7 +1883,9 @@ class Ventana:
                 f"Preceptos que la sostienen: {', '.join(verificadas)}.\n",
                 "apagado",
             )
+        self._columna()
         self.texto.configure(state="disabled")
+        self._arriba()
 
     def _escribir_sin_respaldo(self, res: dict) -> None:
         """NO ENCONTRADO: nunca el borrador, solo lo recuperado en crudo."""
@@ -923,7 +1924,9 @@ class Ventana:
                 "la Ley y el Reglamento del IVA: si la duda es de otro "
                 "impuesto, no puede contestarla.\n",
             )
+        self._columna()
         self.texto.configure(state="disabled")
+        self._arriba()
 
     def _leer_recuperado(self, res: dict) -> list:
         """(referencia, rubrica, enlace) de lo recuperado, desde la traza.
@@ -978,19 +1981,41 @@ def ventana_de_descoordinacion(raiz, error) -> None:
     """La pantalla de «no abro, y te digo por que». Sin traza y sin jerga."""
     raiz.title("Consulta fiscal — sin configurar")
     raiz.configure(bg=PAPEL)
-    marco = tk.Frame(raiz, bg=PAPEL, padx=30, pady=26)
+    # 780x520 estaba medido a ojo. En el peor caso -las seis frases de estado
+    # fuera de la guia- el contenido pide 643 px y se salia por 123. Se abre
+    # segun lo que haga falta, con techo de pantalla.
+    raiz.geometry("820x620")
+    raiz.minsize(620, 400)
+    f_ui = elegir_fuente("interfaz")
+    marco = tk.Frame(raiz, bg=PAPEL, padx=MARGEN, pady=MARGEN)
     marco.pack(fill="both", expand=True)
     tk.Label(marco, text="No se abre: falta terminar de configurar",
-             bg=PAPEL, fg=TINTA, font=("Helvetica", 16, "bold"),
-             anchor="w", justify="left").pack(fill="x", pady=(0, 14))
+             bg=PAPEL, fg=TINTA, font=(f_ui, 20, "bold"),
+             anchor="w", justify="left").pack(fill="x", pady=(0, HUECO))
     caja = tk.Frame(marco, bg=PAPEL2, highlightthickness=1,
                     highlightbackground=FILETE)
     caja.pack(fill="both", expand=True)
-    tk.Label(caja, text="\n".join(error.en_cristiano()), bg=PAPEL2, fg=TINTA,
-             font=("Helvetica", 12), justify="left", anchor="w",
-             padx=18, pady=16, wraplength=640).pack(fill="both", expand=True)
-    tk.Button(marco, text="Cerrar", command=raiz.destroy,
-              font=("Helvetica", 12)).pack(anchor="e", pady=(14, 0))
+    # El mismo filete lila del estado: esto no es un error del sistema, es una
+    # decision deliberada de no abrir, y se pinta como tal.
+    tk.Frame(caja, width=4, bg=LILA).pack(side="left", fill="y")
+    # Con barra: el numero de descuadres no tiene tope, y un aviso que no se
+    # puede leer entero no es un aviso.
+    texto = tk.Text(caja, wrap="word", bg=PAPEL2, fg=TINTA, font=(f_ui, 12),
+                    bd=0, highlightthickness=0, padx=RELLENO, pady=RELLENO,
+                    width=1, height=1)
+    texto.pack(side="left", fill="both", expand=True)
+    barra = ttk.Scrollbar(caja, orient="vertical", command=texto.yview,
+                          style="Vertical.TScrollbar")
+    barra.pack(side="right", fill="y")
+    texto.configure(yscrollcommand=barra.set)
+    texto.insert("1.0", "\n".join(error.en_cristiano()))
+    texto.configure(state="disabled")
+    boton = tk.Button(marco, text="Cerrar", command=raiz.destroy,
+                      font=(f_ui, 12), bg=ELEVADO, fg=TINTA,
+                      activebackground=FILETE, activeforeground=TINTA,
+                      relief="flat", bd=0, padx=HUECO, pady=AIRE,
+                      cursor="hand2", highlightthickness=0)
+    boton.pack(anchor="e", pady=(HUECO, 0))
 
 
 def main(argv: list[str]) -> int:

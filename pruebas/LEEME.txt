@@ -31,7 +31,7 @@ RECUPERADAS
 -----------
   prueba_instalador.py    10 escenarios del primer arranque en un PC de la
                           oficina. Si esto se rompe, no hay agente.
-  prueba_interfaz.py      73 comprobaciones de lo unico que ve la persona:
+  prueba_interfaz.py      206 comprobaciones de lo unico que ve la persona:
                           ano obligatorio, estados sin semaforo, avisos en tres
                           niveles, citas y enlaces legibles, fallos en cristiano.
   prueba_no_encontrado.py la regla que sostiene el sistema entero: nunca se
@@ -39,13 +39,18 @@ RECUPERADAS
   prueba_topes.py         el techo duro contra bucles. Garantia de seguridad,
                           no funcionalidad: si se rompe en silencio, nadie se
                           entera hasta que una consulta se queda dando vueltas.
-  prueba_configurar.py    el interruptor unico, los dos botones y la negativa
-                          a abrir a medias (escrita ya aqui, fase 20).
+  prueba_configurar.py    que los dos botones NO dependen de ningun fichero, y
+                          que una frase de la ventana que no este en GUIA.md
+                          impide abrir. Reescrita entera en la fase 21: la de
+                          la fase 20 protegia un interruptor que ya no existe.
   prueba_normativa.py     la identidad de un precepto es (norma, cuerpo,
                           articulo). El campo `normativa` en sus formatos
                           reales, el mapeo por codigo de DYCTEA y «ante la duda,
                           nada».
-  prueba_unidad.py        un TEAR no es el TEAC. El rotulo se comprueba en los
+  prueba_unidad.py        un TEAR no es el TEAC. Y desde la fase 26, que UNA
+                          SOLA funcion compone la etiqueta: habia dos caminos
+                          y el segundo llamaba TEAC a un TEAR cuando la
+                          resolucion no estaba en la copia local. El rotulo se comprueba en los
                           dos sentidos, la fuerza sale de unidad+calificacion y
                           el orden va por peso juridico.
   prueba_recorte.py       que los fragmentos recortados sigan siendo literales
@@ -65,7 +70,13 @@ boton. Con ellas en verde se puede encender el criterio; sin ellas, no.
 
 SIN PROTECCION HASTA SEPTIEMBRE
 -------------------------------
-Quedan SEIS. Ninguna esta en el camino critico del boton de criterio, y su
+Quedan CINCO. `prueba_textos_guia` ya no hace falta: lo que comprobaba -que
+todas las frases de la ventana esten dentro de GUIA.md, letra por letra- lo hace
+ahora `configuracion.revisar()` AL ARRANCAR, en la ventana y en la terminal. Una
+condicion de arranque protege mas que una suite que hay que acordarse de lanzar.
+Y en cuanto se encendio encontro dos descuadres reales.
+
+Las CINCO que quedan: ninguna esta en el camino critico del boton de criterio, y su
 fallo seria VISIBLE -un estado raro, un aviso repetido- y no silencioso. Queda
 escrito que cubrian, para no descubrirlo en produccion:
 
@@ -98,13 +109,6 @@ escrito que cubrian, para no descubrirlo en produccion:
   `prueba_asunto`. No entra en el camino del boton de criterio, pero conviene
   que vuelva: sin el, una remision que nadie ve se pierde en silencio.
 
-  prueba_textos_guia.py  Que la ventana y GUIA.md dicen LO MISMO, letra por
-                         letra. Desde la fase 20 el riesgo baja mucho -la guia
-                         la genera `configurar.py` y hay comprobacion de
-                         coherencia al arrancar- pero no desaparece: nadie
-                         comprueba que las frases de `interfaz.EXPLICACION`
-                         esten dentro de la guia que toca.
-
   prueba_dialogo.py      El dialogo de la clave: que oculta lo que se escribe,
                          que pega con Ctrl+V UNA vez, que comprueba la clave
                          antes de cerrar y que con una mala no se cierra.
@@ -116,7 +120,7 @@ LO QUE NUNCA ESTUVO EN /tmp, Y SIGUE
   python banco.py --motor ensayo  banco de recuperacion, 19 consultas
   python fase4.py comprobaciones  comprobaciones de la fase 4
   python fase2.py diagnostico     remisiones y corpus
-  python configurar.py --estado   coherencia de las cuatro piezas
+  python configurar.py            que hay dentro y lo que cuesta cada boton
 
 Y los FIXTURES tambien estaban versionados (casos/dgt_prueba, casos/teac_prueba),
 asi que reescribir las diez no exige rehacer los datos de prueba.
@@ -137,12 +141,47 @@ y lo que cayo, para poder repetirlo:
                       dejar de avisar si no queda ninguno   4 comprobaciones
   prueba_topes        quitar el techo al motor de ensayo    3 comprobaciones
   prueba_interfaz     rellenar solo el ano del caso         2 comprobaciones
+                      escribir la etiqueta en una f-string   1 comprobacion
+                      (fase 26, con su falso positivo comprobado)
+                      quitar el peso a la fila del texto     3 comprobaciones
+                      (fase 24: se queda en UNA linea visible)
+                      pintar NO ENCONTRADO de rojo (#CC2222) 2 comprobaciones
+                      de ambar (#E8A317)                     2 comprobaciones
+                      y del gris viejo del modo claro        1 comprobacion
+                      (fase 22, contraste 2,2:1)
   prueba_no_encontrado pintar el borrador rechazado         3 comprobaciones
   prueba_instalador   no crear el .env desde el ejemplo     4 comprobaciones
+  prueba_configurar   vaciar interfaz.TEXTOS_DE_ESTADO      la guia rota pasa
+                      (fase 21)                             por buena
+
+OJO CON LA PRUEBA QUE NO PRUEBA POR EL ENTORNO (fase 23): sin ventana ACTIVA,
+Tk no entrega eventos de teclado a nadie y `event_generate` se pierde sin decir
+nada. Medido: `focus_get()` vuelve a None despues de la primera tecla. Hay que
+llamar a `focus_force()` DENTRO del bucle; sin eso, cinco teclas de seis salian
+verdes sin haberse probado. Lo mismo con un `<Configure>` pendiente, que mueve
+la vista entre el evento y la comprobacion: se deja la vista en un punto
+conocido antes de medir.
+
+OJO CON EL EVENTO QUE LLEGA TARDE (fase 25): `event_generate` ENCOLA por
+defecto (`when="tail"`). Medido: una de cada cinco ejecuciones, la rueda de una
+comprobacion llegaba despues de recolocar la vista y la empujaba al reves. Se
+generan con `when="now"`, que los entrega en el acto.
+
+LOS NUMEROS DE LOS FIXTURES VAN EN LA SERIE 9xxx (V9001-22, 00/09001/2024): es
+lo que impide que un dato de prueba se confunda con material real si alguien lo
+ve fuera de contexto. Y cada carpeta lleva su LEEME.txt diciendo que esta
+inventado. Ver la regla de arriba del LEEME principal.
 
 OJO CON EL SABOTAJE QUE NO OCURRE: si el trozo que se busca para mutar no esta
 tal cual, la mutacion no pasa y la suite sale verde sin haber probado nada. Ya
 paso una vez con `interfaz.py`. Si no se puede mutar, cuenta como fallo.
+
+Y UNA VARIANTE NUEVA, de la fase 21: la mutacion puede ocurrir SOBRE OTRO OBJETO.
+`prueba_configurar` vacia `interfaz.TEXTOS_DE_ESTADO`, pero `revisar()` hace
+`import interfaz` por dentro y la suite habia vaciado `sys.modules` por el
+camino: eran dos modulos distintos y el sabotaje no llegaba. Se coge el modulo
+de `sys.modules` EN EL MOMENTO de mutar. Salio en rojo, que es justo para lo que
+esta puesto el mensaje «la mutacion no ocurrio».
 
 COMO SE CORREN
 --------------

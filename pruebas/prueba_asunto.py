@@ -34,7 +34,6 @@ from agente_fiscal import estado as EST
 from agente_fiscal import teac as T
 
 fallos = []
-MODO_ORIGINAL = CONF.modo_guardado()
 
 
 def comprobar(que, ok, obtenido=""):
@@ -241,7 +240,6 @@ comprobar("y el bloque 5 lo habria cazado",
           any(c.resolucion in ELECTRICIDAD for c in solo_articulo))
 print("    (con el filtro puesto no entra ninguno: la prueba mide de verdad)")
 
-CONF.guardar_modo(MODO_ORIGINAL)
 print("\n" + "=" * 62)
 print(f"FALLOS: {len(fallos)}")
 for f in fallos:

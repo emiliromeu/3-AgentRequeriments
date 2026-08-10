@@ -85,7 +85,7 @@ def es_central(unidad: str) -> bool:
 
 
 def etiqueta_de(unidad: str) -> str:
-    """Como se nombra una resolucion segun QUIEN la dicto.
+    """LA UNICA FUNCION QUE NOMBRA UNA RESOLUCION. Todo lo demas la usa.
 
         TEAC             -> «Criterio TEAC»
         TEAR de Cataluña -> «Resolucion del TEAR de Cataluña»
@@ -94,6 +94,23 @@ def etiqueta_de(unidad: str) -> str:
     El TEAR NUNCA se nombra «criterio»: un criterio es doctrina, y la doctrina
     la sienta el TEAC. Llamar criterio a una resolucion regional es decir que
     obliga a alguien cuando no obliga a nadie mas que al caso que resuelve.
+
+    RECIBE EL NOMBRE DE LA UNIDAD, NO EL CODIGO DEL NUMERO. El `07` de
+    `07/02872/2023` no es la unidad: la unidad es «TEAR de Baleares» y viene de
+    DYCTEA en el registro. Pasarle el codigo devuelve «Resolucion del 07», que
+    es correcto para lo que se le ha pedido y no se parece en nada a lo que el
+    sistema escribe de verdad. Lo digo porque me equivoque yo probandolo asi y
+    llegue a escribir en la guia un ejemplo que ningun usuario vera jamas.
+
+    Y CUANDO NO SE SABE QUIEN LA DICTO, la respuesta es la neutra, nunca
+    «TEAC»: atribuir doctrina a quien no la ha dictado es el peor error que
+    puede cometer este sistema, y sale gratis no cometerlo.
+
+    UN SOLO CAMINO, A PROPOSITO. Hubo dos: el verificador ponia la constante
+    «Criterio TEAC» y solo la corregia si el criterio estaba en la copia local.
+    Dos formas de escribir lo mismo divergen siempre; esta divergio en la rama
+    que menos se mira -la del criterio que no tenemos guardado- y ahi llamaba
+    TEAC a un TEAR.
     """
     u = " ".join((unidad or "").split())
     if not u:

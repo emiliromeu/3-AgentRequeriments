@@ -556,9 +556,17 @@ LEE ESTO ANTES DE USARLO, PORQUE NO ES LO MISMO QUE LO DE ARRIBA:
 
   FORMATO DE LA CITA, con el tribunal DENTRO del rotulo:
 
-      «fragmento literal» {Resolucion del TEAR de Cataluña
-      08/02042/2022/00/00, de 21/09/2022 —
+      «fragmento literal» {Resolucion del TEAR de Baleares
+      07/02872/2023/00/00, de 29/04/2025 —
       https://serviciostelematicosext.hacienda.gob.es/...}
+
+  EL EJEMPLO ES UNA RESOLUCION QUE ESTA EN LA COPIA LOCAL, con su unidad y su
+  fecha de verdad. Antes ponia «TEAR de Cataluña 08/02042/2022», que no existe
+  en ninguna parte: un numero inventado con formato de cita real.
+
+  El nombre del tribunal NO se escribe aqui: sale de `unidad`, que es lo que
+  dice DYCTEA, y lo compone `teac.etiqueta_de`. Si algun dia se cita un TEAR de
+  Cataluña saldra «Resolucion del TEAR de Cataluña» sin que nadie toque nada.
 
   Se comprueba igual de estricto que todo lo demas -letra por letra- Y
   ADEMAS se comprueba que el rotulo diga el tribunal que de verdad la

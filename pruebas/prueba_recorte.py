@@ -23,7 +23,13 @@ from agente_fiscal import dgt as D
 from agente_fiscal import redactor as RED
 
 fallos = []
-MODO_ORIGINAL = CONF.modo_guardado()
+
+# LOS NUMEROS DE CONSULTA DE ESTA SUITE SON INVENTADOS, Y VAN EN LA SERIE 9xxx.
+# Es la marca que impide que un dato de prueba se confunda con criterio real si
+# alguien lo ve fuera de contexto -en una traza, en un pantallazo, en un
+# informe-. Ver la regla de arriba del LEEME. Antes iban en el rango normal
+# (V0001-23, V0100-24...) y no habia forma de saber a simple vista que no
+# existian.
 
 
 def comprobar(que, ok, obtenido=""):
@@ -126,7 +132,7 @@ print("  un unico fragmento gigante. Con el tope aplicado al fragmento entero,")
 print("  esa consulta -la mas pertinente que existe- se caia del todo.\n")
 enorme = consulta("\n".join(
     [f"Parrafo {i} sobre el articulo 80 de la Ley 37/1992. " + "relleno " * 60
-     for i in range(200)]), "V0002-23")
+     for i in range(200)]), "V9102-23")
 plan = RED.plan_de_criterio(REG80, 2023, grafo, [enorme], None, N)
 r = plan.recortes[0]
 print(f"    ley {plan.ley} · criterio {plan.criterio} ({plan.proporcion_ley:.0%} ley)")
@@ -189,7 +195,7 @@ def gorda(n):
          for i in range(120)]), n)
 
 
-tres = [gorda("V0010-21"), gorda("V0020-22"), gorda("V0030-23")]
+tres = [gorda("V9110-21"), gorda("V9120-22"), gorda("V9130-23")]
 plan = RED.plan_de_criterio(REG80, 2023, grafo, tres, None, N)
 for r in plan.recortes:
     print(f"    {r.fuente}: {r.enviado:6d} car. ({r.parrafos_enviados} parrafos)")
@@ -222,7 +228,7 @@ comprobar("las descartadas dicen por que",
 
 # ===================================== 6. SIN NADA PERTINENTE, NO SE MANDA
 print("\n=== 6. SIN NADA PERTINENTE, NO SE MANDA ===")
-nada = consulta("Esto habla del articulo 148 y de nada mas.\nNi rastro.", "V0001-23")
+nada = consulta("Esto habla del articulo 148 y de nada mas.\nNi rastro.", "V9101-23")
 plan3 = RED.plan_de_criterio(REG80, 2023, grafo, [nada], None, N)
 comprobar("no genera bloque", plan3.bloques_dgt == [], str(plan3.bloques_dgt))
 comprobar("pero queda anotada con su motivo",
@@ -246,7 +252,6 @@ comprobar("y uno cosido de dos trozos, tampoco",
           C.normalizar_literal(recortado) not in cuerpo, recortado[:60])
 print("    (las dos alteraciones se detectan: la comprobacion 1 mide de verdad)")
 
-CONF.guardar_modo(MODO_ORIGINAL)
 print("\n" + "=" * 62)
 print(f"FALLOS: {len(fallos)}")
 for f in fallos:
