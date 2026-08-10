@@ -89,8 +89,13 @@ VARIABLE_TEXTOS = "AGENTE_DGT_TEXTOS"
 
 
 def textos_con_dgt() -> bool:
-    import os
-    return os.environ.get(VARIABLE_TEXTOS, "").strip() not in ("", "0", "no", "off")
+    """Los textos de la ventana los decide el MODO, no una variable suelta.
+
+    Ver `agente_fiscal.configuracion`. La variable sigue mandando sobre el
+    fichero para poder mirar los textos nuevos sin cambiar de modo.
+    """
+    from agente_fiscal import configuracion as C
+    return C.textos_con_criterio()
 
 
 CLARO_SIN_DGT = (
@@ -888,6 +893,25 @@ class Ventana:
 # ------------------------------------------------------------------- main
 
 
+def ventana_de_descoordinacion(raiz, error) -> None:
+    """La pantalla de «no abro, y te digo por que». Sin traza y sin jerga."""
+    raiz.title("Consulta fiscal — sin configurar")
+    raiz.configure(bg=PAPEL)
+    marco = tk.Frame(raiz, bg=PAPEL, padx=30, pady=26)
+    marco.pack(fill="both", expand=True)
+    tk.Label(marco, text="No se abre: falta terminar de configurar",
+             bg=PAPEL, fg=TINTA, font=("Helvetica", 16, "bold"),
+             anchor="w", justify="left").pack(fill="x", pady=(0, 14))
+    caja = tk.Frame(marco, bg=PAPEL2, highlightthickness=1,
+                    highlightbackground=FILETE)
+    caja.pack(fill="both", expand=True)
+    tk.Label(caja, text="\n".join(error.en_cristiano()), bg=PAPEL2, fg=TINTA,
+             font=("Helvetica", 12), justify="left", anchor="w",
+             padx=18, pady=16, wraplength=640).pack(fill="both", expand=True)
+    tk.Button(marco, text="Cerrar", command=raiz.destroy,
+              font=("Helvetica", 12)).pack(anchor="e", pady=(14, 0))
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description="Ventana de consulta fiscal.")
     ap.add_argument("--motor", choices=["anthropic", "ensayo"],
@@ -895,6 +919,19 @@ def main(argv: list[str]) -> int:
     args = ap.parse_args(argv)
 
     raiz = tk.Tk()
+
+    # MEJOR NO ABRIR QUE ABRIR MINTIENDO. Si las fuentes, los textos y la guia
+    # no dicen lo mismo, la ventana podria estar afirmando que hay criterio de
+    # la DGT mientras la hoja de la mesa dice que no. Quien lea la hoja
+    # decidira con ella, y nadie se enterara.
+    from agente_fiscal import configuracion as CONF
+    try:
+        CONF.exigir_coherencia()
+    except CONF.Descoordinado as e:
+        ventana_de_descoordinacion(raiz, e)
+        raiz.mainloop()
+        return 1
+
     Ventana(raiz, args.motor)
     raiz.mainloop()
     return 0

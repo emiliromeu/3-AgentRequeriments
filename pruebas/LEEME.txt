@@ -1,0 +1,119 @@
+LOS BANCOS DE PRUEBAS VIVEN AQUI, Y NO EN UN DIRECTORIO TEMPORAL
+================================================================
+
+LA REGLA
+--------
+1. Si un guion comprueba algo que no queremos que se rompa, VA AL REPOSITORIO.
+   Nada en /tmp. Un banco de pruebas que se borra solo no es un banco de
+   pruebas.
+
+2. NINGUNA PRUEBA SE DA POR BUENA SIN VERLA FALLAR CUANDO DEBE FALLAR.
+   Se rompe el codigo de verdad, se corre la suite y se comprueba que se pone
+   roja. Ya nos ha pasado TRES veces tener suites en verde que no probaban
+   nada:
+     · `prueba_9b_e2e` llevaba desde la fase 12 saltandose su comprobacion
+       principal por un `if` que nunca se cumplia;
+     · `prueba_no_encontrado` se apoyaba en un fallo del material -la ficha
+       nombraba mal la norma- y al arreglarlo dejo de probar lo suyo;
+     · un caso «mixto» de TEAC y TEAR que no mezclaba nada y salia verde.
+
+   Cada suite lleva un bloque final de CONTROL NEGATIVO que rompe a proposito
+   lo que protege y comprueba que la propia suite lo cazaria.
+
+QUE SE PERDIO, Y CUANDO
+-----------------------
+El 10 de agosto de 2026 el directorio temporal donde vivian las suites se
+limpio entre sesiones. Se perdieron CATORCE. Empezaron siendo guiones de usar
+y tirar y dejaron de serlo hace mucho: eran lo unico que decia si un cambio
+rompia algo.
+
+RECUPERADAS (las cuatro que protegen la entrega)
+------------------------------------------------
+  prueba_instalador.py    10 escenarios del primer arranque en un PC de la
+                          oficina. Si esto se rompe, no hay agente.
+  prueba_interfaz.py      73 comprobaciones de lo unico que ve la persona:
+                          ano obligatorio, estados sin semaforo, avisos en tres
+                          niveles, citas y enlaces legibles, fallos en cristiano.
+  prueba_no_encontrado.py la regla que sostiene el sistema entero: nunca se
+                          ensena texto que el verificador no ha aceptado.
+  prueba_topes.py         el techo duro contra bucles. Garantia de seguridad,
+                          no funcionalidad: si se rompe en silencio, nadie se
+                          entera hasta que una consulta se queda dando vueltas.
+  prueba_configurar.py    el interruptor unico y la negativa a abrir a medias
+                          (escrita ya aqui, en la fase 20).
+
+SIN PROTECCION HASTA SEPTIEMBRE
+-------------------------------
+Estas DIEZ no se han reescrito. Queda escrito que cubrian, para saber que
+dejo de estar vigilado y no descubrirlo por un fallo en produccion:
+
+  prueba_9b.py           Las señales de estado de la DGT: que varias consultas
+                         de anos distintos sobre el mismo precepto dan
+                         DISCUTIDO, que una consulta de otra norma va a
+                         cobertura y no a desacuerdo, y que la fuente caida se
+                         dice sin bajar el estado.
+
+  prueba_9b_e2e.py       Lo mismo de extremo a extremo por `fase4.consultar`,
+                         con la DGT encendida: que una pregunta de IRPF sigue
+                         sin colarse y que la fuente caida deja constancia.
+
+  prueba_discutido.py    Que DISCUTIDO sale de `EST.calcular` y no solo de las
+                         señales sueltas. Incluye los dos ejes: desacuerdo
+                         frente a cobertura, y el criterio revocado de la
+                         fuente caida.
+
+  prueba_normativa.py    El campo `normativa` de la DGT: que se compara por
+                         NORMA Y ARTICULO y nunca por numero suelto. Es la
+                         leccion de la fase 6 y la que mas caro sale si se
+                         rompe: inventa señales de discusion que no existen.
+
+  prueba_petete.py       El cliente de PETETE: troceo del HTML cacheado,
+                         mapeo numero<->id, el canario y sus tres cubos de
+                         fallo (culpa nuestra / suya / sin respuesta).
+
+  prueba_recorte.py      El recorte del criterio: que los fragmentos que se
+                         mandan siguen siendo LITERALES letra por letra, que
+                         el tope relativo se cumple (el criterio nunca por
+                         encima de la ley), la cuota por consulta y que un
+                         articulo 80 de otra ley no selecciona parrafos.
+
+  prueba_agrupado.py     Que los avisos del TEAC se agrupan por articulo y no
+                         por criterio -salian seis identicos- y que la
+                         unificacion de criterio va delante.
+
+  prueba_unidad.py       La unidad resolutoria: que un TEAR no se presenta como
+                         TEAC, que la fuerza sale de la calificacion de la
+                         fuente y que el rotulo se comprueba en los DOS
+                         sentidos. Aqui vive el defecto mas grave que se ha
+                         encontrado en el proyecto.
+
+  prueba_asunto.py       El filtro de materia y asunto de la doctrina: que no
+                         entre doctrina del impuesto sobre la electricidad en
+                         una consulta de IVA, y el detector de anexos.
+
+  prueba_textos_guia.py  Que la ventana y GUIA.md dicen LO MISMO, letra por
+                         letra. Desde la fase 20 el riesgo baja mucho -la guia
+                         la genera `configurar.py` y hay comprobacion de
+                         coherencia al arrancar- pero no desaparece: nadie
+                         comprueba que las frases de `interfaz.EXPLICACION`
+                         esten dentro de la guia que toca.
+
+  prueba_dialogo.py      El dialogo de la clave: que oculta lo que se escribe,
+                         que pega con Ctrl+V UNA vez, que comprueba la clave
+                         antes de cerrar y que con una mala no se cierra.
+                         (`prueba_instalador` cubre el camino, no el dialogo.)
+
+LO QUE NUNCA ESTUVO EN /tmp, Y SIGUE
+------------------------------------
+  python fase3.py probar          bateria del verificador, 37 casos adversarios
+  python banco.py --motor ensayo  banco de recuperacion, 19 consultas
+  python fase4.py comprobaciones  comprobaciones de la fase 4
+  python fase2.py diagnostico     remisiones y corpus
+  python configurar.py --estado   coherencia de las cuatro piezas
+
+Y los FIXTURES tambien estaban versionados (casos/dgt_prueba, casos/teac_prueba),
+asi que reescribir las diez no exige rehacer los datos de prueba.
+
+COMO SE CORREN
+--------------
+  for p in pruebas/prueba_*.py; do python3 "$p" || echo "ROJO: $p"; done

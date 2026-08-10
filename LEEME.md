@@ -1600,3 +1600,112 @@ nuestras tenemos el articulado.
 
 Remisiones: **1704 → 1709** totales, **159 → 164** pendientes externas. Cinco
 nuevas en todo el corpus, ninguna de ruido.
+
+---
+
+# FASE 20 · UN SOLO INTERRUPTOR
+
+## El problema
+
+Encender las fuentes eran **cuatro cosas** coordinadas por la memoria de una
+persona: `AGENTE_DGT`, `AGENTE_TEAC`, `AGENTE_DGT_TEXTOS` y cambiar `GUIA.md` a
+mano. El día que se olvidara una, la ventana diría que la DGT está y la hoja de
+la mesa diría que no. **Y quien lea la hoja decidirá con ella.**
+
+## El mando
+
+```
+python configurar.py --estado          qué hay ahora, y lo que cuesta
+python configurar.py --con-criterio    enciende las fuentes, sus textos y su guía
+python configurar.py --solo-ley        vuelve a la ley sola
+```
+
+Las cuatro piezas o ninguna. Y los dos modos son **simétricos**: no hay ida sin
+vuelta.
+
+**`GUIA.md` pasa a ser un fichero generado.** Las versiones que se editan viven
+en `guias/GUIA.solo-ley.md` y `guias/GUIA.con-criterio.md`, cada una con una
+marca `<!-- MODO: … -->` dentro. La marca viaja con el texto que describe: un
+registro aparte se queda viejo, una marca dentro del fichero no.
+
+### Por qué un fichero y no solo variables de entorno
+
+Una variable vive dentro de un proceso: `configurar.py` no puede dejarla puesta
+para el doble clic de mañana. Así que el modo se guarda en `modo.json`.
+
+```
+ORDEN DE MANDO:  variable de entorno  >  modo.json  >  apagado
+```
+
+El entorno manda **a propósito**: las suites encienden la DGT con `AGENTE_DGT=1`
+para una ejecución concreta y no deben depender de cómo esté configurado el
+equipo ni dejarlo tocado.
+
+**`modo.json` va al repositorio**, y no es un descuido: `GUIA.md` también está
+versionado. Si uno viajara y el otro no, un clon nuevo tendría la guía de un
+modo y el modo por defecto del otro — y se negaría a abrir nada más clonarlo.
+
+## Imposible quedarse a medias
+
+`configuracion.revisar()` mira lo que **cada pieza dice de verdad** —no lo que
+debería decir— y lo compara con el modo. Si algo no cuadra, ni la ventana ni la
+terminal abren:
+
+```
+La herramienta esta a medio configurar y NO se abre.
+
+El modo guardado es «solo-ley», pero no todo lo acompana:
+
+  · fuente DGT: esta encendida y el modo «solo-ley» pide que este apagada
+
+Se arregla con UNA orden, que deja las cuatro piezas a la vez:
+
+    python configurar.py --solo-ley
+
+No se abre a medias a proposito: si la ventana dijera que hay criterio de
+la DGT y la hoja de la mesa dijera que no, alguien decidiria con la que
+tuviera delante.
+```
+
+La terminal para **antes de gastar una llamada**. Comprobado rompiendo cada
+pieza por separado: guía sin marca, guía del otro modo, fuente encendida a mano
+y textos encendidos a mano. Los cuatro se detectan y **los cuatro dicen cuál es**
+— «algo va mal» no sirve para arreglarlo.
+
+## La guía dice la verdad en los dos modos
+
+La de `con-criterio` lleva la tabla que faltaba, y es lo más importante de esa
+página:
+
+| | qué es | a quién obliga |
+|---|---|---|
+| Ley y reglamento | la norma | a todos. Es lo único que fundamenta |
+| Doctrina del TEAC | criterio del tribunal central | **a toda la Administración** (art. 239.8 LGT) |
+| Consulta de la DGT | criterio administrativo | a Hacienda, **frente a quien preguntó** |
+| Resolución de un TEAR | un caso resuelto en su región | **a nadie más que a ese caso** |
+
+Con la nota de que un TEAR vale por **valor predictivo**, no por fuerza: es lo
+que mejor anticipa qué le va a pasar de hecho a un cliente de esa provincia.
+
+## ⚠️ SE PERDIERON LOS CATORCE BANCOS DE PRUEBAS
+
+El 10 de agosto de 2026 el directorio temporal donde vivían se limpió entre
+sesiones. Se perdieron las suites de unidad de las fases 9 a 19: `prueba_9b`,
+`prueba_discutido`, `prueba_recorte`, `prueba_topes`, `prueba_dialogo`,
+`prueba_unidad`, `prueba_asunto`, `prueba_interfaz`, `prueba_petete`,
+`prueba_normativa`, `prueba_no_encontrado`, `prueba_textos_guia`,
+`prueba_9b_e2e` y `prueba_instalador`.
+
+**Empezaron siendo guiones de usar y tirar y dejaron de serlo hace mucho**: eran
+lo único que decía si un cambio rompía algo. Escribirlos en `/tmp` fue el error,
+y se mantuvo por inercia sesión tras sesión.
+
+**Lo que NO se perdió**, porque está en el repositorio: la batería del
+verificador (`fase3.py probar`, 37 casos), el banco de recuperación
+(`banco.py`), las comprobaciones de la fase 4 y el diagnóstico de remisiones.
+Y los **fixtures** (`casos/dgt_prueba/`, `casos/teac_prueba/`) también estaban
+versionados, así que reescribir las suites no exige rehacer los datos.
+
+**Regla, a partir de ahora:** si un guion comprueba algo que no queremos que se
+rompa, va a `pruebas/` en el repositorio. Un banco de pruebas que se borra solo
+no es un banco de pruebas.

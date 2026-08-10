@@ -153,8 +153,18 @@ URL_NAVEGADOR = ("https://serviciostelematicosext.hacienda.gob.es/TEAC/DYCTEA/"
 
 
 def activa() -> bool:
-    """Interruptor PROPIO, distinto del de la DGT. Apagado por defecto."""
-    return os.environ.get(VARIABLE, "").strip() not in ("", "0", "no", "off")
+    """Si el TEAC participa. Ver `configuracion`.
+
+    YA NO ES UN INTERRUPTOR PROPIO, y es deliberado: tenerlos separados era
+    una de las cuatro cosas que habia que acordarse de hacer a la vez. Un
+    sistema con doctrina y sin criterio -o al reves- no lo pidio nadie; era
+    solo lo que salia de olvidarse una variable.
+    `AGENTE_TEAC` sigue valiendo para encenderlo suelto en una prueba.
+    """
+    from . import configuracion as C
+    if os.environ.get(VARIABLE) is not None:
+        return os.environ.get(VARIABLE, "").strip() not in ("", "0", "no", "off")
+    return C.con_criterio()
 
 
 # ------------------------------------- que norma de DYCTEA es cual de las nuestras

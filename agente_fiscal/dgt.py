@@ -253,8 +253,15 @@ def _parece_norma(designacion: str) -> bool:
 
 
 def activa() -> bool:
-    """Si la DGT participa. Apagada por defecto: ver la cabecera."""
-    return os.environ.get(VARIABLE, "").strip() not in ("", "0", "no", "off")
+    """Si la DGT participa. Apagada por defecto: ver la cabecera.
+
+    El interruptor de verdad esta en `configuracion`: un solo modo para las
+    cuatro piezas. La variable de entorno sigue mandando sobre el fichero, que
+    es lo que permite a las suites encender la DGT para UNA ejecucion sin
+    tocar como esta configurado el equipo.
+    """
+    from . import configuracion as C
+    return C.con_criterio()
 
 
 # --------------------------------------------------------------- la consulta

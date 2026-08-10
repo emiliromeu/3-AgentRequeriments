@@ -694,7 +694,22 @@ def modo_esquema(args) -> int:
     return 0 if ok else 1
 
 
+def _exigir_coherencia_o_parar() -> int:
+    """El mismo corte que en la ventana. Ver `interfaz.main`."""
+    from agente_fiscal import configuracion as CONF
+    try:
+        CONF.exigir_coherencia()
+    except CONF.Descoordinado as e:
+        titulo("LA HERRAMIENTA ESTA A MEDIO CONFIGURAR")
+        for l in e.en_cristiano():
+            print(l)
+        return 1
+    return 0
+
+
 def modo_consultar(args) -> int:
+    if _exigir_coherencia_o_parar():
+        return 1
     motor, err = preparar_motor(
         args.motor,
         modelo_analisis=args.modelo_analisis,
