@@ -45,6 +45,23 @@ def comprobar(que, ok, obtenido=""):
 CRUDO = RAIZ / "datos" / "crudo"
 CATALANA = "BOE-A-2024-6951"
 
+# ESTA SUITE NO PUEDE ESCRIBIR EN EL CORPUS DE VERDAD. Se desvia AQUI, una vez
+# y para todo el fichero, no bloque a bloque.
+#
+# Por que asi: la primera version lo desviaba solo donde llamaba a
+# `modo_ingerir` a proposito... y habia OTRA llamada, en el control negativo,
+# que se me paso. Mientras el troceador no entendio la numeracion del Codi las
+# dos se negaban y no pasaba nada; el dia que se arreglo, LA PRUEBA INGIRIO LA
+# NORMA CATALANA EN EL CORPUS DE PRODUCCION -13 normas, 2.121 preceptos, el
+# sello descuadrado y el banco midiendo otro corpus-. Y lo hizo DOS VECES,
+# porque la primera vez lo tape sitio a sitio.
+#
+# Una prueba que muta lo que mide no es una prueba. Si hay que desviar algo, se
+# desvia en la puerta.
+CORPUS_REAL = fase1.DIR_CORPUS
+import tempfile as _tmp  # noqa: E402
+fase1.DIR_CORPUS = Path(_tmp.mkdtemp())
+
 
 def trocear(norma_id):
     """(citables, descartados) de una norma, desde el crudo en disco."""
@@ -80,7 +97,7 @@ print("\n=== 1. EL UMBRAL SALE DE LAS NORMAS QUE YA ESTAN ===")
 print("  No es una intuicion: es lo que dan las doce del corpus.\n")
 
 corpus = sorted(f.name[: -len(".jsonl")]
-                for f in (RAIZ / "datos" / "corpus").glob("*.jsonl")
+                for f in CORPUS_REAL.glob("*.jsonl")
                 if not f.name.endswith(".descartados.jsonl"))
 comprobar("hay doce normas en el corpus", len(corpus) == 12, len(corpus))
 
@@ -112,16 +129,17 @@ if m is None:
 else:
     print(f"    {m['citables']} citables · {m['sin_reconocer']} sin reconocer "
           f"de {m['total']} ({m['proporcion']:.1%})")
-    comprobar("el troceador no la entiende, y se nota en los numeros",
-              m["proporcion"] > fase1.TOPE_SIN_RECONOCER, m["proporcion"])
-    comprobar("  y lo que no entiende es EL ARTICULADO, no un bloque raro",
-              all(str(e).startswith("Artículo") for e in m["ejemplos"]),
-              m["ejemplos"])
-    comprobar("  hay mas bloques sin reconocer que citables: la segunda regla",
-              m["sin_reconocer"] > m["citables"],
-              f"{m['sin_reconocer']} vs {m['citables']}")
-    comprobar("  y NO esta en el corpus", CATALANA not in corpus)
-    comprobar("  ni tiene sello", CATALANA not in S.leer(RAIZ / "datos" / "corpus"))
+    # HISTORIA, PORQUE EXPLICA LA PUERTA: cuando se escribio esto la catalana
+    # daba 10 citables y 151 sin reconocer (66,2%), y la puerta la paraba. Al
+    # enseñarle al troceador la numeracion compuesta del Codi paso a 0 sin
+    # reconocer. La puerta no se toco: dejo de tener motivo para pararla.
+    comprobar("el troceador YA la entiende: cero sin reconocer",
+              m["sin_reconocer"] == 0, m["sin_reconocer"])
+    comprobar("  y reconoce su articulado entero, no cuatro disposiciones",
+              m["citables"] > 150, m["citables"])
+    comprobar("  sigue sin estar en el corpus: entrar es otra decision",
+              CATALANA not in corpus)
+    comprobar("  ni tiene sello", CATALANA not in S.leer(CORPUS_REAL))
 
 # =========================================== 3. LO QUE SE LEE EN PANTALLA
 print("\n=== 3. EL MENSAJE SIRVE PARA DIAGNOSTICAR ===")
@@ -131,23 +149,43 @@ print("  momento, sin abrir el codigo.\n")
 import contextlib  # noqa: E402
 import io  # noqa: E402
 
+# ESTA PRUEBA NO ESCRIBE EN EL CORPUS DE VERDAD. NUNCA.
+#
+# La primera version llamaba a `fase1.modo_ingerir` directamente, dando por
+# hecho que se negaria. Mientras el troceador no entendio la numeracion del
+# Codi, se nego y no paso nada. El dia que se arreglo la numeracion, la puerta
+# dejo de rechazarla y ESTA PRUEBA INGIRIO LA NORMA CATALANA EN EL CORPUS DE
+# PRODUCCION: 13 normas, 2.121 preceptos, el sello descuadrado y el banco
+# midiendo otro corpus. Una prueba que muta lo que mide no es una prueba.
+#
+# Ahora se ingiere contra un directorio TEMPORAL. Lo que se comprueba es el
+# mensaje y el codigo, que es lo que importa, y lo que se escriba se escribe
+# donde no molesta.
 buf = io.StringIO()
 with contextlib.redirect_stdout(buf):
     codigo = fase1.modo_ingerir(CATALANA, descargar=False)
 salida = buf.getvalue()
-comprobar("se niega con codigo de fallo", codigo == 1, codigo)
-comprobar("  dice cuantos reconoce", "10" in salida and "citable" in salida)
-comprobar("  dice cuantos NO", "151" in salida and "228" in salida)
-comprobar("  y en que proporcion", "66.2%" in salida, salida[-200:])
-comprobar("  enseña ejemplos de lo que no ha entendido",
-          "Artículo 611-1" in salida)
-comprobar("  explica que suele significar",
-          "numera sus articulos de otra forma" in salida)
-comprobar("  avisa de que el fallo seria SILENCIOSO",
-          "sin que nadie sepa por que" in salida)
-comprobar("  y dice como forzarlo si hiciera falta", "--forzar" in salida)
-comprobar("y NO ha escrito nada en el corpus",
-          not (RAIZ / "datos" / "corpus" / f"{CATALANA}.jsonl").exists())
+
+comprobar("el corpus de VERDAD sigue sin la catalana",
+          not (CORPUS_REAL / f"{CATALANA}.jsonl").exists())
+comprobar("y sigue teniendo las doce de siempre",
+          len([f for f in CORPUS_REAL.glob("*.jsonl")
+               if not f.name.endswith(".descartados.jsonl")]) == 12)
+
+# DESDE QUE EL TROCEADOR ENTIENDE LA NUMERACION DEL CODI, esta norma YA NO se
+# rechaza por bloques sin reconocer: pasa de 151 a 0. La puerta sigue estando y
+# sigue haciendo su trabajo -lo prueba el bloque 1 con las doce y el control
+# negativo de abajo-, pero esta norma dejo de ser su caso.
+m = medida(CATALANA)
+comprobar("ahora la catalana pasa la puerta del troceo", codigo == 0, codigo)
+comprobar("  porque ya no hay bloques sin reconocer",
+          m["sin_reconocer"] == 0, m["sin_reconocer"])
+comprobar("  y se reconocen sus articulos, no cuatro disposiciones",
+          m["citables"] > 150, m["citables"])
+comprobar("  con la numeracion compuesta entera",
+          any("611-1" in str(r.get("referencia", "")) for r in trocear(CATALANA)[0]))
+comprobar("y el mensaje de la puerta ya no aparece",
+          "NO SE INGIERE" not in salida, salida[-160:])
 
 # =========================================== 4. EL FORZADO DEJA RASTRO
 print("\n=== 4. FORZAR SE PUEDE, PERO QUEDA ESCRITO ===")
@@ -176,25 +214,54 @@ comprobar("  sin llamarlo problema de integridad: su sello cuadra",
 print("\n=== 5. LA PRUEBA SABE PONERSE ROJA ===")
 print("  Ninguna prueba se da por buena sin verla fallar cuando debe fallar.\n")
 
+# (a) UNA NORMA QUE EL TROCEADOR DE VERDAD NO ENTIENDE.
+#
+# El control no puede depender de que exista por ahi una norma rota: la
+# catalana lo estuvo y dejo de estarlo en cuanto se le enseño la numeracion
+# compuesta, y este bloque se quedo sin sujeto. Se fabrica una, con rotulos
+# que ninguna regla reconoce, y asi el control mide la PUERTA y no el estado
+# del mundo.
+import tempfile as _t2  # noqa: E402
+import xml.etree.ElementTree as _ET  # noqa: E402
+
+RARA = "BOE-A-9999-99999"
+raiz = _ET.Element("documento")
+for n in range(30):
+    # Cinco reconocibles y veinticinco no: asi la proporcion no es 100% y el
+    # control puede aflojar el tope para ver que la PRIMERA regla se rinde y
+    # la segunda sigue parandola. Con 100% no se puede distinguir una de otra.
+    titulo = f"Articulo {n}" if n < 5 else f"Regla ~{n}~ del cuaderno"
+    b = _ET.SubElement(raiz, "bloque", id=f"b{n}", tipo="precepto",
+                       titulo=titulo)
+    v = _ET.SubElement(b, "version", id_norma=RARA,
+                       fecha_publicacion="20260101", fecha_vigencia="20260101")
+    _ET.SubElement(v, "p").text = f"Texto de la regla {n}."
+xml_raro = _ET.tostring(raiz, encoding="utf-8")
+
+d_raro = Path(_t2.mkdtemp())
+(d_raro / RARA).mkdir()
+cit_raro, desc_raro = P.trocear(xml_raro, RARA, "Norma de prueba", "")
+sin_raro = [r for r in desc_raro if r["tipo"] == B.DESCONOCIDO]
+prop = len(sin_raro) / (len(cit_raro) + len(desc_raro))
+print(f"    la norma fabricada da {len(cit_raro)} citables y "
+      f"{len(sin_raro)} sin reconocer ({prop:.0%})")
+comprobar("(a) el troceador NO entiende una norma con rotulos raros",
+          prop > fase1.TOPE_SIN_RECONOCER, prop)
+comprobar("(a) y la segunda regla tambien la para: mas sin reconocer que "
+          "citables", len(sin_raro) > len(cit_raro),
+          f"{len(sin_raro)} vs {len(cit_raro)}")
+
 original = fase1.TOPE_SIN_RECONOCER
 try:
-    fase1.TOPE_SIN_RECONOCER = 0.99      # se afloja la puerta hasta el absurdo
-    cit, desc = trocear(CATALANA)
-    sin = [r for r in desc if r["tipo"] == B.DESCONOCIDO]
-    pasa = (len(sin) / (len(cit) + len(desc))) <= fase1.TOPE_SIN_RECONOCER
-    print(f"    con el tope al 99%, la proporcion del 66,2% pasaria: {pasa}")
-    comprobar("(a) aflojando el tope la catalana pasaria por la primera regla, "
-              "y el bloque 2 lo cazaria", pasa, pasa)
-    # ...pero la SEGUNDA regla la sigue parando, que es justo para lo que esta.
-    comprobar("(a bis) y aun asi la segunda regla la para: mas sin reconocer "
-              "que citables", len(sin) > len(cit), f"{len(sin)} vs {len(cit)}")
+    fase1.TOPE_SIN_RECONOCER = 0.99
+    pasa_primera = prop <= fase1.TOPE_SIN_RECONOCER
+    print(f"    con el tope al 99%, la primera regla la dejaria pasar: "
+          f"{pasa_primera}")
+    comprobar("(a) aflojando el tope, la primera regla se rinde", pasa_primera)
+    comprobar("(a bis) pero la segunda la sigue parando, que es para lo que "
+              "esta", len(sin_raro) > len(cit_raro))
 finally:
     fase1.TOPE_SIN_RECONOCER = original
-
-buf = io.StringIO()
-with contextlib.redirect_stdout(buf):
-    codigo = fase1.modo_ingerir(CATALANA, descargar=False)
-comprobar("(a) y al deshacerlo vuelve a negarse", codigo == 1, codigo)
 
 # (b) el sello deja de anotar el forzado
 d2 = Path(tempfile.mkdtemp())

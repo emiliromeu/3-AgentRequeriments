@@ -101,8 +101,23 @@ SUFIJOS_CONOCIDOS = frozenset(
 # Todas las expresiones se aplican sobre el titulo SIN TILDES y en minusculas
 # (ver sin_tildes: conserva las posiciones, asi que los tramos capturados
 # siguen valiendo para recortar el titulo original).
+# UN NUMERO DE ARTICULO PUEDE SER UNA DESIGNACION COMPUESTA.
+#
+# La numeracion corrida -«Articulo 12»- es la del BOE estatal, pero no es la
+# unica que existe. Los codigos por libros numeran cada articulo con su sitio
+# dentro de la estructura: el «Articulo 641-14» del Codi tributari de Catalunya
+# es el articulo 14 del capitulo 1 del titulo 4 del libro 6, y el numero
+# COMPLETO es su identificador; el «14» solo no identifica nada.
+#
+# Se admite como PROPIEDAD GENERAL -digitos unidos por guiones- y no como un
+# caso para esta norma. Una lista de normas con numeracion rara envejece igual
+# que todas las listas escritas a mano de este proyecto.
+#
+# SOLO EL GUION, no el punto: «articulo 1.2» es el apartado 2 del articulo 1,
+# no un articulo llamado «1.2», y admitir el punto partiria en dos preceptos lo
+# que es uno.
 _RE_ARTICULO = re.compile(
-    r"^articulos?\s+(?P<num>\d+)(?P<suf>(?:\s+[a-z]+){0,2})\s*\.?\s*$"
+    r"^articulos?\s+(?P<num>\d+(?:-\d+)*)(?P<suf>(?:\s+[a-z]+){0,2})\s*\.?\s*$"
 )
 _RE_RANGO_ARTICULOS = re.compile(r"^articulos\s+.+\s+a\s+.+")
 # UN ARTICULO PUEDE IR NOMBRADO CON PALABRA EN VEZ DE CON CIFRA.
