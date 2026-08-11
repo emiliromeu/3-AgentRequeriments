@@ -346,10 +346,14 @@ def modo_sembrar(args) -> int:
                 av["fallidas"][numero] = f"forma inesperada: {e}"
                 guardar_avance(av)
 
+    nuevas_de_esta = av["descargadas"][ya:]
     apuntar(f"\nsiembra terminada: {bajadas} nuevas en esta pasada, "
             f"{len(av['descargadas'])} en total")
     guardar_avance(av)
-    return modo_informe(args)
+    modo_informe(args)
+    # LA PUERTA DE LA CADENA. Devuelve 1 si algo de lo bajado AHORA no se
+    # puede encontrar, y quien encadena las tandas para ahi.
+    return informe_de_tanda(nuevas_de_esta)
 
 
 def _resumen_corte(av: dict, args) -> int:
@@ -366,6 +370,47 @@ def _resumen_corte(av: dict, args) -> int:
 
 
 # ----------------------------------------------------------------- informe
+
+
+def alcanzables_de(consultas, N) -> tuple:
+    """(alcanzables, total, [inalcanzables]) por (norma, articulo)."""
+    malas = [c for c in consultas
+             if not [x for x in c.preceptos(N) if getattr(x, "comparable", False)]]
+    return len(consultas) - len(malas), len(consultas), malas
+
+
+def informe_de_tanda(nuevas: list) -> int:
+    """Lo bajado EN ESTA TANDA y cuanto de ello se puede encontrar.
+
+    LA PUERTA DE LA CADENA MIDE LA TANDA, NO EL ACUMULADO. Con el acumulado la
+    cadena se pararia siempre por los 65 que ya sabemos que no se leen -prosa
+    del campo «normativa» de la DGT, diagnosticada y pendiente-, y una puerta
+    que salta siempre se acaba ignorando. Lo que hay que cazar es material
+    NUEVO que se baje y no se pueda encontrar.
+
+    Devuelve el codigo de salida: 0 si todo lo bajado es alcanzable, 1 si no.
+    """
+    import fase4
+    ix, _g = fase4.cargar_corpus()
+    cache = DGT.CacheDGT()
+    porn = {c.numero: c for c in cache.todas()}
+    de_tanda = [porn[n] for n in nuevas if n in porn]
+    if not de_tanda:
+        print("\n  TANDA: no se ha bajado nada nuevo.")
+        return 0
+    alc, tot, malas = alcanzables_de(de_tanda, ix.normas)
+    pct = 100 * alc / tot
+    print(f"\n  LO BAJADO EN ESTA TANDA: {tot} consultas")
+    print(f"  ALCANZABLE por (norma, art.): {alc} de {tot} ({pct:.1f}%)")
+    if malas:
+        print(f"  [PARADA] {len(malas)} de las bajadas AHORA no se encuentran.")
+        print(f"           La cadena se para aqui. Bajar y no poder encontrarlo")
+        print(f"           ocupa disco, parece cobertura y no lo es.")
+        for c in malas[:6]:
+            print(f"             {c.numero}: {(c.normativa or '')[:58]}")
+        return 1
+    print("  todo lo bajado en esta tanda se puede encontrar.")
+    return 0
 
 
 def modo_informe(args) -> int:
@@ -385,6 +430,20 @@ def modo_informe(args) -> int:
     bytes_crudo = sum(f.stat().st_size for f in crudos)
     bytes_json = sum(f.stat().st_size for f in petete.DIR_CONSULTAS.glob("*.json"))
     print(f"\n  consultas guardadas : {len(consultas)}")
+    # CUANTO DE LO BAJADO SE PUEDE ENCONTRAR. Bajar y no poder encontrarlo
+    # ocupa disco, parece cobertura y no lo es: 118 criterios del TEAC se
+    # sembraron asi y se descubrio tres dias despues, mirando a mano. Desde
+    # entonces esta cifra va en el informe de CADA tanda.
+    malas = [c for c in consultas
+             if not [x for x in c.preceptos(N) if getattr(x, "comparable", False)]]
+    pct = 100 * (len(consultas) - len(malas)) / len(consultas) if consultas else 0
+    print(f"  ALCANZABLES por (norma, art.): "
+          f"{len(consultas) - len(malas)} de {len(consultas)} ({pct:.1f}%)")
+    if malas:
+        print(f"  [AVISO] {len(malas)} NO se encuentran. La siguiente tanda NO "
+              f"sale hasta saber por que:")
+        for c in malas[:4]:
+            print(f"            {c.numero}: {(c.normativa or '')[:60]}")
     print(f"  fallidas            : {len(av.get('fallidas', {}))}")
     print(f"  cortes por caida    : {len(av.get('cortes', []))}")
     print(f"  ocupa               : {(bytes_crudo + bytes_json)/1024:.0f} KB "

@@ -244,17 +244,60 @@ def sembrar(tope: int) -> int:
         print(f"  {marca}: {n_art} criterio(s)", flush=True)
 
     print(f"\nHECHO. {bajados} criterio(s) nuevos en esta tanda.", flush=True)
+    # LA PUERTA DE LA CADENA: lo bajado AHORA tiene que poder encontrarse.
+    # Mide la tanda y no el acumulado, para que no salte por lo que ya se
+    # sabia. Ver la nota de `sembrar.informe_de_tanda`.
+    import fase4
+    _ix, _g = fase4.cargar_corpus()
+    _alc, _tot, _malos = alcanzables(cache, _ix.normas)
+    if _malos:
+        print(f"  [PARADA] {len(_malos)} de {_tot} criterios no se encuentran "
+              f"por (norma, articulo). La cadena se para aqui.", flush=True)
+        for c in _malos[:6]:
+            refs = ", ".join(str(r.get("norma"))[:38]
+                             for r in (c.referencias or [])[:2])
+            print(f"             {c.resolucion}: {refs}", flush=True)
+        return 1
+    print(f"  alcanzables por (norma, articulo): {_alc} de {_tot} (100%)",
+          flush=True)
     return 0
 
 
 # -------------------------------------------------------------- informe
 
 
+def alcanzables(cache, normas) -> tuple:
+    """(alcanzables, total, [inalcanzables]) por (norma, articulo).
+
+    BAJAR Y NO PODER ENCONTRARLO ES PEOR QUE NO BAJAR: ocupa disco, parece
+    cobertura y no lo es. Paso de verdad: 118 de 507 criterios se sembraron y
+    no habia forma de alcanzarlos, y se descubrio tres dias despues mirando a
+    mano. Desde entonces esta cifra va EN EL INFORME DE CADA TANDA.
+    """
+    todos = cache.todas()
+    malos = [c for c in todos
+             if not any(normas.por_clave(k) for k, _n in c.preceptos(normas))]
+    return len(todos) - len(malos), len(todos), malos
+
+
 def informe() -> int:
     avance = _cargar_avance()
     cache = TC.CacheTEAC()
     todos = cache.todas()
-    print(f"CRITERIOS EN LA COPIA LOCAL: {len(todos)}\n")
+    print(f"CRITERIOS EN LA COPIA LOCAL: {len(todos)}")
+    import fase4
+    _ix, _g = fase4.cargar_corpus()
+    _alc, _tot, _malos = alcanzables(cache, _ix.normas)
+    _pct = 100 * _alc / _tot if _tot else 0
+    print(f"  ALCANZABLES por (norma, art.): {_alc} de {_tot} ({_pct:.1f}%)")
+    if _malos:
+        print(f"  [AVISO] {len(_malos)} NO se encuentran. La siguiente tanda "
+              f"NO sale hasta saber por que:")
+        for c in _malos[:4]:
+            refs = ", ".join(str(r.get("norma"))[:38]
+                             for r in (c.referencias or [])[:2])
+            print(f"            {c.resolucion}: {refs}")
+    print()
 
     citan_dgt = [c for c in todos if getattr(c, "consultas_dgt", "")]
     print(f"  citan consultas de la DGT por numero : {len(citan_dgt)}")

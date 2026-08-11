@@ -58,7 +58,34 @@ CORPUS = RAIZ / "datos" / "corpus"
 #   · GENERALES: solo procedimiento (LGT, RGAT, recaudacion, sancionador).
 #     Aqui el criterio del TEAC es abundante y el de la DGT escaso, asi que la
 #     cuota se gasta sobre todo en TEAC.
-CUOTA = {"IVA": 30, "IRPF": 30, "IS": 22, "IP": 10, "GENERAL": 26}
+# SEGUNDA TANDA: ya no 118 elegidos a mano, sino todo lo que da señal.
+#
+# TRES FILTROS, y el orden importa:
+#
+#   1. SOLO LO QUE SE PUEDE RECUPERAR. Los titulos de Sucesiones, ITP, medios
+#      de transporte y residuos de la norma catalana caen en impuestos que no
+#      estan en `impuestos()` del corpus, asi que el agente NO LOS SACA NUNCA.
+#      Sembrar criterio de lo que nunca sale es tirar horas: 100 articulos
+#      fuera de golpe, sin perder nada.
+#
+#   2. NI EL ARTICULADO DE LOS DECRETOS APROBATORIOS, que es «se aprueba el
+#      reglamento» y «entrada en vigor».
+#
+#   3. Y SOLO LO QUE DA SEÑAL: un articulo al que nadie llama por remision y
+#      por el que nadie pregunta en el banco no la da. Es la misma idea que la
+#      reserva de las remisiones: lo que decide es A QUIEN SE LE LLAMA, no a
+#      quien se parece.
+#
+# El umbral de 2 remisiones entrantes sale de la distribucion, no de una
+# intuicion: 810 articulos tienen 1 o mas, 500 tienen 2 o mas, 341 tienen 3 o
+# mas. Con 1 entra casi la mitad del corpus elegible y la cola son articulos
+# que se mencionan una vez de pasada.
+MINIMO_REMISIONES = 2
+
+# Sin cuota por impuesto: con el umbral puesto, el reparto lo decide el propio
+# corpus. Se deja el diccionario porque el informe lo usa para enseñar el
+# reparto, pero ya no recorta.
+CUOTA = {"IVA": 999, "IRPF": 999, "IS": 999, "IP": 999, "GENERAL": 999}
 
 # Un articulo del banco vale por estas remisiones entrantes. No es un ajuste
 # fino: es decir que una pregunta real pesa mas que una cita interna.
@@ -87,6 +114,8 @@ def plan() -> dict:
     N = ix.normas
 
     entrantes = {d.clave: len(grafo.le_mencionan(d.clave)) for d in ix.docs}
+    # Los impuestos que el agente sabe contestar, mas las normas generales.
+    recuperables = set(N.impuestos()) | {""}
 
     # 1. lo que el banco manda al redactor, de verdad, corriendo la busqueda.
     del_banco: collections.Counter = collections.Counter()
@@ -125,8 +154,11 @@ def plan() -> dict:
             continue
         if d.registro.get("cuerpo_clave") in aprobatorios:
             continue
+        # SOLO LO QUE EL AGENTE PUEDE RECUPERAR. Ver `MINIMO_REMISIONES`.
+        if N.impuesto_de_precepto(d.registro) not in recuperables:
+            continue
         b, e = del_banco.get(d.clave, 0), entrantes.get(d.clave, 0)
-        if not b and not e:
+        if not b and e < MINIMO_REMISIONES:
             continue
         puntos[d.clave] = b * PESO_BANCO + e
         trozos = []
