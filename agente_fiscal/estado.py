@@ -255,7 +255,7 @@ class Seleccion:
 
 def seleccionar_material(indice, consulta: str, resultados, grafo=None,
                          umbral: float = UMBRAL_MATERIAL,
-                         reserva=None) -> Seleccion:
+                         reserva=None, naturaleza=None) -> Seleccion:
     """Que preceptos de los recuperados llegan al redactor.
 
     El tope de 5 sigue siendo el techo (lo aplica la busqueda), pero no es una
@@ -316,17 +316,33 @@ def seleccionar_material(indice, consulta: str, resultados, grafo=None,
     #   -su precepto es el mejor resultado- o cuando un precepto ya elegido
     #   la llama por remision.
     #
-    # Es decir: la LGT entra como APOYO, no compitiendo. Si la consulta va de
-    # procedimiento, su articulo gana el primer puesto por si solo y entonces
-    # manda ella; si va del impuesto, se queda fuera salvo que la norma del
-    # impuesto la mande llamar. La excepcion por remision de la pasada 2 sigue
-    # intacta, que es la que trae la nota al pie que no se ve.
+    # Es decir: la LGT entra como APOYO, no compitiendo, salvo que la consulta
+    # sea suya. La excepcion por remision de la pasada 2 sigue intacta, que es
+    # la que trae la nota al pie que no se ve.
+    #
+    # QUIEN DECIDE QUE LA CONSULTA ES DE PROCEDIMIENTO. Antes se ADIVINABA:
+    # se miraba quien ganaba el PUESTO 1 de la busqueda. Funcionaba mientras
+    # hubiera un solo ranking, y dejo de funcionar en cuanto la busqueda se
+    # separo en dos ligas: la norma general nunca queda la primera en su
+    # propia liga, asi que TODA consulta pasaba por «de fondo» y el
+    # procedimiento se rompia por construccion, con cualquier reparto.
+    #
+    # Ahora lo dice el analizador, que es quien ha leido la pregunta. Ver
+    # `analizador.NATURALEZAS`. Y si no lo sabe -o nadie lo pasa- se vuelve a
+    # la regla vieja: sin senal no se cambia nada, que es la misma regla que
+    # con el impuesto.
+    from . import analizador as AN
     papel = getattr(indice.normas, "papel", None)
-    manda_general = False
-    if papel is not None and resultados:
-        primero = resultados[0].doc.registro
-        manda_general = papel(primero.get("cuerpo_clave") or "") == \
-            indice.normas.GENERAL
+    if naturaleza == AN.PROCEDIMIENTO:
+        manda_general = True
+    elif naturaleza == AN.FONDO:
+        manda_general = False
+    else:
+        manda_general = False
+        if papel is not None and resultados:
+            primero = resultados[0].doc.registro
+            manda_general = papel(primero.get("cuerpo_clave") or "") == \
+                indice.normas.GENERAL
 
     def es_apoyo(registro) -> bool:
         """Este precepto es de una norma general en una consulta que no lo es."""

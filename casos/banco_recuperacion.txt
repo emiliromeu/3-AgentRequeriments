@@ -185,3 +185,23 @@ me he retrasado en presentar el modelo 303 del IVA y nadie me lo ha reclamado, q
 me han sancionado por no atender un requerimiento sobre las facturas de IVA | Ley 58/2003 | 203 | 3 | IVA
 cuantos años puede Hacienda revisar la declaracion de la renta de mi cliente | Ley 58/2003 | 66 | 3 | IRPF
 mi cliente olvido incluir unos rendimientos en la renta, como se corrige | Ley 58/2003 | 122 | 3 | IRPF
+#
+# LAS DOS DE RENTA ROJAS SON [PUENTE], NO AHOGAMIENTO. Importa no confundirlo:
+#
+#   «cuantos años puede Hacienda revisar la declaracion de la renta»  -> LGT 66
+#   «mi cliente olvido incluir unos rendimientos en la renta»         -> LGT 122
+#
+# Medido: NO SALEN NI SIN FILTRAR NADA, ni con el corpus entero compitiendo. No
+# es que las generales las ahoguen; es que no comparten ni una palabra con su
+# articulo. La rubrica del 66 es «Plazos de prescripcion» y la pregunta dice
+# «revisar»; la del 122 es «Declaraciones complementarias» y la pregunta dice
+# «olvido incluir». Es el mismo puente que «coche» -> «vehiculo automovil de
+# turismo», y lo construye el analizador, no el buscador.
+#
+# Comprobado con el modelo real el 11/08/2026: el analizador propone
+# «prescripcion del derecho a liquidar, plazo de prescripcion cuatro años,
+# interrupcion de...» y las clasifica IRPF + procedimiento, las dos bien.
+#
+# El ahogamiento por tamaño es OTRA cosa y se arreglo aparte: era el articulo
+# 37 de la Ley 19/1991, que estaba en el puesto 4 contando solo su ley y en el
+# 25 con las 836 generales dentro. Ver `prueba_naturaleza`.

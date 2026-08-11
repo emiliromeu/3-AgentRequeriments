@@ -249,9 +249,19 @@ def bloque_1(reg: Registro, ix, grafo, casos) -> None:
         # lo declara, el de su norma. Ver el quinto campo en `leer_casos`.
         impuesto = (caso.get("impuesto")
                     or ix.normas.impuesto_de_cuerpo(cuerpo_esperado))
+        # LA NATURALEZA, del propio caso: si el articulo que se espera vive en
+        # una norma general, la duda es de procedimiento. No es una suposicion,
+        # es lo que el caso declara al decir donde esta su respuesta.
+        #
+        # El bloque 1 mide la recuperacion DADA una clasificacion correcta.
+        # Que el analizador acierte la clasificacion lo mide el bloque 5, con
+        # el modelo de verdad; son dos preguntas distintas y se miden aparte.
+        naturaleza = (AN.PROCEDIMIENTO
+                      if ix.normas.impuesto_de_cuerpo(cuerpo_esperado) == ""
+                      else AN.FONDO)
         resultados, _h, _reserva = fase4.recuperar(
             ix, grafo, caso["consulta"], impuesto,
-            tope=max(caso["tope"], 10))
+            tope=max(caso["tope"], 10), naturaleza=naturaleza)
         salieron = []
         puesto = None
         for i, r in enumerate(resultados, 1):
@@ -574,7 +584,8 @@ def comparar_analizador(ix, casos, modelos: list[str]) -> int:
             cuerpo, _ = ix.normas.resolver(caso["norma"])
             resultados, _h, _r = fase4.recuperar(
                 ix, grafo, " ".join(terminos),
-                ix.normas.impuesto_de_cuerpo(cuerpo), tope=10)
+                ix.normas.impuesto_de_cuerpo(cuerpo), tope=10,
+                naturaleza=analisis.naturaleza)
             puesto = None
             for i, r in enumerate(resultados, 1):
                 rg = r.doc.registro
@@ -682,7 +693,11 @@ def casos_en_rojo(ix, casos) -> list[dict]:
             continue
         resultados, _h, _r = fase4.recuperar(
             ix, grafo, caso["consulta"],
-            ix.normas.impuesto_de_cuerpo(cuerpo), tope=max(caso["tope"], 10))
+            caso.get("impuesto") or ix.normas.impuesto_de_cuerpo(cuerpo),
+            tope=max(caso["tope"], 10),
+            naturaleza=(AN.PROCEDIMIENTO
+                        if ix.normas.impuesto_de_cuerpo(cuerpo) == ""
+                        else AN.FONDO))
         puesto = None
         for i, r in enumerate(resultados, 1):
             rg = r.doc.registro
@@ -753,7 +768,7 @@ def bloque_5(reg: Registro, ix, motor, casos) -> None:
         consulta = " ".join(analisis.terminos_busqueda)
         resultados, _h, _r = fase4.recuperar(
             ix, grafo, consulta, analisis.impuesto,
-            tope=max(caso["tope"], 10))
+            tope=max(caso["tope"], 10), naturaleza=analisis.naturaleza)
         puesto, salieron = None, []
         for i, r in enumerate(resultados, 1):
             rg = r.doc.registro

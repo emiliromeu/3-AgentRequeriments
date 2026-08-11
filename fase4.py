@@ -118,7 +118,7 @@ def cargar_corpus():
 
 
 def recuperar(ix, grafo, consulta: str, impuesto: str,
-              tope: int = TOPE_MATERIAL):
+              tope: int = TOPE_MATERIAL, naturaleza: str = ""):
     """LA UNICA FORMA DE BUSCAR. -> (resultados, huerfanos, reserva)
 
     Existe para que no vuelva a pasar lo que ya ha pasado DOS VECES: un guion
@@ -135,8 +135,29 @@ def recuperar(ix, grafo, consulta: str, impuesto: str,
     Parchear sitio a sitio es como se llega a cinco sitios distintos. Aqui hay
     uno, y el agente pasa por el mismo: si esto cambia, cambia para todos.
     """
-    return ix.buscar_del_impuesto(consulta, tope,
-                                  ix.normas.cuerpos_para(impuesto), grafo)
+    cuerpos = ix.normas.cuerpos_para(impuesto)
+
+    # LAS DOS LIGAS. Cuando la duda es DE FONDO y se sabe el impuesto, se busca
+    # SOLO en los cuerpos de ese impuesto; las normas generales se quedan
+    # fuera de la competicion y entran unicamente por remision, via la reserva.
+    #
+    # El motivo es de tamano, no de pertinencia: 836 preceptos generales contra
+    # 47 de la Ley del Patrimonio. Compitiendo en el mismo ranking, las
+    # generales copaban los puestos y los articulos de la ley del impuesto NO
+    # LLEGABAN A SER CANDIDATOS. El articulo 37 de la Ley 19/1991 -quien esta
+    # obligado a declarar- estaba en el puesto 4 contando solo su ley y en el
+    # 25 con las generales dentro.
+    #
+    # Y SOLO CON LA SEÑAL. Con «procedimiento» o «no_esta_claro» no se separa
+    # nada: medido, separar sin señal deja las cuatro preguntas de
+    # procedimiento SIN RECUPERAR su articulo -de puesto 1 a no salir- porque
+    # su respuesta vive precisamente en una norma general.
+    from agente_fiscal import analizador as _AN
+    if cuerpos is not None and naturaleza == _AN.FONDO:
+        cuerpos = {c for c in cuerpos
+                   if ix.normas.impuesto_de_cuerpo(c) == impuesto}
+
+    return ix.buscar_del_impuesto(consulta, tope, cuerpos, grafo)
 
 
 def _fin(res: dict, tr) -> dict:
@@ -413,7 +434,8 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     # filtrar. La reserva mantiene viva la remision entre impuestos.
     cuerpos = ix.normas.cuerpos_para(analisis.impuesto)
     resultados, huerfanos, reserva = recuperar(
-        ix, grafo, consulta, analisis.impuesto)
+        ix, grafo, consulta, analisis.impuesto,
+        naturaleza=analisis.naturaleza)
     if cuerpos is None:
         print("   busqueda: en TODO el corpus "
               f"(el impuesto quedo en «{analisis.impuesto}»: no se filtra)")
@@ -446,7 +468,8 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     # El tope de arriba es un techo, no una cuota. Lo que decide que se manda
     # a redactar es si el precepto trata de lo que se pregunta, no su puesto.
     seleccion = EST.seleccionar_material(ix, consulta, resultados, grafo,
-                                         reserva=reserva)
+                                         reserva=reserva,
+                                         naturaleza=analisis.naturaleza)
     tr.json("seleccion.json", seleccion.a_json())
     tr.corte(seleccion.a_json())
     tr.paso("corte de material",

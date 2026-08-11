@@ -3443,3 +3443,86 @@ la catalana sale con codigo 1 y no escribe nada
 banco 16/19 sin cambios · fase3 39/39 · fase4 5/5 · corpus intacto
 llamadas a la API ... 0
 ```
+
+---
+
+# Fase 38 · La naturaleza de la duda, dicha en vez de adivinada
+
+**El problema era de tamaño, no de pertinencia.** 836 preceptos generales —LGT,
+RGAT, recaudación, sancionador, facturación— contra 47 de la Ley del Patrimonio.
+Compitiendo en el mismo ranking, las generales copaban los puestos y los
+artículos de la ley del impuesto **no llegaban a ser candidatos**. El artículo 37
+de la Ley 19/1991 —quién está obligado a declarar— estaba en el **puesto 4**
+contando solo su ley y en el **25** con las generales dentro.
+
+## Por qué no bastaba con separar las dos ligas
+
+El corte por pertinencia ya tenía la regla del papel, pero decidía si una
+consulta era de procedimiento **mirando quién ganaba el puesto 1**. Eso funciona
+con un ranking y deja de funcionar con dos: la norma general nunca queda la
+primera en su propia liga, así que **toda** consulta pasaba por «de fondo».
+
+Medido, y es lo que descartó el diseño: separando sin señal, las cuatro preguntas
+de procedimiento pasaban de **puesto 1-3 a NO SALIR**.
+
+| diseño | banco | art. 37 | procedimiento |
+|---|---|---|---|
+| solo separar (6/0) | 22/27 | puesto 4 ✔ | **4 de 4 no salen** ✘ |
+| reservar puestos (5/1, 4/2, 3/3) | **20/27** ✘ | 5-6 | — |
+| dos ligas unidas por cobertura | 22/27 | llega ✔ | 2 de 4 no llegan ✘ |
+| **6/0 con la señal** | 24/31 · **material 25/31** | **puesto 4** ✔ | **intacto** ✔ |
+
+## La señal
+
+Campo `naturaleza` en el analizador: `fondo` · `procedimiento` · `no_esta_claro`.
+**La instrucción es sobre qué se pregunta, no sobre qué norma lo resuelve**: el
+analizador no tiene que saber que existe la Ley General Tributaria, tiene que
+distinguir «cuánto puedo deducir» de «qué plazo tengo». Y ante la duda,
+`no_esta_claro`, que es un valor legítimo — **si no se sabe, no se separa**, la
+misma regla que con el impuesto.
+
+Verificado con el modelo real, 3 llamadas, **3 de 3**:
+
+```
+«me he retrasado en presentar el modelo 303…»   procedimiento · IVA
+«las participaciones de la empresa familiar…»   fondo         · IP
+«cuantos años puede Hacienda revisar la renta»  procedimiento · IRPF
+```
+
+## El banco medía un escenario que no ocurre
+
+Las cuatro preguntas de procedimiento declaraban la LGT como norma, de la que se
+deducía impuesto GENERAL, y con eso **no se filtraba nada**. En la realidad
+«me he retrasado en presentar el 303» la clasifica el analizador como IVA.
+
+**Quinto campo en los casos**: el impuesto que diría el analizador, que no es
+dónde vive la respuesta. Y cuatro casos nuevos con el escenario real — **dos ya
+salían rojos antes de tocar nada**.
+
+## Y la distinción que hay que no volver a confundir
+
+Las dos rojas de Renta **son [PUENTE], no ahogamiento**: no salen **ni sin
+filtrar nada**. La rúbrica del art. 66 LGT es «Plazos de prescripción» y la
+pregunta dice «revisar»; la del 122 es «Declaraciones complementarias» y la
+pregunta dice «olvidó incluir». Es el puente «coche» → «vehículo automóvil de
+turismo», y lo construye el analizador, no el buscador. Anotado en el fichero de
+casos con el motivo.
+
+## Dos veces que la prueba acusó al código de lo que hace a propósito
+
+- **`ANALISIS_BUENO` de `prueba_topes`** se quedó sin el campo nuevo, así que el
+  análisis se rechazaba antes de llegar a la redacción y la prueba culpaba al
+  tope. Un doble incompleto mide otra cosa y lo dice como si fuera esta.
+- **La regla 1 del corte —el primero entra siempre, pase lo que pase—** es
+  anterior a todo esto y deliberada. Mi prueba esperaba que una norma general
+  marcada «fondo» no entrara, y entra si es el mejor resultado. Lo que la señal
+  cambia es a **los demás**: con `procedimiento` llegan tres generales al
+  material, con `fondo` solo la primera.
+
+## Comprobaciones
+
+```
+15 suites verdes (la nueva: prueba_naturaleza, con cuatro controles negativos)
+banco 24/31 · las de procedimiento NI UN PUESTO de diferencia
+bateria 39/39 · fase4 5/5 · llamadas nuevas a la API ... 0
+```
