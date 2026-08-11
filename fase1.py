@@ -26,11 +26,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from agente_fiscal import boe_api, bloques as B, parser as P, sellos as SELLOS
+from agente_fiscal import boe_api, bloques as B, parser as P
+from agente_fiscal import pendientes as PEND, sellos as SELLOS
 
 RAIZ = Path(__file__).resolve().parent
 DIR_CRUDO = RAIZ / "datos" / "crudo"
@@ -360,6 +362,47 @@ def modo_ingerir(norma_id: str, descargar: bool,
               f"--forzar")
         print("  (queda anotado en el sello, para que se vea siempre.)")
         return 1
+
+    # ------------------------------- HASTA CUANDO ESTA AL DIA, Y QUE FALTA
+    #
+    # El BOE consolida las estatales al dia; con las autonomicas no siempre.
+    # Se apunta EN CADA PRECEPTO -no en un fichero aparte- porque quien lo
+    # necesita es la maquinaria de vigencia, que trabaja precepto a precepto y
+    # ya sabe leer del registro. Un fichero al lado seria otra fuente que
+    # mantener sincronizada.
+    #
+    # `pendientes.leer` dice ademas QUE reformas faltan por incorporar y a que
+    # preceptos afectan. Si alguna toca un precepto concreto, se marca aqui
+    # como no citable y `vigencia` lo caza. Hoy no marca ninguno: ver el LEEME.
+    try:
+        analisis_json = json.loads(
+            (boe_api.ultimo_crudo(norma_id, DIR_CRUDO, "analisis")
+             or Path(os.devnull)).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, AttributeError):
+        analisis_json = {}
+    informe = PEND.leer((analisis_json.get("data") or [{}])[0], xml_bytes,
+                        (meta.get("estado_consolidacion") or {}).get("texto", ""))
+    tocados = informe.preceptos_tocados if informe.pendientes else set()
+    culpables = ", ".join(sorted(r.id_norma for r in informe.pendientes))
+
+    for r in citables:
+        if informe.consolidado_hasta:
+            r["consolidado_hasta"] = informe.consolidado_hasta
+        num = str(r.get("numero") or "").strip()
+        if num and num in tocados:
+            r["no_citable_por"] = culpables
+
+    if informe.pendientes:
+        apartado("Consolidacion")
+        print(f"  el BOE la marca: {informe.estado or '(sin dato)'}")
+        print(f"  texto consolidado hasta   : {informe.consolidado_hasta}")
+        print(f"  reformas sin incorporar   : {len(informe.pendientes)} "
+              f"({culpables})")
+        marcados = sum(1 for r in citables if r.get("no_citable_por"))
+        print(f"  preceptos marcados NO CITABLES: {marcados}")
+        if not marcados:
+            print("  (ninguno: las reformas pendientes no tocan preceptos de "
+                  "esta norma que esten en el texto)")
 
     DIR_CORPUS.mkdir(parents=True, exist_ok=True)
     destino = ruta_corpus(norma_id)

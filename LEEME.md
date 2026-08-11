@@ -3526,3 +3526,97 @@ casos con el motivo.
 banco 24/31 · las de procedimiento NI UN PUESTO de diferencia
 bateria 39/39 · fase4 5/5 · llamadas nuevas a la API ... 0
 ```
+
+---
+
+# Fase 39 · La catalana entra, y el acotamiento sale de la regla general
+
+`BOE-A-2024-6951`, libro sexto del Codi tributari de Catalunya. **161 preceptos,
+152 artículos.** El corpus pasa a **13 normas y 2.121 preceptos**.
+
+## El acotamiento no hizo falta como regla aparte
+
+Sus títulos de Sucesiones, ITP, medios de transporte y residuos se clasifican en
+impuestos que **no están en `impuestos()` del corpus**, así que `admitidos_para`
+nunca los admite. **Medido, no supuesto:**
+
+| pregunta | catalanes en el top 6 |
+|---|---|
+| Patrimonio · «mínimo exento y tarifa» | **2** (arts. 621-2 Tarifa y 621-1 Mínimo exento) |
+| Patrimonio · «bienes y derechos exentos» | 0 |
+| Renta · «deducción autonómica por alquiler» | **4** (612-3, 612-11, 612-4, 613-1) |
+| Renta · «gastos deducibles del trabajo» | 0 |
+| IVA · «deducción cuotas vehículo turismo» | **0** |
+| IVA · «modificación base imponible por incobrable» | **0** |
+
+Salen **junto a los estatales, no en su lugar**: en la de patrimonio, el art.
+621-2 catalán el primero y el art. 28 de la Ley 19/1991 el segundo. Y aparecen
+sólo cuando la pregunta es autonómica de verdad — «gastos deducibles del trabajo»
+no trae ni uno.
+
+## La fecha de consolidación
+
+`consolidado_hasta: 2026-05-23` en cada uno de sus 161 preceptos, sacado de las
+versiones del propio articulado. Las otras doce no lo llevan: el BOE las mantiene
+al día. Si el ejercicio de la consulta es posterior, `vigencia` emite un aviso de
+**cobertura** —NOTA, no GRAVE—: no invalida el precepto, dice que puede haber
+reformas no recogidas y manda a mirar el boletín autonómico.
+
+## El mecanismo de no citables: escrito y **activo**, pero sin efecto
+
+Marca **7 preceptos**, no cero como esperaba:
+
+```
+Articulo 631-20  ISD       Articulo 641-1   ITPAJD
+Articulo 632-1   ISD       Articulo 641-14  ITPAJD
+Articulo 632-16  ISD       Articulo 642-1   ITPAJD
+                           Articulo 684-2   general
+```
+
+**Ninguno en IRPF ni Patrimonio**, que es lo único que se recupera. Así que está
+activo y no tiene efecto: exactamente lo que se buscaba, pero por la razón buena
+—no hay nada que marcar donde miramos— y no porque esté apagado.
+
+**Cuándo se activa de verdad**: el día que se ingiera una norma cuya reforma
+pendiente toque un título que sí recuperamos. `fase1` escribe `no_citable_por` en
+esos preceptos —la lista la da `pendientes.leer`— y `vigencia` los caza con un
+aviso GRAVE. No hay que acordarse de encender nada.
+
+## Lo que se probó y se revirtió
+
+Las remisiones internas del Codi —«artículo 631-1»— las lee el resolutor como
+«artículo 631», que no existe, y **declina**: 52 remisiones perdidas. Probé
+extender el patrón a números compuestos, como en el troceador, y **no vale**: en
+las normas estatales «art. 10-3» es el apartado 3 del artículo 10, y pasaba a ser
+un artículo «10-3». Lo cazó `prueba_normativa` con el campo `normativa` de una
+consulta real de la DGT — las cifras agregadas de remisiones no lo veían porque
+es otro camino de código.
+
+**Y no se puede decidir ahí**: `leer_numeros` es una función pura de texto, sin
+corpus, y lo es a propósito. Sin corpus no hay forma de saber si «631-1» es un
+artículo compuesto o el apartado 1 del 631.
+
+Se queda como está, con el motivo escrito. **Declinadas, no mal resueltas**: «ante
+la duda, nada» sigue intacto. Y están casi todas en títulos que no recuperamos
+—26 en Sucesiones, 13 en Sucesiones, 5 en ITP—, así que en Renta y Patrimonio la
+pérdida es casi nula. Si algún día hace falta, la decisión es del resolutor, que
+sí tiene corpus: probar el compuesto y caer al plano si no existe.
+
+## Comprobaciones
+
+```
+15 suites verdes · bateria 39/39 · fase4 5/5
+banco 25/31: el art. 37 de la Ley 19/1991 pasa a verde solo, por el
+             reordenamiento estadistico de meter 161 preceptos
+los doce sellos anteriores ... IDENTICOS. Trece normas, ninguna forzada
+remisiones ... cero mal resueltas (bateria 39/39)
+la puerta de bloques sin reconocer ... ya no la rechaza: 0 sin reconocer
+llamadas a la API ... 0
+```
+
+## Anotado, no construido
+
+**La residencia va como campo junto al año, no como aviso al pie.** Un aviso se
+lee una vez y se deja de ver; el año es obligatorio y bloquea porque una
+respuesta con la ley de otro ejercicio sale impecable y está mal, y la norma
+autonómica de otra comunidad falla exactamente igual. Es lo siguiente.

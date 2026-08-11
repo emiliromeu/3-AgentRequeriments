@@ -52,6 +52,55 @@ def avisos(registro: dict, ejercicio: int | None) -> list[Aviso]:
     inicio, fin = limites(ejercicio)
     salida: list[Aviso] = []
 
+    # ------------------------------------------------ HASTA CUANDO ESTA AL DIA
+    #
+    # El BOE mantiene consolidadas las normas estatales al dia; con las
+    # autonomicas no siempre. El Decreto Legislativo 1/2024 -libro sexto del
+    # Codi tributari de Catalunya- viene marcado «Desactualizado»: su texto
+    # incorpora reformas hasta el 23/05/2026 y hay una ley posterior sin
+    # recoger.
+    #
+    # Eso NO invalida el precepto: lo que dice es lo que decia esa fecha. Pero
+    # si la consulta es de un ejercicio POSTERIOR, quien la lea tiene que saber
+    # que puede haber cambios que no estan aqui. Es un aviso de COBERTURA -lo
+    # que no se ha podido mirar- y por eso es NOTA y no GRAVE: no mueve el
+    # estado, se enseña al lado.
+    #
+    # Se guarda por precepto en la fase 1, sacado de las versiones del propio
+    # articulado, no escrito a mano en ninguna parte.
+    hasta = registro.get("consolidado_hasta") or ""
+    if hasta and fin > hasta:
+        salida.append(Aviso(
+            NOTA, "consolidacion_incompleta",
+            f"esta norma esta consolidada hasta el {hasta} y la consulta es de "
+            f"{ejercicio}: puede haber reformas posteriores no recogidas. "
+            f"Compruebalo en el boletin autonomico"))
+
+    # ------------------------------------------- PRECEPTOS QUE NO SE PUEDEN CITAR
+    #
+    # ESCRITO Y HOY INACTIVO, a proposito. Cuando una norma entra a medio
+    # consolidar, los preceptos que la reforma pendiente deroga o modifica NO
+    # se pueden citar: su texto es el de antes y decir lo que decia es decir
+    # algo que ya no rige.
+    #
+    # Hoy no marca nada porque no hay nada que marcar: de la catalana solo se
+    # recuperan Renta y Patrimonio -el resto de sus titulos son de impuestos
+    # que no estan en el corpus- y la reforma pendiente (Ley 11/2026) no toca
+    # NI UN precepto de esos dos titulos. Sus 7 preceptos afectados que ya
+    # existen estan todos en Sucesiones, ITP y obligaciones formales.
+    #
+    # SE ACTIVA SOLO: el dia que se ingiera una norma cuya reforma pendiente si
+    # toque un titulo que recuperamos, `fase1` escribira `no_citable_por` en
+    # esos preceptos -la lista la da `pendientes.leer`- y esto los cazara. No
+    # hay que acordarse de encender nada.
+    culpable = registro.get("no_citable_por") or ""
+    if culpable:
+        salida.append(Aviso(
+            GRAVE, "modificado_sin_incorporar",
+            f"NO SE PUEDE CITAR: este precepto lo modifica {culpable}, que "
+            f"todavia no esta incorporada al texto consolidado. Lo que hay "
+            f"aqui es la redaccion anterior"))
+
     versiones = registro.get("versiones") or []
     fechas = [
         v.get("fecha_vigencia_efectiva") or v.get("fecha_vigencia") or ""

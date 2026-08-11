@@ -78,6 +78,28 @@ _RE_ANEXO = re.compile(
     re.IGNORECASE,
 )
 
+# EL NUMERO DE UN ARTICULO SE LEE PLANO, Y AQUI SI ES A PROPOSITO.
+#
+# Se probo leerlo compuesto -«\d+(?:-\d+)*»- para que las remisiones internas
+# del Codi tributari de Catalunya («articulo 631-1») se resolvieran, y NO VALE:
+# en las normas estatales «art. 10-3» significa el apartado 3 del articulo 10,
+# y con el patron compuesto pasaba a ser un articulo «10-3» que no existe. Lo
+# cazo `prueba_normativa`, con el campo «normativa» de una consulta de la DGT.
+#
+# Y NO SE PUEDE DECIDIR AQUI: `leer_numeros` es una funcion PURA de texto, sin
+# corpus, y lo es a proposito -la usa el campo «normativa» de la DGT, que habla
+# de normas que no tenemos cargadas-. Sin corpus no hay forma de saber si
+# «631-1» es un articulo compuesto o el apartado 1 del 631.
+#
+# LO QUE CUESTA, medido: 52 remisiones INTERNAS del Codi se quedan declinadas.
+# DECLINADAS, no mal resueltas: «ante la duda, nada» sigue intacto y no se
+# atribuye ni un articulo a quien no le toca. Y estan casi todas en titulos que
+# no recuperamos -26 en Sucesiones, 13 en Sucesiones, 5 en ITP-, asi que en
+# Renta y Patrimonio, que es lo que se consulta, la perdida es casi nula.
+#
+# Si algun dia hace falta: la decision es del resolutor -que si tiene corpus- y
+# no de este patron. Se probaria el numero compuesto y, si ese articulo no
+# existe, se caeria al plano.
 _RE_NUMERO = re.compile(r"\s*(\d+)")
 _RE_PALABRA_SUF = re.compile(r"\s+([a-zA-ZáéíóúÁÉÍÓÚ]+)")
 
