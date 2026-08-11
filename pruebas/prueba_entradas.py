@@ -276,6 +276,59 @@ raiz = tk.Tk()
 raiz.withdraw()
 ventana = interfaz.Ventana(raiz, "ensayo")
 
+print("  Y el largo se avisa MIENTRAS SE ESCRIBE, no al pulsar: alguien va a")
+print("  pegar un requerimiento entero y no puede llevarse un rechazo.\n")
+
+visible = tk.Tk()
+visible.geometry("1180x900+40+40")
+uno = interfaz.Ventana(visible, "ensayo")
+espera = 0
+while uno.motor is None and espera < 1200:
+    visible.update()
+    espera += 1
+uno.ejercicio.set("2023")
+
+
+def escribir(n):
+    uno.caja.delete("1.0", "end")
+    uno.caja.insert("1.0", "x" * n)
+    visible.update()
+    return (bool(uno.aviso_largo.winfo_manager()),
+            str(uno.boton["state"]), uno.aviso_largo.cget("text"))
+
+
+hay, boton, _t = escribir(40)
+comprobar("con una duda corta no hay aviso ninguno", not hay)
+comprobar("  y se puede consultar", boton == "normal", boton)
+
+hay, boton, texto = escribir(int(fase4.TOPE_PREGUNTA * 0.85))
+comprobar("acercandose SI avisa, antes de que sorprenda", hay)
+comprobar("  pero sin impedir nada: es un aviso, no una alarma",
+          boton == "normal", boton)
+comprobar("  y dice por donde va", "1.200" in texto, texto)
+
+hay, boton, texto = escribir(fase4.TOPE_PREGUNTA + 400)
+comprobar("pasado el tope se dice y no se deja pulsar", hay and boton == "disabled",
+          boton)
+comprobar("  y se dice QUE HACER, no solo que esta mal",
+          "pega solo" in texto.lower() or "resúmela" in texto.lower(), texto)
+comprobar("  y que esto se va a caer cuando se lean PDF",
+          "pdf" in texto.lower(), texto)
+comprobar("  sin regañar: ni «error», ni «no puedes»",
+          not any(p in texto.lower() for p in ("error", "no puedes", "prohib")),
+          texto)
+
+# PEGAR NO ES ESCRIBIR: con el raton no hay `<KeyRelease>` ninguno.
+uno.caja.delete("1.0", "end")
+visible.update()
+uno.caja.insert("1.0", "y" * (fase4.TOPE_PREGUNTA + 800))   # como un pegado
+visible.update()
+comprobar("y pegando con el raton, sin tocar una tecla, avisa igual",
+          bool(uno.aviso_largo.winfo_manager())
+          and str(uno.boton["state"]) == "disabled",
+          str(uno.boton["state"]))
+visible.destroy()
+
 PARADAS = [
     ("sin pregunta", consultar("")[0], "pregunta"),
     ("pregunta larga", consultar(LARGA)[0], "tope"),
@@ -318,6 +371,30 @@ comprobar("(0) y al deshacerlo vuelven a leerse",
           not any("sin referencia" in d.motivo for d in
                   VF.Verificador(ix).verificar_texto(
                       borrador, 2023, exigir_norma=True).dictamenes))
+
+# (a0) el aviso de largo deja de mirar el tope
+original_avisar = interfaz.Ventana._avisar_del_largo
+try:
+    interfaz.Ventana._avisar_del_largo = lambda self, duda: True
+    v2 = tk.Tk()
+    v2.geometry("1180x900+40+40")
+    w = interfaz.Ventana(v2, "ensayo")
+    n = 0
+    while w.motor is None and n < 1200:
+        v2.update()
+        n += 1
+    w.ejercicio.set("2023")
+    w.caja.insert("1.0", "x" * (fase4.TOPE_PREGUNTA + 400))
+    v2.update()
+    print(f"    sin el aviso, con {fase4.TOPE_PREGUNTA + 400} caracteres el "
+          f"boton queda «{w.boton['state']}»")
+    comprobar("(a0) sin el aviso se puede pulsar con la pregunta pasada, "
+              "y el bloque 2 lo cazaria",
+              str(w.boton["state"]) == "normal"
+              and not w.aviso_largo.winfo_manager(), str(w.boton["state"]))
+    v2.destroy()
+finally:
+    interfaz.Ventana._avisar_del_largo = original_avisar
 
 # (a) se quita la validacion del año
 original = AN.leer_ejercicio

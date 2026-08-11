@@ -2991,3 +2991,107 @@ fase3 · fase4 ..... 39/39 · 5/5
 banco de IVA ...... 16/19, sin cambios de veredicto
 llamadas a la API ... 4  (las dos medidas pendientes, autorizadas)
 ```
+
+---
+
+# Fase 32 · La suma de control del corpus, y el aviso de largo
+
+## 1 · Un corpus incompleto no daba error: daba respuestas peores
+
+Es el peor fallo que hemos encontrado, porque **no deja rastro**. Un fichero del
+corpus que se queda a medias —un disco lleno a mitad de `ingerir`, una copia
+interrumpida, un `rsync` cortado— se carga sin protestar **si el corte cae en un
+final de línea**: cada línea sigue siendo JSON válido, el índice se construye, la
+ventana abre y todo parece normal.
+
+Lo que pasa después no se parece a una avería. La búsqueda deja de encontrar
+artículos que existen, el corte por pertinencia descarta lo que queda, y salen
+**NO ENCONTRADO donde antes había CRITERIO CLARO**. Nadie lo relaciona con el
+corpus: se piensa que la pregunta estaba mal escrita, o que la ley no lo dice.
+
+**`agente_fiscal/sellos.py`**: un `sha256` del fichero tal cual está en disco,
+apuntado al ingerir y comprobado al cargar. Se guardan además los preceptos y los
+bytes, que no hacen falta para detectar nada —el sha256 ya los cubre— pero sí
+para el mensaje: no es lo mismo «el fichero no cuadra» que **«faltan 63
+preceptos: tiene 180 y debería tener 243»**. Lo segundo se entiende.
+
+```
+El corpus no cuadra con su suma de control. No se abre: con media ley
+las respuestas empeoran sin dar ningún error.
+  - BOE-A-1992-28740 no cuadra con su sello del 2026-08-11: faltan 63
+    preceptos: tiene 180 y debería tener 243. Vuelve a ingerirla:
+    python fase1.py ingerir BOE-A-1992-28740
+```
+
+**Dónde va la comprobación**: en `Indice._cargar`, no en el arranque de cada
+programa. Por ahí pasan todos —la ventana, la terminal, el banco y las pruebas—.
+Un sitio, una regla.
+
+**El sello se escribe en `fase1.py ingerir`, en la misma función que escribe el
+corpus.** Si se sellara aparte habría un momento en que el corpus está escrito y
+sin sello, y ese momento es justo el que se quiere hacer imposible.
+
+**Tres estados, no dos.** «Sin sellar» no es «mal»: es el estado de cualquier
+corpus de prueba en un directorio temporal. Sin fichero de sellos no se bloquea
+nada, pero **tampoco se canta verde** — eso sería la mentira que esto viene a
+evitar. La pantalla lo distingue.
+
+**Antes de sellar se auditaron las siete normas** con `fase1.py verificar`: las
+siete correctas. El sello certifica algo que pasó la auditoría, no lo que hubiera
+en disco.
+
+| norma | preceptos | bytes |
+|---|---:|---:|
+| BOE-A-1992-28740 (LIVA) | 243 | 5.001.578 |
+| BOE-A-1992-28925 (RIVA) | 144 | 2.232.825 |
+| BOE-A-2003-23186 (LGT) | 335 | 2.364.474 |
+| BOE-A-2006-20764 (LIRPF) | 222 | 3.479.484 |
+| BOE-A-2007-6820 (RIRPF) | 170 | 1.915.432 |
+| BOE-A-2014-12328 (LIS) | 212 | 2.325.661 |
+| BOE-A-2015-7771 (RIS) | 86 | 648.815 |
+| | **1.412** | |
+
+**Sólo se sella lo que se carga.** Los `.descartados.jsonl` no entran: no los lee
+el motor, son material de auditoría de la fase 1 y un fallo suyo no cambia ni una
+respuesta.
+
+**Y se ve en «Qué hay dentro»**, que es la pantalla que se abre justo para dudar
+de una respuesta: `✓ Corpus comprobado: las 7 normas cuadran con su suma de
+control (2026-08-11).`
+
+## 2 · El aviso de largo, mientras se escribe
+
+Antes sólo se enteraba al pulsar: se pegaba el requerimiento entero, se pulsaba y
+llegaba un rechazo. **Tres tramos**, no dos: callado mientras hay sitio de sobra,
+un aviso tranquilo al 75% —para que no sorprenda a mitad de pegar— y el motivo
+cuando ya no cabe, con el botón apagado.
+
+> Son 1.535 caracteres y caben 1.200. Esto pasa al pegar un requerimiento
+> entero: pega solo la parte que pregunta, o resúmela en unas líneas. (Cuando la
+> herramienta sepa leer el PDF entero, esto dejará de hacer falta.)
+
+**Esa última frase importa.** El tope no es una manía: es que hoy la pregunta
+viaja al modelo tal cual, y un escrito entero cuesta dinero y da peor resultado
+que la duda concreta. Cuando lea PDF, desaparece. Sin decirlo parece una
+limitación tonta, **y una limitación que parece tonta se salta**.
+
+**Pegar no es escribir.** `<KeyRelease>` no llega cuando se pega con el botón
+derecho, y pegar es justo lo que hace alguien con un requerimiento delante. Se
+usa `<<Modified>>`, que salta con cualquier cambio venga de donde venga.
+Comprobado insertando texto sin tocar una tecla.
+
+## 3 · La cuarta vez con lo mismo
+
+`pady=(12, 0)` en un **widget**. `pady` de un widget es UNA distancia; el par va
+en el `pack`/`grid`. Van cuatro. **La cazó `prueba_interfaz` en la misma pasada**,
+que es exactamente para lo que está.
+
+## Comprobaciones
+
+```
+11 suites ......... verdes
+fase3 · fase4 ..... 39/39 · 5/5
+fase1 verificar ... las 7 normas correctas antes de sellar
+banco de IVA ...... 16/19, sin cambios de veredicto
+llamadas a la API ... 0
+```

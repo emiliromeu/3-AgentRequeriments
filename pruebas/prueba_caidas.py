@@ -264,6 +264,121 @@ except Exception as e:  # noqa: BLE001
     comprobar("un corpus cortado a mitad se detecta", False,
               f"{type(e).__name__}: {e}")
 
+print("\n  Y EL CASO SILENCIOSO, que es el que importa: un corpus cortado por")
+print("  un final de linea. Cada linea sigue siendo JSON valido, el indice se")
+print("  construye y la ventana abre. Lo unico que se nota es que empiezan a")
+print("  salir NO ENCONTRADO donde antes habia respuesta, y nadie lo")
+print("  relaciona con el corpus.\n")
+
+from agente_fiscal import sellos as SL  # noqa: E402
+
+# Un corpus pequeño pero REAL: los 20 primeros preceptos de la Ley del IVA.
+crudo = (RAIZ / "datos" / "corpus" / "BOE-A-1992-28740.jsonl").read_text(
+    encoding="utf-8").splitlines(keepends=True)
+mini = Path(tempfile.mkdtemp())
+(mini / "BOE-A-1992-28740.jsonl").write_text("".join(crudo[:20]), encoding="utf-8")
+SL.sellar(mini / "BOE-A-1992-28740.jsonl")
+
+ix_mini = Indice(mini)
+comprobar("un corpus sellado y entero abre", len(ix_mini.docs) == 20,
+          len(ix_mini.docs))
+
+(mini / "BOE-A-1992-28740.jsonl").write_text("".join(crudo[:12]), encoding="utf-8")
+try:
+    Indice(mini)
+    comprobar("un corpus cortado por un final de linea NO abre", False,
+              "abrio con 12 de 20 preceptos")
+except ErrorCorpus as e:
+    comprobar("un corpus cortado por un final de linea NO abre", True)
+    comprobar("  y dice QUE norma", "BOE-A-1992-28740" in str(e), str(e))
+    comprobar("  y CUANTO falta", "faltan 8 preceptos" in str(e), str(e))
+    comprobar("  y QUE hacer", "fase1.py ingerir" in str(e), str(e))
+
+# Un cambio del mismo tamaño tampoco cuela: el sello es de bytes.
+igual = [l for l in crudo[:20]]
+igual[5] = igual[5].replace("Articulo", "Articulq", 1)
+(mini / "BOE-A-1992-28740.jsonl").write_text("".join(igual), encoding="utf-8")
+try:
+    Indice(mini)
+    comprobar("un corpus manipulado sin cambiar el numero de preceptos "
+              "tampoco abre", False, "abrio")
+except ErrorCorpus as e:
+    comprobar("un corpus manipulado sin cambiar el numero de preceptos "
+              "tampoco abre", True)
+    comprobar("  y lo dice asi, sin hablar de preceptos que falten",
+              "el contenido ha cambiado" in str(e), str(e))
+
+# Una norma nueva sin sellar: no se cuela por la puerta de atras.
+(mini / "BOE-A-1992-28740.jsonl").write_text("".join(crudo[:20]), encoding="utf-8")
+(mini / "BOE-A-9999-99999.jsonl").write_text(crudo[0], encoding="utf-8")
+try:
+    Indice(mini)
+    comprobar("una norma sin sello no se cuela", False, "abrio")
+except ErrorCorpus as e:
+    comprobar("una norma sin sello no se cuela", True)
+    comprobar("  y dice cual", "BOE-A-9999-99999" in str(e), str(e))
+(mini / "BOE-A-9999-99999.jsonl").unlink()
+
+# Y SIN FICHERO DE SELLOS NO SE BLOQUEA NADA: un corpus sin sellar no esta
+# corrupto, esta sin sellar. Es el estado de cualquier corpus de prueba.
+SL.ruta_de_sellos(mini).unlink()
+try:
+    Indice(mini)
+    comprobar("un corpus sin sellar abre igual (no es lo mismo que roto)", True)
+except ErrorCorpus as e:
+    comprobar("un corpus sin sellar abre igual (no es lo mismo que roto)",
+              False, str(e))
+est = SL.estado(sorted(mini.glob("*.jsonl")))
+comprobar("  pero NO se canta verde: se dice que no se ha podido comprobar",
+          est["sellado"] is False and "no se ha podido comprobar" in est["frase"],
+          est["frase"])
+
+print("\n  Y EL CORPUS DE VERDAD, que es lo que se usa:")
+est = SL.estado(ix.rutas)
+comprobar("esta sellado", est["sellado"] is True, est)
+comprobar("y las siete normas cuadran", not est["problemas"], est["problemas"])
+print(f"    {est['frase']}")
+
+print("\n  Y SE VE EN «QUE HAY DENTRO», que es la pantalla que se abre para")
+print("  dudar de una respuesta: quien venga a preguntarse si la ley esta")
+print("  entera tiene que ver que se ha comprobado, no que se supone.\n")
+
+import tkinter as tk  # noqa: E402
+
+
+def _textos(w, salida):
+    """Todo el texto de una ventana, widget a widget."""
+    try:
+        t = w.cget("text")
+        if t:
+            salida.append(str(t))
+    except tk.TclError:
+        pass
+    for h in w.winfo_children():
+        _textos(h, salida)
+    return salida
+
+
+raiz = tk.Tk()
+raiz.geometry("1180x900+40+40")
+ventana = interfaz.Ventana(raiz, "ensayo")
+espera = 0
+while ventana.motor is None and espera < 1200:
+    raiz.update()
+    espera += 1
+ventana._abrir_estado()
+raiz.update()
+pantallas = [v for v in raiz.winfo_children() if isinstance(v, tk.Toplevel)]
+comprobar("la pantalla se abre", len(pantallas) == 1, len(pantallas))
+leido = " | ".join(_textos(pantallas[0], []))
+comprobar("y dice que el corpus esta comprobado",
+          "Corpus comprobado" in leido and "7 normas" in leido,
+          [t for t in leido.split(" | ") if "orpus" in t])
+comprobar("  con su marca de verde", "✓" in leido)
+comprobar("  y sin una ruta de fichero dentro",
+          "/Users/" not in leido and ".jsonl" not in leido)
+raiz.destroy()
+
 # Y lo que ve quien abre la ventana: `_arrancar_motor` coge cualquier
 # excepcion y bloquea con una frase. Aqui se comprueba la frase, no el hilo.
 comprobar("y en la ventana no se cuela el detalle tecnico",
@@ -320,13 +435,36 @@ comprobar("(b) sin mirar el corte vuelve a salir NO ENCONTRADO, "
           res.get("estado") == "NO ENCONTRADO", res.get("estado"))
 comprobar("(b) pero SIGUE sin enseñar el trozo", not res.get("respuesta"))
 
-# (c) el mensaje del 500 vuelve al generico
+# (c) se deja de comprobar la suma de control
+original_comprobar = SL.comprobar
+try:
+    SL.comprobar = lambda rutas: []
+    (mini / "BOE-A-1992-28740.jsonl").write_text("".join(crudo[:20]),
+                                                 encoding="utf-8")
+    SL.sellar(mini / "BOE-A-1992-28740.jsonl")
+    (mini / "BOE-A-1992-28740.jsonl").write_text("".join(crudo[:12]),
+                                                 encoding="utf-8")
+    ix_roto = Indice(mini)
+    print(f"    sin sello, el corpus cortado abre con {len(ix_roto.docs)} de 20 "
+          f"preceptos y NO da ningun error")
+    comprobar("(c) sin la suma de control se abre con medio corpus en "
+              "silencio, y el bloque 4 lo cazaria", len(ix_roto.docs) == 12,
+              len(ix_roto.docs))
+finally:
+    SL.comprobar = original_comprobar
+try:
+    Indice(mini)
+    comprobar("(c) y al deshacerlo vuelve a negarse", False, "abrio")
+except ErrorCorpus:
+    comprobar("(c) y al deshacerlo vuelve a negarse", True)
+
+# (d) el mensaje del 500 vuelve al generico
 original_fallos = interfaz.FALLOS
 try:
     interfaz.FALLOS = tuple(f for f in interfaz.FALLOS if "500" not in f[0])
     frase = interfaz.en_cristiano("La API respondio 500: Internal server error")
     print(f"    sin su regla, un 500 se lee: «{frase[:60]}...»")
-    comprobar("(c) sin su regla el 500 cae en el generico, y el bloque 1 "
+    comprobar("(d) sin su regla el 500 cae en el generico, y el bloque 1 "
               "lo cazaria", frase == interfaz.FALLO_GENERICO, frase)
 finally:
     interfaz.FALLOS = original_fallos

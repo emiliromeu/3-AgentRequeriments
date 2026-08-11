@@ -30,7 +30,7 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from agente_fiscal import boe_api, bloques as B, parser as P
+from agente_fiscal import boe_api, bloques as B, parser as P, sellos as SELLOS
 
 RAIZ = Path(__file__).resolve().parent
 DIR_CRUDO = RAIZ / "datos" / "crudo"
@@ -311,8 +311,15 @@ def modo_ingerir(norma_id: str, descargar: bool) -> int:
     print(f"  notas del BOE (reformas): {n_notas}")
     print(f"  bloques no citables     : {len(descartados)} "
           f"(encabezados, preambulo, firma)")
+    # EL SELLO, EN EL MISMO SITIO EN QUE SE ESCRIBE. Si se sellara aparte,
+    # habria un momento en que el corpus esta escrito y sin sello, y ese
+    # momento es justo el que se quiere hacer imposible. Ver `sellos`.
+    sello = SELLOS.sellar(destino)
+
     print(f"\n  corpus      -> {destino}")
     print(f"  descartados -> {destino_desc}")
+    print(f"  sello       -> {sello['sha256'][:16]}... "
+          f"({sello['preceptos']} preceptos, {sello['bytes']:,} bytes)")
 
     if con_incid:
         print(f"\n  [AVISO] {len(con_incid)} precepto(s) con incidencias:")

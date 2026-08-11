@@ -720,7 +720,11 @@ class Ventana:
         # AQUI SI CABEN CUATRO LINEAS. Cuando el formulario compartia pantalla
         # con la respuesta, cada linea se la quitaba a lo que hay que leer; con
         # la pantalla para el solo, no le quita nada a nadie.
-        self.caja = tk.Text(tarjeta, height=4, width=ANCHO_DUDA, wrap="word",
+        # La caja y su aviso van juntos en un cajon para no renumerar toda la
+        # rejilla de la tarjeta por meter una linea debajo.
+        cajon = tk.Frame(tarjeta, bg=PAPEL2)
+        cajon.grid(row=1, column=0, sticky="ew", pady=(AIRE, HUECO))
+        self.caja = tk.Text(cajon, height=4, width=ANCHO_DUDA, wrap="word",
                             font=self.fuente_texto,
                             relief="flat", borderwidth=0,
                             padx=HUECO2, pady=HUECO2 - 4,
@@ -730,8 +734,22 @@ class Ventana:
                             highlightthickness=1,
                             highlightbackground=FILETE,
                             highlightcolor=LILA, bd=0)
-        self.caja.grid(row=1, column=0, sticky="ew", pady=(AIRE, HUECO))
+        self.caja.pack(fill="x")
         self.caja.bind("<KeyRelease>", lambda _e: self._revisar_boton())
+        # PEGAR NO ES ESCRIBIR. `<KeyRelease>` no llega cuando se pega con el
+        # boton derecho, y pegar es justo lo que hace alguien con un
+        # requerimiento delante. `<<Modified>>` salta con cualquier cambio,
+        # venga de donde venga; hay que rearmar la marca a mano.
+        self.caja.bind("<<Modified>>", self._caja_cambiada)
+
+        # EL AVISO DE LARGO, MIENTRAS SE ESCRIBE. Antes solo se enteraba al
+        # pulsar: se pegaba el requerimiento entero, se pulsaba y llegaba un
+        # rechazo. Va en gris y sin alarma, y solo aparece cuando hace falta.
+        self.aviso_largo = tk.Label(
+            cajon, text="", bg=PAPEL2, fg=TINTA2, font=self.fuente_menuda,
+            anchor="w", justify="left", wraplength=ANCHO_TARJETA - 40)
+        self.aviso_largo.pack(fill="x", pady=(AIRE, 0))
+        self.aviso_largo.pack_forget()
 
         fila = tk.Frame(tarjeta, bg=PAPEL2)
         fila.grid(row=2, column=0, sticky="ew")
@@ -1392,10 +1410,50 @@ class Ventana:
         # que tenia `fase4.main`. Coincidian hoy, que es lo que hace peligroso
         # este patron: coinciden hasta que alguien arregla una y no las otras.
         año, _motivo = AN.leer_ejercicio(self.ejercicio.get())
-        estado = "normal" if (duda and año is not None) else "disabled"
+        cabe = self._avisar_del_largo(duda)
+        estado = "normal" if (duda and año is not None and cabe) else "disabled"
         self.boton.configure(state=estado)
         if self.boton_criterio is not None:
             self.boton_criterio.configure(state=estado)
+
+    def _caja_cambiada(self, _evento=None) -> None:
+        """Cualquier cambio en la caja, incluido pegar con el raton."""
+        self.caja.edit_modified(False)
+        self._revisar_boton()
+
+    def _avisar_del_largo(self, duda: str) -> bool:
+        """Enseña el aviso de largo si toca. Devuelve si la duda cabe.
+
+        TRES TRAMOS, no dos. Callado mientras hay sitio de sobra; un aviso
+        tranquilo cuando se acerca -para que no pille por sorpresa a mitad de
+        pegar-; y el motivo cuando ya no cabe.
+
+        Y SE DICE QUE ESTO SE VA A CAER. El tope no es una manía: es que hoy
+        la pregunta viaja al modelo tal cual, y un escrito entero cuesta
+        dinero y da peor resultado que la duda concreta. Cuando la herramienta
+        sepa leer un PDF, la restriccion desaparece. Sin esa frase parece una
+        limitacion tonta, y una limitacion que parece tonta se salta.
+        """
+        n = len(duda)
+        if n > fase4.TOPE_PREGUNTA:
+            self.aviso_largo.configure(
+                text=f"Son {n:,} caracteres y caben {fase4.TOPE_PREGUNTA:,}. "
+                     f"Esto pasa al pegar un requerimiento entero: pega solo "
+                     f"la parte que pregunta, o resúmela en unas líneas. "
+                     f"(Cuando la herramienta sepa leer el PDF entero, esto "
+                     f"dejará de hacer falta.)".replace(",", "."),
+                fg=TINTA)
+            self.aviso_largo.pack(fill="x", pady=(AIRE, 0))
+            return False
+        if n > fase4.TOPE_PREGUNTA * 0.75:
+            self.aviso_largo.configure(
+                text=f"Vas por {n:,} caracteres de {fase4.TOPE_PREGUNTA:,}."
+                     .replace(",", "."),
+                fg=TINTA2)
+            self.aviso_largo.pack(fill="x", pady=(AIRE, 0))
+            return True
+        self.aviso_largo.pack_forget()
+        return True
 
     # -------------------------------------------------------------- lanzar
 
@@ -1601,6 +1659,24 @@ class Ventana:
                          justify="left", wraplength=520,
                          padx=RELLENO).pack(fill="x")
             linea(c, "", f"{total} en total")
+
+            # QUE EL CORPUS ESTA ENTERO, DICHO EN LA PANTALLA QUE SE ENSEÑA
+            # PARA DUDAR DE UNA RESPUESTA. Un corpus truncado no da error: da
+            # respuestas peores en silencio. Quien venga aqui a preguntarse
+            # «¿esto lo tiene?» tiene que poder ver que si, y que se ha
+            # comprobado, no que se supone. Ver `sellos`.
+            from agente_fiscal import sellos as _S
+            est = _S.estado(self.ix.rutas)
+            tk.Label(c, text=("✓  " if not est["problemas"] and est["sellado"]
+                              else "·  ") + est["frase"],
+                     bg=PAPEL2,
+                     fg=(TINTA2 if est["sellado"] and not est["problemas"]
+                         else TINTA),
+                     font=self.fuente_menuda, anchor="w", justify="left",
+                     wraplength=560, padx=RELLENO,
+                     # `pady` de un WIDGET es UNA distancia. El par va en el
+                     # `pack`. Es la cuarta vez que caigo en esto.
+                     ).pack(fill="x", pady=(HUECO2 - 4, 0))
         else:
             linea(c, "cargando...")
 

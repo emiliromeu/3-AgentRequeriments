@@ -128,6 +128,22 @@ class Indice:
         if not self.docs:
             raise ErrorCorpus(f"El corpus {self.ruta} esta vacio.")
 
+        # EL CORPUS, CONTRA SU SUMA DE CONTROL. Va aqui y no en el arranque de
+        # cada programa porque aqui pasan TODOS: la ventana, la terminal, el
+        # banco y las pruebas. Un sitio, una regla.
+        #
+        # MEJOR NO ABRIR QUE ABRIR CON MEDIA LEY. Un corpus truncado en un
+        # final de linea carga sin protestar y lo unico que se nota es que
+        # empiezan a salir NO ENCONTRADO donde antes habia respuesta. Nadie lo
+        # relaciona con el corpus. Ver `sellos`.
+        from . import sellos as S
+        problemas = S.comprobar(self.rutas)
+        if problemas:
+            raise ErrorCorpus(
+                "El corpus no cuadra con su suma de control. No se abre: con "
+                "media ley las respuestas empeoran sin dar ningun error.\n"
+                + "\n".join(f"  - {p}" for p in problemas))
+
         # Registro de normas y cuerpos, derivado de lo que se acaba de cargar.
         from .normas import Registro
         self.normas = Registro(self.docs)
