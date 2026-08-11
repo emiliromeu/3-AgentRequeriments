@@ -269,8 +269,36 @@ print("  «Falta el año del caso». Desde que hay tope de longitud eso es")
 print("  mentira: a quien pega un requerimiento se le decia que faltaba el")
 print("  año.\n")
 
+import time  # noqa: E402
 import tkinter as tk  # noqa: E402
+
 import interfaz  # noqa: E402
+
+
+def abrir_ventana():
+    """Una ventana con el motor YA cargado, o se para diciendo eso.
+
+    Antes esto esperaba contando vueltas de `update()` en vez de tiempo, y en
+    un clon limpio fallaba 1 de cada 6: si el corpus tardaba mas de la cuenta,
+    `_revisar_boton` se iba por la puerta de `motor is None`, el boton se
+    quedaba apagado y la prueba acusaba al aviso de largo de algo que no habia
+    hecho. UNA PRUEBA QUE CONVIERTE UNA MAQUINA LENTA EN UNA ACUSACION FALSA
+    ES PEOR QUE NO TENERLA: se aprende a ignorarla.
+    """
+    raiz = tk.Tk()
+    raiz.geometry("1180x900+40+40")
+    v = interfaz.Ventana(raiz, "ensayo")
+    fin = time.time() + 120
+    while v.motor is None and time.time() < fin:
+        raiz.update()
+        time.sleep(0.02)
+    if v.motor is None:
+        comprobar("la ventana carga el motor en menos de dos minutos", False,
+                  "no cargo: lo de abajo no se ha llegado a probar")
+        raiz.destroy()
+        return None, None
+    return raiz, v
+
 
 raiz = tk.Tk()
 raiz.withdraw()
@@ -279,13 +307,7 @@ ventana = interfaz.Ventana(raiz, "ensayo")
 print("  Y el largo se avisa MIENTRAS SE ESCRIBE, no al pulsar: alguien va a")
 print("  pegar un requerimiento entero y no puede llevarse un rechazo.\n")
 
-visible = tk.Tk()
-visible.geometry("1180x900+40+40")
-uno = interfaz.Ventana(visible, "ensayo")
-espera = 0
-while uno.motor is None and espera < 1200:
-    visible.update()
-    espera += 1
+visible, uno = abrir_ventana()
 uno.ejercicio.set("2023")
 
 
@@ -376,13 +398,7 @@ comprobar("(0) y al deshacerlo vuelven a leerse",
 original_avisar = interfaz.Ventana._avisar_del_largo
 try:
     interfaz.Ventana._avisar_del_largo = lambda self, duda: True
-    v2 = tk.Tk()
-    v2.geometry("1180x900+40+40")
-    w = interfaz.Ventana(v2, "ensayo")
-    n = 0
-    while w.motor is None and n < 1200:
-        v2.update()
-        n += 1
+    v2, w = abrir_ventana()
     w.ejercicio.set("2023")
     w.caja.insert("1.0", "x" * (fase4.TOPE_PREGUNTA + 400))
     v2.update()

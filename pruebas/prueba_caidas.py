@@ -359,13 +359,20 @@ def _textos(w, salida):
     return salida
 
 
+import time  # noqa: E402
+
 raiz = tk.Tk()
 raiz.geometry("1180x900+40+40")
 ventana = interfaz.Ventana(raiz, "ensayo")
-espera = 0
-while ventana.motor is None and espera < 1200:
+# SE ESPERA POR RELOJ, NO CONTANDO VUELTAS. Contando vueltas, en una maquina
+# cargada el motor no llegaba a tiempo y la prueba acusaba a la pantalla de
+# algo que no habia hecho. Ver la nota en `prueba_entradas.abrir_ventana`.
+fin = time.time() + 120
+while ventana.motor is None and time.time() < fin:
     raiz.update()
-    espera += 1
+    time.sleep(0.02)
+comprobar("la ventana carga el motor", ventana.motor is not None,
+          "no cargo en dos minutos")
 ventana._abrir_estado()
 raiz.update()
 pantallas = [v for v in raiz.winfo_children() if isinstance(v, tk.Toplevel)]
