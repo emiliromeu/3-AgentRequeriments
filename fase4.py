@@ -135,7 +135,9 @@ def recuperar(ix, grafo, consulta: str, impuesto: str,
     Parchear sitio a sitio es como se llega a cinco sitios distintos. Aqui hay
     uno, y el agente pasa por el mismo: si esto cambia, cambia para todos.
     """
-    cuerpos = ix.normas.cuerpos_para(impuesto)
+    # QUE PUEDE COMPETIR: el impuesto de la pregunta y las normas generales
+    # -la cadena vacia-. `None` si el impuesto no se sabe.
+    admitidos = ix.normas.admitidos_para(impuesto)
 
     # LAS DOS LIGAS. Cuando la duda es DE FONDO y se sabe el impuesto, se busca
     # SOLO en los cuerpos de ese impuesto; las normas generales se quedan
@@ -153,11 +155,10 @@ def recuperar(ix, grafo, consulta: str, impuesto: str,
     # procedimiento SIN RECUPERAR su articulo -de puesto 1 a no salir- porque
     # su respuesta vive precisamente en una norma general.
     from agente_fiscal import analizador as _AN
-    if cuerpos is not None and naturaleza == _AN.FONDO:
-        cuerpos = {c for c in cuerpos
-                   if ix.normas.impuesto_de_cuerpo(c) == impuesto}
+    if admitidos is not None and naturaleza == _AN.FONDO:
+        admitidos = {impuesto}
 
-    return ix.buscar_del_impuesto(consulta, tope, cuerpos, grafo)
+    return ix.buscar_del_impuesto(consulta, tope, admitidos, grafo)
 
 
 def _fin(res: dict, tr) -> dict:
@@ -429,20 +430,21 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     # del IRPF, y el verificador no lo salva: la cita es literal y correcta, lo
     # que falla es que no viene al caso, y eso no lo mira nadie.
     #
-    # `cuerpos_para` devuelve None si el impuesto no se ha podido determinar, y
-    # entonces no se filtra: filtrar con un impuesto equivocado es peor que no
-    # filtrar. La reserva mantiene viva la remision entre impuestos.
-    cuerpos = ix.normas.cuerpos_para(analisis.impuesto)
+    # `admitidos_para` devuelve None si el impuesto no se ha podido determinar,
+    # y entonces no se filtra: filtrar con un impuesto equivocado es peor que
+    # no filtrar. La reserva mantiene viva la remision entre impuestos.
     resultados, huerfanos, reserva = recuperar(
         ix, grafo, consulta, analisis.impuesto,
         naturaleza=analisis.naturaleza)
-    if cuerpos is None:
+    if ix.normas.admitidos_para(analisis.impuesto) is None:
         print("   busqueda: en TODO el corpus "
               f"(el impuesto quedo en «{analisis.impuesto}»: no se filtra)")
+    elif analisis.naturaleza == AN.FONDO:
+        print(f"   busqueda: SOLO en preceptos de {analisis.impuesto} "
+              f"(duda de fondo; las generales entran por remision)")
     else:
-        print(f"   busqueda: en los cuerpos de {analisis.impuesto} y en las "
-              f"normas generales ({len(cuerpos)} de "
-              f"{len(ix.normas.cuerpos)} cuerpos)")
+        print(f"   busqueda: en preceptos de {analisis.impuesto} y en normas "
+              f"generales (duda de {analisis.naturaleza})")
     if huerfanos:
         print(f"   sin resultados para: {', '.join(huerfanos)}")
     for i, r in enumerate(resultados, 1):

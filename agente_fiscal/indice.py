@@ -276,14 +276,20 @@ class Indice:
         )
         return orden[:tope], huerfanos
 
-    def buscar_del_impuesto(self, consulta: str, tope: int, cuerpos,
+    def buscar_del_impuesto(self, consulta: str, tope: int, admitidos,
                             grafo=None):
         """Como `buscar`, filtrando por impuesto. -> (dentro, huerfanos, reserva)
 
-        `cuerpos` son las claves donde puede COMPETIR esta consulta: las del
-        impuesto de la pregunta y las de las normas generales, que aplican a
-        todos. `None` = no filtrar; es lo que pasa cuando el impuesto no se ha
-        podido determinar, porque filtrar con uno equivocado es peor.
+        `admitidos` son los CODIGOS DE IMPUESTO que pueden competir; la cadena
+        vacia dentro significa «y tambien las normas generales». `None` = no
+        filtrar; es lo que pasa cuando el impuesto no se ha podido determinar,
+        porque filtrar con uno equivocado es peor.
+
+        SE PREGUNTA POR EL PRECEPTO, NO POR EL CUERPO. Antes esto era un
+        conjunto de claves de cuerpo, y valia mientras cada norma tratara de un
+        solo impuesto. Un codigo por libros -el Codi tributari de Catalunya-
+        tiene Renta, Patrimonio, Sucesiones e ITP dentro del mismo cuerpo, cada
+        uno en su titulo. Ver `normas.impuesto_de_precepto`.
 
         LA RESERVA ES LO QUE MANTIENE VIVA LA REMISION ENTRE IMPUESTOS. Son los
         preceptos A LOS QUE REMITEN los candidatos y que el filtro dejo fuera.
@@ -296,13 +302,13 @@ class Indice:
         Ley 19/1991 cuando habla de planes de pensiones exentos. Lo que decide
         quien esta en la reserva es A QUIEN SE LLAMA, no a quien se parece.
         """
-        orden, huerfanos = self.buscar(consulta, tope=tope if cuerpos is None
+        orden, huerfanos = self.buscar(consulta, tope=tope if admitidos is None
                                        else len(self.docs))
-        if cuerpos is None:
+        if admitidos is None:
             return orden[:tope], huerfanos, []
 
         dentro = [r for r in orden
-                  if r.doc.registro.get("cuerpo_clave") in cuerpos][:tope]
+                  if self.normas.admite(r.doc.registro, admitidos)][:tope]
         if grafo is None:
             return dentro, huerfanos, []
 
@@ -313,7 +319,7 @@ class Indice:
                 d = self.por_clave.get(rem.destino or "")
                 if d is None or d.clave in llamados:
                     continue
-                if d.registro.get("cuerpo_clave") in cuerpos:
+                if self.normas.admite(d.registro, admitidos):
                     continue          # ya podia competir; si no salio, no venia al caso
                 llamados[d.clave] = Resultado(d, 0.0)
         return dentro, huerfanos, list(llamados.values())

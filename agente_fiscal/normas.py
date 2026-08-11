@@ -62,6 +62,26 @@ def _acronimo(materia: str) -> str:
     return "".join(iniciales)
 
 
+# EL ROTULO DE UN NIVEL ESTRUCTURAL, SIN SU NUMERACION NI SU RANGO.
+#
+#   «TITULO II. Impuesto sobre el patrimonio (articulo 621-1 - articulo 622-2)»
+#        ->  «Impuesto sobre el patrimonio»
+#
+# Hace falta porque `es_materia_de_impuesto` mira como EMPIEZA la materia -una
+# ley de un tributo se titula «Impuesto sobre ...»- y con el «TITULO II.»
+# delante no empieza por ahi nunca.
+_RE_NIVEL = re.compile(
+    r"^(?:libro|titulo|capitulo|seccion|subseccion|parte)\b[^.]*\.\s*",
+    re.IGNORECASE)
+_RE_RANGO_ROTULO = re.compile(r"\s*\(art[ií]culos?\s[^)]*\)\s*$", re.IGNORECASE)
+
+
+def _materia_de_rotulo(rotulo: str) -> str:
+    t = B.sin_tildes(rotulo or "").strip()
+    t = _RE_NIVEL.sub("", t)
+    return _RE_RANGO_ROTULO.sub("", t).strip()
+
+
 @dataclass
 class Cuerpo:
     """Un articulado con numeracion propia."""
@@ -342,14 +362,72 @@ class Registro:
                 return _acronimo(otro.materia)
         return ""
 
-    def cuerpos_para(self, impuesto: str):
-        """Donde se busca una pregunta de ESE impuesto. `None` = no filtrar.
+    def impuesto_de_precepto(self, registro) -> str:
+        """De que impuesto es ESTE precepto. Cadena vacia = de ninguno.
 
-        Los cuerpos del impuesto MAS los generales -LGT, RGAT, recaudacion,
-        sancionador, facturacion-, que aplican a todos. Un cuerpo que no es de
-        ningun impuesto es general por definicion: no hay lista de normas
-        generales escrita en ninguna parte, se deduce de que su titulo no
-        nombra un impuesto.
+        LA UNIDAD DE CLASIFICACION ES EL PRECEPTO, NO LA NORMA. Hasta ahora una
+        norma era «de un impuesto» o «general» y bastaba, porque cada norma
+        estatal trata de uno. Un CODIGO POR LIBROS no: en el libro sexto del
+        Codi tributari de Catalunya cada impuesto es un TITULO, y la misma
+        norma tiene dentro Renta, Patrimonio, Sucesiones e ITP. Clasificada
+        como «general» competiria en las busquedas de los cuatro impuestos que
+        tenemos, y sus articulos de Sucesiones saldrian en preguntas de IVA.
+
+        POR QUE EL PRECEPTO Y NO EL TITULO, que era la otra opcion:
+
+          · el precepto es lo que se recupera, lo que se filtra y lo que se
+            cita. Cualquier unidad mas gruesa necesita despues un mapa a
+            preceptos, asi que se acaba aqui igual, con un rodeo;
+          · la EVIDENCIA si vive en el titulo -«TITULO II. Impuesto sobre el
+            patrimonio»- y de ahi se lee; lo que se guarda es la RESPUESTA, y
+            esa se pega al precepto;
+          · y meter un nivel «titulo» en el modelo obligaria a tocar los
+            registros de las doce normas ya ingeridas. Esto no toca ninguno:
+            `contexto` ya esta en cada registro desde la fase 1.
+
+        Se lee de los datos, sin lista en ninguna parte. Para Sucesiones e ITP
+        el dia que entren no hay que escribir nada: sus titulos ya lo dicen.
+        """
+        ctx = registro.get("contexto") or []
+        if isinstance(ctx, str):
+            ctx = [ctx]
+        for rotulo in ctx:
+            materia = _materia_de_rotulo(str(rotulo))
+            if es_materia_de_impuesto(materia):
+                return _acronimo(materia)
+        return self.impuesto_de_cuerpo(registro.get("cuerpo_clave") or "")
+
+    def impuestos_de_norma(self, norma_id: str) -> set:
+        """TODOS los impuestos que trata una norma. Puede ser mas de uno.
+
+        Es la regla del papel, pero sin obligar a elegir: una norma de varios
+        impuestos ya no tiene que hacerse pasar por general.
+        """
+        fuera = set()
+        for c in self.cuerpos.values():
+            if c.norma_id == norma_id and es_materia_de_impuesto(c.materia):
+                fuera.add(_acronimo(c.materia))
+        return fuera
+
+    def admite(self, registro, impuestos) -> bool:
+        """¿Puede este precepto competir en una consulta de esos impuestos?
+
+        `impuestos` es un conjunto de codigos; la cadena vacia dentro significa
+        «y tambien las normas generales». `None` = no se filtra.
+        """
+        if impuestos is None:
+            return True
+        return self.impuesto_de_precepto(registro) in impuestos
+
+    def admitidos_para(self, impuesto: str):
+        """Que impuestos pueden competir en una consulta de ESE impuesto.
+
+        Devuelve codigos, no cuerpos: la cadena vacia significa «y las normas
+        generales», que aplican a todos. Antes esto devolvia un conjunto de
+        CUERPOS, y valia mientras cada norma tratara de un solo impuesto; con
+        un codigo por libros dentro -Renta, Patrimonio, Sucesiones e ITP en el
+        mismo cuerpo- el cuerpo dejo de ser la unidad. Ver
+        `impuesto_de_precepto`.
 
         DEVUELVE `None` SI EL IMPUESTO NO SE HA PODIDO DETERMINAR, y esa es la
         regla que no se negocia: filtrar con un impuesto equivocado es peor que
@@ -359,8 +437,7 @@ class Registro:
         """
         if not impuesto or impuesto not in self.impuestos():
             return None
-        return {clave for clave in self.cuerpos
-                if self.impuesto_de_cuerpo(clave) in ("", impuesto)}
+        return {impuesto, ""}
 
     def papel(self, clave_cuerpo: str) -> str:
         c = self.cuerpos.get(clave_cuerpo)

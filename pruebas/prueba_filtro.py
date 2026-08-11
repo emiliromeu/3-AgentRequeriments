@@ -53,7 +53,7 @@ print(f"corpus: {len(ix.docs)} preceptos · {len(N.cuerpos)} cuerpos · "
 
 def buscar(consulta, impuesto):
     return ix.buscar_del_impuesto(consulta, TOPE,
-                                  N.cuerpos_para(impuesto), grafo)
+                                  N.admitidos_para(impuesto), grafo)
 
 
 def normas_de(resultados):
@@ -78,14 +78,18 @@ comprobar("y el RGAT tampoco", N.impuesto_de_cuerpo("BOE-A-2007-15984#1") == "")
 
 # ================================================ 2. DONDE SE BUSCA
 print("\n=== 2. SE BUSCA EN EL IMPUESTO Y EN LAS GENERALES ===")
+# `admitidos_para` devuelve CODIGOS DE IMPUESTO, no cuerpos: la unidad de
+# clasificacion es el precepto desde que hay codigos por libros con varios
+# impuestos dentro del mismo cuerpo. Ver `normas.impuesto_de_precepto`.
 for imp in sorted(N.impuestos()):
-    cu = N.cuerpos_para(imp)
-    suyos = {c for c in cu if N.impuesto_de_cuerpo(c) == imp}
-    generales = {c for c in cu if N.impuesto_de_cuerpo(c) == ""}
-    otros = {c for c in cu if N.impuesto_de_cuerpo(c) not in ("", imp)}
-    comprobar(f"{imp}: entran sus cuerpos ({len(suyos)}) y los generales "
-              f"({len(generales)})", bool(suyos) and bool(generales))
-    comprobar(f"  {imp}: y NINGUNO de otro impuesto", not otros, sorted(otros))
+    cu = N.admitidos_para(imp)
+    comprobar(f"{imp}: entra el suyo y entran las generales",
+              cu == {imp, ""}, cu)
+    dentro = [d for d in ix.docs if N.admite(d.registro, cu)]
+    otros = {N.impuesto_de_precepto(d.registro) for d in dentro} - {imp, ""}
+    comprobar(f"  {imp}: y NI UN PRECEPTO de otro impuesto", not otros,
+              sorted(otros))
+    print(f"      {imp}: {len(dentro)} preceptos de {len(ix.docs)} pueden competir")
 
 # ================================================ 3. LOS CUATRO MEDIDOS
 print("\n=== 3. LOS CUATRO CASOS QUE DESTAPARON ESTO ===")
@@ -179,8 +183,8 @@ print("  la ley que tocaba y la respuesta sale igual de segura citando otra.\n")
 
 for valor, que in (("", "vacio"), (None, "nulo"), ("desconocido", "desconocido"),
                    ("otro", "otro"), ("ISD", "un impuesto que no tenemos")):
-    comprobar(f"con «{que}» no se filtra", N.cuerpos_para(valor) is None,
-              N.cuerpos_para(valor))
+    comprobar(f"con «{que}» no se filtra", N.admitidos_para(valor) is None,
+              N.admitidos_para(valor))
 sin, _h, res_sin = ix.buscar_del_impuesto("escala de gravamen base liquidable",
                                           TOPE, None, grafo)
 todo, _h2 = ix.buscar("escala de gravamen base liquidable", tope=TOPE)
@@ -219,9 +223,9 @@ print("\n=== 7. LA PRUEBA SABE PONERSE ROJA ===")
 print("  Ninguna prueba se da por buena sin verla fallar cuando debe fallar.\n")
 
 # (a) se quita el filtro
-original = N.__class__.cuerpos_para
+original = N.__class__.admitidos_para
 try:
-    N.__class__.cuerpos_para = lambda self, impuesto: None
+    N.__class__.admitidos_para = lambda self, impuesto: None
     roto, _h, _r = buscar(CASOS["LA VIVIENDA HABITUAL (traia 5/5 del IRPF)"], "IP")
     del_irpf = sum(1 for n in normas_de(roto) if n in (LIRPF, RIRPF))
     print(f"    sin filtro, la pregunta de patrimonio trae {del_irpf} de "
@@ -229,7 +233,7 @@ try:
     comprobar("(a) sin filtro vuelven los del IRPF, y el bloque 3 lo cazaria",
               del_irpf > 0, del_irpf)
 finally:
-    N.__class__.cuerpos_para = original
+    N.__class__.admitidos_para = original
 roto, _h, _r = buscar(CASOS["LA VIVIENDA HABITUAL (traia 5/5 del IRPF)"], "IP")
 comprobar("(a) y al deshacerlo vuelven a desaparecer",
           not any(n in (LIRPF, RIRPF) for n in normas_de(roto)))
@@ -244,17 +248,16 @@ comprobar("(b) y con reserva vuelve", bool(de_otro))
 
 # (c) se filtra SIEMPRE, tambien sin impuesto: el error que se quiso evitar
 try:
-    N.__class__.cuerpos_para = lambda self, impuesto: {
-        c for c in self.cuerpos if self.impuesto_de_cuerpo(c) in ("", "IVA")}
+    N.__class__.admitidos_para = lambda self, impuesto: {"IVA", ""}
     mal, _h, _r = buscar("escala de gravamen base liquidable patrimonio neto",
                          "desconocido")
     print(f"    filtrando con el impuesto equivocado, sale: "
           f"{', '.join(r.doc.referencia for r in mal[:4])}")
     comprobar("(c) con un impuesto equivocado se pierde la ley que tocaba, "
-              "y por eso `cuerpos_para` devuelve None cuando no se sabe",
+              "y por eso `admitidos_para` devuelve None cuando no se sabe",
               not any(n == LIP for n in normas_de(mal)), normas_de(mal))
 finally:
-    N.__class__.cuerpos_para = original
+    N.__class__.admitidos_para = original
 
 print("\n" + "=" * 62)
 print(f"COMPROBACIONES: {len(fallos)} fallos")

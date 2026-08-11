@@ -181,7 +181,7 @@ for c in casos:
     a, _h, _x = fase4.recuperar(ix, grafo, c["consulta"], imp, tope=30,
                                 naturaleza=AN.PROCEDIMIENTO)
     b, _h2, _y = ix.buscar_del_impuesto(c["consulta"], 30,
-                                        N.cuerpos_para(imp), grafo)
+                                        N.admitidos_para(imp), grafo)
     pa = next((i for i, r in enumerate(a, 1)
                if r.doc.registro["referencia"].replace("Articulo ", "")
                in c["aceptables"] and r.doc.registro["cuerpo_clave"] == cuerpo), None)
