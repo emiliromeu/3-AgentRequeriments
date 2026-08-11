@@ -77,11 +77,34 @@ for r in ELECTRICIDAD:
 for r in (IMPORTACION,) + DEL_ASUNTO:
     comprobar(f"{r}: es de IVA, NO se descarta por materia",
               not T.materia_ajena(por_id[r]))
+# LA PREMISA DE ESTE BUCLE CADUCO AL SEMBRAR EL TEAC.
+#
+# Decia «todas las regionales de la copia son de IVA, ninguna se descarta», y
+# era cierto cuando la copia tenia nueve resoluciones caidas probando. Al
+# sembrar los articulos de PROCEDIMIENTO de la LGT entraron resoluciones de
+# Sociedades y de IRPF -la LGT es de todos los impuestos- y el filtro empezo a
+# descartarlas, que es su trabajo.
+#
+# Asi que ya no se comprueba contra una suposicion sobre la copia, sino contra
+# LOS DATOS DE CADA CRITERIO: se descarta si -y solo si- sus `conceptos` no
+# nombran ninguno de los impuestos que cubre el corpus. Eso sigue valiendo
+# cuando la copia crezca otra vez.
 regionales = [c for c in cache.todas() if not c.es_central]
+print(f"    {len(regionales)} resoluciones regionales en la copia")
+# LA REGLA ENTERA, que son dos mitades y la segunda se me olvido al primer
+# intento: se descarta si nombra un impuesto Y ninguno es de los que cubrimos.
+# Si NO nombra ninguno -«Prescripcion», «Procedimiento de inspeccion»- se deja
+# pasar, porque no se infiere lo que la fuente no dice. Es lo que comprueba el
+# bloque 3, y sin esa mitad esta comprobacion pedia lo contrario.
 for c in regionales:
-    comprobar(f"{c.resolucion} ({c.unidad}): tambien es de IVA, se queda",
-              not T.materia_ajena(c))
-
+    bajos = [x.lower() for x in c.conceptos]
+    nombra_impuesto = any("impuesto" in x or "iva" in x.split() for x in bajos)
+    es_de_iva = any("valor añadido" in x or x.strip() == "iva" for x in bajos)
+    esperado = nombra_impuesto and not es_de_iva
+    comprobar(f"{c.resolucion} ({c.unidad}): el filtro coincide con sus conceptos",
+              T.materia_ajena(c) == esperado,
+              f"materia_ajena={T.materia_ajena(c)} esperado={esperado} "
+              f"conceptos={c.conceptos[:3]}")
 # ============================ 3. LO QUE LA FUENTE CALLA NO SE INFIERE
 print("\n=== 3. SI NO NOMBRA IMPUESTO, SE LE DEJA PASAR ===")
 print("  No se infiere lo que la fuente no dice. Es la regla de siempre.\n")

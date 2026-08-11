@@ -41,6 +41,11 @@ def comprobar(que, ok, obtenido=""):
 ix, g = fase4.cargar_corpus()
 N = ix.normas
 LIVA = next(c for c in N.cuerpos if "28740" in c)
+# Las dos de Renta, desde que se ingirieron: la ley y su reglamento. Se buscan
+# por identificador del BOE y no se escriben a mano, para que la suite siga
+# valiendo si cambia el indice del cuerpo.
+LIRPF = next(c for c in N.cuerpos if "20764" in c)
+RIRPF = next(c for c in N.cuerpos if "6820" in c and c.endswith("#1"))
 RIVA = next(c for c in N.cuerpos if c.endswith("28925#1"))
 LGT = next(c for c in N.cuerpos if "23186" in c)
 
@@ -64,15 +69,27 @@ print(f"    señales: {lec.senales}")
 print(f"    cobertura: {lec.cobertura}")
 comprobar("NO dispara ninguna señal de desacuerdo", not lec.hay_discusion,
           str(lec.senales))
-comprobar("y tampoco se mete en cobertura como si fuera comparable",
-          not any("22" in c for c in lec.cobertura), str(lec.cobertura))
-
+# LA PREMISA DE ESTE BLOQUE CAMBIO AL INGERIR RENTA, Y PARA BIEN.
+#
+# Cuando se escribio, el Reglamento del IRPF NO estaba en el corpus: el
+# articulo 22 del RIRPF era una norma «externa» y lo que se comprobaba era que
+# no se confundiera con el 22 de la Ley del IVA por no poder leerlo.
+#
+# Ahora el RIRPF esta dentro, asi que ese precepto se lee, es «cargada» y es
+# comparable. La leccion de la fase 6 no ha desaparecido: se ha vuelto MAS
+# exigente. Antes bastaba con no resolver; ahora hay que resolver AL SITIO
+# CORRECTO teniendo los dos articulos 22 delante.
 preceptos = D.pares_de_normativa("RIRPF, RD 439/2007, art. 22", N)
-comprobar("el precepto se lee, pero NO es comparable",
-          preceptos and not preceptos[0].comparable,
+comprobar("el articulo 22 del RIRPF ahora se lee: esta en el corpus",
+          preceptos and preceptos[0].estado == "cargada",
           str([(p.numero, p.estado) for p in preceptos]))
-comprobar("y se le marca como de norma EXTERNA",
-          preceptos[0].estado == "externa", preceptos[0].estado)
+comprobar("Y RESUELVE AL REGLAMENTO DEL IRPF, no a la Ley del IVA",
+          preceptos[0].clave[0] == RIRPF, str(preceptos[0].clave))
+comprobar("o sea: NO es el articulo 22 del IVA, que es el que costo la fase 6",
+          preceptos[0].clave != (LIVA, "22"), str(preceptos[0].clave))
+comprobar("la cobertura dice que va de otro precepto, sin llamarlo desacuerdo",
+          all("22 de la Ley 37" not in c for c in lec.cobertura),
+          str(lec.cobertura))
 
 # ================================================== 2. LOS DOS ESPEJOS
 print("\n=== 2. LOS DOS ESPEJOS: LA MISMA NORMA SI SE COMPARA ===")
@@ -111,7 +128,13 @@ CASOS = [
     ("Ley 37/1992 art. 95, 130", [(LIVA, "95"), (LIVA, "130")], "lista"),
     ("Ley 37/1992 arts. 75, 78, 80-cuatro",
      [(LIVA, "75"), (LIVA, "78"), (LIVA, "80")], "plural y apartado pegado"),
-    ("LIRPF, Ley 35/2006, Art. 33 a 36.", [], "rango de OTRA norma"),
+    # Antes daba [] porque la Ley del IRPF no estaba en el corpus. Ahora esta,
+    # y el rango se resuelve a SUS articulos: es lo que tiene que pasar. Lo que
+    # no puede pasar -y lo comprueba el bloque 1- es que un «articulo 33» acabe
+    # en la ley que no toca.
+    ("LIRPF, Ley 35/2006, Art. 33 a 36.",
+     [(LIRPF, "33"), (LIRPF, "34"), (LIRPF, "35"), (LIRPF, "36")],
+     "rango de otra norma, que ahora SI esta cargada"),
     ("Ley 38/1992;Ley 37/1992", [], "dos normas, sin articulos"),
     ("LIVA, Ley 37/1992, Art. 27.\n\n LIVA, Ley 37/1992, Art. 95.",
      [(LIVA, "27"), (LIVA, "95")], "SALTO DE LINEA (2026)"),

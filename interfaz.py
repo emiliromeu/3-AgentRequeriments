@@ -91,7 +91,8 @@ from agente_fiscal import estado as EST
 BOTON_LEY = "Consultar la ley"
 BOTON_CRITERIO = "Consultar tambien el criterio"
 PIE_CRITERIO = ("anade consultas de la DGT y resoluciones del TEAC y de los "
-                "tribunales regionales · unos 0,22 € frente a 0,13 €")
+                "tribunales regionales, TODAS DE IVA por ahora · unos 0,22 € "
+                "frente a 0,13 €")
 
 # Lo que se dice arriba, junto al estado, y lo que viaja en el texto copiado.
 # Si alguien pega la respuesta en sus notas, tiene que saberse con que se hizo.
@@ -99,9 +100,37 @@ PIE_CRITERIO = ("anade consultas de la DGT y resoluciones del TEAC y de los "
 # todavia no hay criterio guardado sobre eso. No es una averia ni un fallo del
 # que pregunta, y es lo primero que va a pasar cuando alguien pruebe una
 # pregunta al azar con 241 consultas guardadas.
-AVISO_DESPENSA = ("La copia se va llenando poco a poco. Si el segundo botón no "
-                  "encuentra nada sobre tu duda, no es un fallo: todavía no hay "
-                  "criterio guardado sobre eso.")
+# DONDE BUSCAR SI HACE FALTA. Va pegado a todo mensaje de ausencia.
+#
+# EL PROBLEMA DE FONDO: «no hay criterio sobre esto» y «no hay criterio
+# guardado sobre esto» se parecen mucho y dicen cosas opuestas. La primera es
+# una afirmacion sobre el mundo que esta herramienta NO puede hacer -tiene una
+# copia parcial, hecha a mano, de dos fuentes que publican decenas de miles de
+# documentos-. La segunda es una afirmacion sobre nuestro disco, que es lo
+# unico que sabemos.
+#
+# Quien lea la primera y no encuentre nada da el tema por cerrado. Por eso
+# ningun mensaje de ausencia se queda sin decir DE DONDE habla y DONDE mirar.
+DONDE_BUSCAR = ("Para mirarlo en la fuente: las consultas de la DGT están en "
+                "PETETE (petete.tributos.hacienda.gob.es) y la doctrina del "
+                "TEAC en DYCTEA.")
+
+AVISO_DESPENSA = ("Esta copia es NUESTRA y es parcial: se va llenando poco a "
+                  "poco. Si el segundo botón no encuentra nada sobre tu duda "
+                  "no es un fallo, y tampoco significa que no haya criterio: "
+                  "significa que aquí todavía no está. " + DONDE_BUSCAR)
+
+# Y EL CASO QUE VA A PASAR SIEMPRE, NO DE VEZ EN CUANDO.
+#
+# La ley cubre IVA y Renta; la copia de criterio es TODA de IVA. Asi que para
+# cualquier pregunta de IRPF el segundo boton no va a encontrar nada, y no una
+# vez: ninguna. Sin decirlo, se lee como que el criterio esta roto justo el dia
+# que alguien prueba Renta por primera vez.
+AVISO_CRITERIO_SOLO_IVA = (
+    "El criterio que tenemos guardado es todo de IVA. Para preguntas de Renta "
+    "el segundo botón no encontrará nada todavía —no porque no exista "
+    "doctrina de Renta, que la hay, sino porque esa parte de la copia aún no "
+    "se ha llenado. " + DONDE_BUSCAR)
 
 HECHA_CON = {
     False: "Hecha solo con la ley y sus reglamentos. Sin criterio administrativo.",
@@ -146,9 +175,10 @@ NO_ENCONTRADO_TEXTO = (
     "para mirarlos tu."
 )
 NO_ENCONTRADO_CON_CRITERIO = (
-    "No hay respaldo suficiente en la ley, y en la copia guardada todavia no "
-    "hay criterio sobre esto. La copia se llena poco a poco: que no este no "
-    "quiere decir que no exista. Abajo tienes los articulos encontrados."
+    "No hay respaldo suficiente en la ley, y en NUESTRA copia de criterio "
+    "todavia no hay nada sobre esto. Que no este aqui no quiere decir que no "
+    "exista: la copia es parcial y se llena poco a poco. Abajo tienes los "
+    "articulos encontrados."
 )
 DISCUTIDO_CON_EJES = (
     "Hay textos que apuntan a soluciones distintas: criterio de años "
@@ -1514,15 +1544,44 @@ class Ventana:
                  ).pack(fill="x", pady=(AIRE, 0))
 
         # --- las normas ---
+        # AGRUPADO POR IMPUESTO, NO UNA LINEA POR CUERPO.
+        #
+        # Con cuatro normas cabia; con diez cuerpos la pantalla se fue a 45
+        # lineas y dejo de caber de una vez. Subir el tope no arregla nada:
+        # crecia UNA LINEA POR CUERPO, asi que con doce tampoco cabria.
+        #
+        # Agrupado crece una linea por IMPUESTO, que es como piensa quien mira:
+        # nadie viene a saber cuantos cuerpos normativos hay, viene a saber si
+        # su impuesto esta dentro. Las normas concretas siguen ahi, en gris y en
+        # una linea, porque el detalle importa cuando importa.
         titulo("NORMAS CARGADAS · es lo único que fundamenta")
         c = caja()
         total = 0
         if self.ix is not None:
+            from agente_fiscal.normas import _acronimo, es_materia_de_impuesto
+            grupos: dict = {}
             for cuerpo in self.ix.normas.cuerpos.values():
                 n = sum(1 for d in self.ix.docs
                         if d.registro.get("cuerpo_clave") == cuerpo.clave)
                 total += n
-                linea(c, cuerpo.etiqueta, f"{n} artículos")
+                materia = (cuerpo.materia or "").strip()
+                if es_materia_de_impuesto(materia):
+                    clave = f"{materia} ({_acronimo(materia)})"
+                else:
+                    clave = "Normas generales"
+                g = grupos.setdefault(clave, {"n": 0, "normas": []})
+                g["n"] += n
+                nombre = cuerpo.etiqueta.split(",")[0]
+                if nombre not in g["normas"]:
+                    g["normas"].append(nombre)
+            for nombre, g in sorted(grupos.items(),
+                                    key=lambda kv: (kv[0] == "Normas generales",
+                                                    kv[0])):
+                linea(c, nombre, f"{g['n']} artículos")
+                tk.Label(c, text="   " + " · ".join(g["normas"]), bg=PAPEL2,
+                         fg=TINTA3, font=self.fuente_menuda, anchor="w",
+                         justify="left", wraplength=520,
+                         padx=RELLENO).pack(fill="x")
             linea(c, "", f"{total} en total")
         else:
             linea(c, "cargando...")
@@ -1542,6 +1601,10 @@ class Ventana:
         tk.Label(c, text=AVISO_DESPENSA, bg=PAPEL2, fg=TINTA2,
                  font=self.fuente_menuda, anchor="w", justify="left",
                  wraplength=560, padx=RELLENO, pady=HUECO2 - 4).pack(fill="x")
+        tk.Label(c, text=AVISO_CRITERIO_SOLO_IVA, bg=PAPEL2, fg=TINTA,
+                 font=self.fuente_menuda, anchor="w", justify="left",
+                 wraplength=560, padx=RELLENO,
+                 pady=(HUECO2 - 4)).pack(fill="x")
 
         # --- el coste ---
         titulo("LO QUE CUESTA CADA CONSULTA · medido, no estimado")
@@ -1682,10 +1745,29 @@ class Ventana:
             self.panel_aporte.pack_forget()
             return
 
+        # TRES CASOS, NO DOS. Y la diferencia no es de matiz.
+        #
+        # Con Renta ingerida y la copia de criterio llena de IVA, el
+        # seleccionador trae consultas por COINCIDENCIA DE NUMERO DE ARTICULO
+        # -el 30 existe en las dos leyes-. Decir entonces «se le pusieron
+        # delante 3 y ninguna sostiene la respuesta» da a entender que se ha
+        # mirado el criterio de Renta. No se ha mirado.
+        #
+        # Y «ESTA DUDA LA RESUELVE LA LEY SOLA» SOLO SE PUEDE DECIR CUANDO SE
+        # HA COMPROBADO CRITERIO DE ESA MATERIA. Es una afirmacion sobre lo que
+        # opina la Administracion, y no se sostiene sin haber mirado.
         a = res.get("aporte") or {}
         usadas, resol = a.get("consultas_dgt") or [], a.get("resoluciones") or []
-        habia = len(a.get("consultas_en_material") or [])
+        impuesto = a.get("impuesto") or ""
+        misma = a.get("en_material_misma_materia")
+        otra = a.get("en_material_otra_materia")
+        if misma is None and otra is None:
+            # Expedientes anteriores a esta distincion: todo se cuenta como
+            # de la misma materia, que es lo que se suponia entonces.
+            misma, otra = list(a.get("consultas_en_material") or []), []
+        misma, otra = list(misma or []), list(otra or [])
         habia_r = len(a.get("resoluciones_en_material") or [])
+        de_esto = f" de {impuesto}" if impuesto else ""
 
         if usadas or resol:
             partes = []
@@ -1697,16 +1779,24 @@ class Ventana:
                      + ", citadas y comprobadas una a una.")
             detalle = "  ·  ".join(usadas + resol)
             color = TINTA
-        elif habia or habia_r:
-            texto = (f"Se le pusieron delante {habia} consulta(s) de la DGT y "
-                     f"{habia_r} resolución(es), y NINGUNA sostiene la "
-                     f"respuesta: esta duda la resuelve la ley sola.")
-            detalle = ""
+        elif misma or habia_r:
+            texto = (f"Se le pusieron delante {len(misma)} consulta(s) de la "
+                     f"DGT y {habia_r} resolución(es){de_esto}, y NINGUNA "
+                     f"sostiene la respuesta: esta duda la resuelve la ley sola.")
+            detalle = "  ·  ".join(misma)
+            color = TINTA2
+        elif otra:
+            texto = (f"En la copia local no hay criterio{de_esto}. Lo que se "
+                     f"encontró —{len(otra)} consulta(s)— es de otro impuesto "
+                     f"y coincidía solo por el número de artículo, así que no "
+                     f"se ha comprobado criterio de esta materia. Puede "
+                     f"haberlo en la fuente: aquí no está.")
+            detalle = "  ·  ".join(otra)
             color = TINTA2
         else:
-            texto = ("Todavía no hay criterio guardado sobre esto. No es un "
-                     "fallo: la copia local se va llenando, y esta duda aún no "
-                     "está dentro.")
+            texto = (f"En la copia local todavía no hay criterio{de_esto}. No "
+                     "es un fallo ni quiere decir que no exista: esta copia es "
+                     "parcial y esta duda aún no está dentro.")
             detalle = ""
             color = TINTA2
 

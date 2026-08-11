@@ -73,6 +73,14 @@ ORDINAL_A_NUMERO.update(
         "duodecima": 12, "decimosegunda": 12,
     }
 )
+# EL MASCULINO, PARA LOS ARTICULOS. Las disposiciones van en femenino
+# -«disposicion adicional primera»- y los articulos en masculino -«articulo
+# primero»-. Se derivan del femenino en vez de escribir la lista otra vez:
+# duplicarla es garantizar que un dia solo se actualice una de las dos.
+ORDINAL_A_NUMERO.update(
+    {p[:-1] + "o": n for p, n in list(ORDINAL_A_NUMERO.items())
+     if p.endswith("a")}
+)
 
 # Sufijos latinos de articulos intercalados (art. 163 bis, 163 quater...).
 #
@@ -97,6 +105,19 @@ _RE_ARTICULO = re.compile(
     r"^articulos?\s+(?P<num>\d+)(?P<suf>(?:\s+[a-z]+){0,2})\s*\.?\s*$"
 )
 _RE_RANGO_ARTICULOS = re.compile(r"^articulos\s+.+\s+a\s+.+")
+# UN ARTICULO PUEDE IR NOMBRADO CON PALABRA EN VEZ DE CON CIFRA.
+#
+# «Articulo unico» es lo normal en un real decreto aprobatorio, cuyo articulado
+# propio es ese unico articulo que aprueba el reglamento. Tambien existen
+# «Articulo primero», «Articulo segundo» en normas antiguas. Sin esto el bloque
+# se queda SIN RECONOCER y el articulo aprobatorio no es citable: el RD 439/2007
+# perdia asi su unico articulo.
+#
+# Se apoya en el mismo vocabulario de ordinales que ya usan las disposiciones
+# -«Disposicion adicional unica»- porque es el mismo problema: el BOE nombra en
+# palabras lo que no numera.
+_RE_ARTICULO_ORDINAL = re.compile(
+    r"^articulo\s+(?P<ord>unic[ao]|[a-z]+)\s*\.?\s*$")
 _RE_DISPOSICION = re.compile(
     r"^disposicion\s+(?P<clase>adicional|transitoria|derogatoria|final)"
     r"(?:\s+(?P<ord>[\w\s]+?))?\s*\.?$"
@@ -217,6 +238,24 @@ def clasificar(titulo: str, id_bloque: str, tipo_boe: str) -> Clasificacion:
             es_rango=True,
         )
 
+    # -- articulo nombrado con palabra: "Articulo unico", "Articulo primero" --
+    m = _RE_ARTICULO_ORDINAL.match(tn)
+    if m:
+        ord_norm = normalizar(m.group("ord"))
+        ordinal = (1 if ord_norm.startswith("unic")
+                   else ORDINAL_A_NUMERO.get(ord_norm))
+        if ordinal is not None:
+            ord_txt = recorte(*m.span("ord")).strip()
+            return Clasificacion(
+                ARTICULO,
+                numero=ord_txt,
+                numero_norm=ord_norm,
+                ordinal=ordinal,
+                referencia=f"Articulo {ord_txt}",
+                referencia_corta=f"art. {ord_txt}",
+                clave=f"articulo {ord_norm}",
+            )
+
     # -- articulo --
     m = _RE_ARTICULO.match(tn)
     if m:
@@ -284,6 +323,23 @@ def clasificar(titulo: str, id_bloque: str, tipo_boe: str) -> Clasificacion:
         return Clasificacion(PREAMBULO, referencia=t or "Preambulo", clave="preambulo")
     if tipo_boe == "firma":
         return Clasificacion(FIRMA, referencia=t or "Firma", clave="firma")
+
+    # -- y, LO ULTIMO DE TODO, el encabezado que solo el BOE sabe que lo es --
+    #
+    # El titulo que abre el texto aprobado por un real decreto no empieza por
+    # ninguna de las palabras estructurales: es «REGLAMENTO DEL IMPUESTO
+    # SOBRE...» o «TEXTO REFUNDIDO DE...». No hay forma de reconocerlo por el
+    # texto sin una lista de casos, que es justo lo que este modulo evita. Pero
+    # el XML del BOE ya lo marca como encabezado y para esto su etiqueta es de
+    # fiar: se le cree CUANDO NO HAY NADA MEJOR.
+    #
+    # VA AL FINAL, Y NO ARRIBA, Y ESTO COSTO UN PRECEPTO. Puesto junto a los
+    # otros encabezados se tragaba los ANEXOS -que el BOE tambien declara
+    # «encabezado» y que SI son citables-: el anexo del RD 1624/1992 dejo de
+    # existir y el cuerpo del real decreto paso de 9 preceptos a 8. Un respaldo
+    # que se ejecuta antes que las reglas buenas no es un respaldo.
+    if tipo_boe == "encabezado":
+        return Clasificacion(ENCABEZADO, referencia=t, clave=normalizar(t))
 
     return Clasificacion(
         DESCONOCIDO,

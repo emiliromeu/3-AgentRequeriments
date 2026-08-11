@@ -94,6 +94,18 @@ _RE_REF_DISPOSICION = re.compile(
 
 # Como se nombra a la Ley del IVA. Si aparece cualquiera de estas, la cita es
 # de esta ley y se puede comprobar.
+# «Texto refundido de X» es otra norma que X. Ver el uso, mas abajo: se pega al
+# nombre antes de preguntarle al registro, para que decida con la designacion
+# entera y no con la mitad.
+_RE_DERIVADA = re.compile(
+    r"\b(?:texto\s+refundido|texto\s+articulado|reglamento\s+de\s+desarrollo)"
+    # OJO CON «de LA»: el patron acababa en «de|del» y la designacion real es
+    # «texto refundido de la Ley...». Sin admitir el articulo no casaba nunca,
+    # y la bateria salia VERIFICADA cuando debia ser NO_VERIFICABLE.
+    r"\s+(?:de[l]?\s+)?(?:la|el|los|las)?\s*$",
+    re.IGNORECASE,
+)
+
 _RE_NOMBRE_NORMA = re.compile(
     r"\b(?:LIVA|RIVA|L\.I\.V\.A\.|"
     r"(?:Ley|Reglamento|Real\s+Decreto(?:-ley)?|Decreto|C[oó]digo|Tratado|"
@@ -259,6 +271,18 @@ def _leer_referencia(
     m_nombre = _RE_NOMBRE_NORMA.search(fragmento)
     if m_nombre and registro is not None:
         bruto = re.sub(r"\s+", " ", m_nombre.group(0)).strip(" .,;:")
+        # LO QUE VA DELANTE DEL NOMBRE FORMA PARTE DE LA DESIGNACION.
+        #
+        # «texto refundido de la Ley del Impuesto sobre Sociedades» contiene el
+        # nombre de la Ley 27/2014 letra por letra, y es OTRA norma: el texto
+        # refundido es el RDLeg 4/2004, al que la 27/2014 derogo. El resolutor
+        # ya rechaza la designacion entera; lo que fallaba es que solo le
+        # llegaba el trozo que empieza en «Ley», porque el patron del nombre
+        # arranca ahi. Se le devuelve el cualificador antes de preguntar.
+        cabeza = fragmento[:m_nombre.start()]
+        m_der = _RE_DERIVADA.search(cabeza)
+        if m_der:
+            bruto = (" ".join(m_der.group(0).split()) + " " + bruto).strip()
         clave, porque = registro.resolver(bruto, cola=fragmento[m_nombre.end():])
         if clave:
             ref.norma, ref.norma_bruta, ref.cuerpo = "cargada", bruto, clave

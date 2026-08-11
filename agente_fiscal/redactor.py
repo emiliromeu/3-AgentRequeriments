@@ -83,6 +83,14 @@ _RE_MENCION_ART = re.compile(
 # «el articulo 80, apartado cuatro, de la Ley 37/1992» cabe de sobra.
 VENTANA_NORMA = 30
 
+# POR QUE LA REGLA 11 INSISTE EN QUE ESA LINEA VA SIN COMILLAS: paso de verdad.
+# El redactor entrecomillo «automoviles de turismo» dentro de su propio aviso de
+# remision, el verificador lo trato como cita -que es lo que debe hacer-, le
+# exigio referencia y no la tenia: NO_VERIFICABLE y respuesta entera tumbada.
+#
+# El dato va aqui y no en el prompt. Al modelo se le dan instrucciones, no el
+# historial de nuestras cicatrices: cada linea de anecdota que se le manda se
+# paga en cada consulta y no cambia lo que tiene que hacer.
 SISTEMA = """\
 Eres el redactor de un sistema de consulta fiscal de una gestoria espanola.
 Escribes para un profesional del departamento fiscal, que es quien decide. Tu
@@ -172,8 +180,9 @@ REGLAS QUE NO SE NEGOCIAN
    1998-01-01" es citar nuestra nota como si fuera norma.
 
 7. NO CITES NADA QUE NO ESTE EN EL MATERIAL. Si el material menciona que un
-   articulo remite al Reglamento del IVA, puedes decir que existe esa
-   remision, pero NO puedes citar el Reglamento: no esta en el corpus.
+   articulo remite a otra norma, puedes decir que existe esa remision, pero NO
+   puedes citar esa otra norma: no la tienes delante y no puedes comprobarla.
+   La razon no es que falte de ningun sitio; es que no se te ha dado a ti.
 
 8. Lenguaje juridico, pero la CONCLUSION en una frase que entienda cualquiera,
    al final, bajo el rotulo "En resumen:".
@@ -198,17 +207,17 @@ REGLAS QUE NO SE NEGOCIAN
 
     PERO SI QUE TIENES QUE DECIR ESTO, en una linea al final: si el ARTICULADO
     que estas leyendo remite a una norma que NO esta en el material, dilo.
-    Ejemplo real: el articulo 95 define «automovil de turismo» remitiendo al
-    anexo del Real Decreto Legislativo 339/1990, que no se te ha dado; sin esa
-    definicion no se sabe si el vehiculo del caso es un turismo.
-    El sistema tiene un detector de remisiones, pero NO las coge todas -esa se
-    le escapa, medido- asi que si tu la lees, la dices. Es una linea y evita
-    que el profesional de por cerrado algo que no lo esta.
+    Por ejemplo, un articulo que define un termino remitiendo al anexo de otra
+    ley que no se te ha dado: sin esa definicion no se sabe si el caso encaja.
+    El sistema anota en la FICHA las remisiones que detecta, pero no puede
+    garantizar que las coja todas, asi que si TU lees una que no esta anotada,
+    la dices. Es una linea y evita que el profesional de por cerrado algo que
+    no lo esta.
 
     ESA LINEA VA SIN COMILLAS, EN TUS PALABRAS. Es un aviso, no una cita: todo
     lo que pongas entre « » se comprueba como cita y se le exige su referencia
-    completa, asi que entrecomillar una palabra suelta ahi -«automoviles de
-    turismo»- tumba la respuesta entera. Medido: paso.
+    completa, asi que entrecomillar ahi una palabra suelta -aunque sea un
+    termino de la ley- tumba la respuesta entera.
 
 12. NO ENUMERES LOS PRECEPTOS QUE NO USAS. Si un precepto del material no
     viene al caso, simplemente NO lo menciones. Nada de "los demas preceptos
@@ -308,6 +317,14 @@ def bloque_precepto(registro: dict, ejercicio: int | None, grafo=None,
     if grafo is not None:
         pendientes = grafo.pendientes_de(registro["clave"])
         if pendientes:
+            # «SIN RESOLVER», NO «FUERA DEL CORPUS».
+            #
+            # Decia «fuera del corpus» de todas, y de algunas es falso: «la Ley
+            # del Impuesto» encaja con la del IVA y con la del IRPF, o sea que
+            # esta dentro dos veces y por eso no se resuelve. Al modelo se le
+            # estaba afirmando que falta lo que sobra. Lo que importa para el
+            # es lo mismo en los dos casos -no la tiene delante, no la cita- y
+            # eso es justo lo que ahora dice, sin afirmar de que corpus es.
             vistos = {
                 f"{r.etiqueta_destino} de {r.norma_externa or 'otra norma'}"
                 for r in pendientes
@@ -315,7 +332,7 @@ def bloque_precepto(registro: dict, ejercicio: int | None, grafo=None,
             corte = sorted(vistos)[:TOPE_REMISIONES]
             resto = len(vistos) - len(corte)
             partes.append(
-                "  REMISIONES SIN RESOLVER (fuera del corpus, NO las cites): "
+                "  REMISIONES SIN RESOLVER (no se te han dado, NO las cites): "
                 + "; ".join(corte)
                 + (f" (y {resto} mas)" if resto > 0 else "")
             )
@@ -533,6 +550,22 @@ LEE ESTO ANTES DE USARLO:
   LETRA en el texto de abajo.
 """
 
+# EL EJEMPLO DE ESTE BLOQUE ES UNA RESOLUCION QUE ESTA EN LA COPIA LOCAL, con
+# su unidad y su fecha de verdad, y por eso se puede comprobar sin salir a la
+# red.
+#
+# ANTES PONIA «TEAR de Cataluña 08/02042/2022», Y LO CAMBIE POR LA RAZON
+# EQUIVOCADA. Escribi que no existia en ninguna parte, y existe: es una
+# resolucion real del TEAR de Cataluña de 21/09/2022 sobre creditos
+# incobrables, y sale en DYCTEA en cuanto se busca por ese concepto. Lo unico
+# que comprobe fue que no estaba en NUESTRA copia, y salte de ahi a «no
+# existe». El cambio se queda -un ejemplo comprobable es mejor que uno que hay
+# que ir a buscar fuera- pero el motivo era falso.
+#
+# El nombre del tribunal no se escribe en el prompt: sale de `unidad`, que es
+# lo que dice DYCTEA, y lo compone `teac.etiqueta_de`. Esto son cosas nuestras
+# y por eso van AQUI y no ahi dentro: al modelo se le dice que copie el rotulo,
+# no la historia del repositorio.
 BLOQUE_TEAR = """
 ======================================================================
 RESOLUCIONES DE TRIBUNALES REGIONALES (TEAR)
@@ -552,7 +585,7 @@ LEE ESTO ANTES DE USARLO, PORQUE NO ES LO MISMO QUE LO DE ARRIBA:
 
   COMO SE PRESENTA, si la usas: en parrafo aparte, DESPUES de la ley, de la
   doctrina del TEAC y del criterio de la DGT, y diciendo lo que es:
-  «el TEAR de Cataluña, en un caso semejante, resolvio que...».
+  «el tribunal regional, en un caso semejante, resolvio que...».
 
   FORMATO DE LA CITA, con el tribunal DENTRO del rotulo:
 
@@ -560,13 +593,9 @@ LEE ESTO ANTES DE USARLO, PORQUE NO ES LO MISMO QUE LO DE ARRIBA:
       07/02872/2023/00/00, de 29/04/2025 —
       https://serviciostelematicosext.hacienda.gob.es/...}
 
-  EL EJEMPLO ES UNA RESOLUCION QUE ESTA EN LA COPIA LOCAL, con su unidad y su
-  fecha de verdad. Antes ponia «TEAR de Cataluña 08/02042/2022», que no existe
-  en ninguna parte: un numero inventado con formato de cita real.
-
-  El nombre del tribunal NO se escribe aqui: sale de `unidad`, que es lo que
-  dice DYCTEA, y lo compone `teac.etiqueta_de`. Si algun dia se cita un TEAR de
-  Cataluña saldra «Resolucion del TEAR de Cataluña» sin que nadie toque nada.
+  EL ROTULO SE COPIA DEL TEXTO DE ABAJO, TAL CUAL. No lo escribas tu ni
+  deduzcas el tribunal: cada resolucion trae el suyo, y ponerle otro tumba la
+  respuesta entera.
 
   Se comprueba igual de estricto que todo lo demas -letra por letra- Y
   ADEMAS se comprueba que el rotulo diga el tribunal que de verdad la
@@ -929,10 +958,30 @@ def construir_material(
     escribirlo en la traza -que es siempre que hay criterio-; si no se pasa, se
     calcula aqui y sale lo mismo.
     """
+    # QUE CUBRE LA HERRAMIENTA, LEIDO DEL CORPUS Y NO ESCRITO A MANO.
+    #
+    # Ninguna instruccion decia esto, y hacia falta: el redactor no sabia si
+    # una pregunta cae dentro o fuera de lo que hay cargado. Escribirlo en el
+    # prompt seria repetir el error de la regla 7 -una frase cierta el dia que
+    # se escribe y falsa en cuanto entra otra norma-, asi que se PREGUNTA a las
+    # normas cargadas. El dia que se ingiera Sociedades, esta linea lo dira
+    # sola.
+    cubre = ""
+    if normas is not None:
+        nombres = normas.nombres_de_impuesto()
+        if nombres:
+            cubre = (", ".join(nombres[:-1]) + " y " + nombres[-1]
+                     if len(nombres) > 1 else nombres[0])
+
     cabecera = [
         f"DUDA PLANTEADA: {pregunta.strip()}",
         f"EJERCICIO DEL CASO: {ejercicio if ejercicio else '(no indicado)'}",
         "",
+    ]
+    if cubre:
+        cabecera += [f"ESTA HERRAMIENTA CUBRE: {cubre},",
+                     "y las normas generales que los desarrollan. Nada mas.", ""]
+    cabecera += [
         "MATERIAL RECUPERADO. Es todo lo que tienes. No hay nada mas.",
         "Los textos son los de la version que aplicaba en el ejercicio indicado.",
         "",

@@ -97,7 +97,8 @@ def _analizar_nombre(nombre: str) -> tuple[str, str, str]:
     # Los titulos oficiales encadenan clausulas ("..., por el que se aprueba
     # ..., y se modifica ..."). La materia esta en la PRIMERA; sin cortar, la
     # expresion regular se lleva la cola de la ultima.
-    plano = re.split(r",?\s+(?:por el que|por la que|y se modifica)\b", plano, 1)[0]
+    plano = re.split(r",?\s+(?:por el que|por la que|y se modifica|y de)\b",
+                     plano, 1)[0]
     tipo = ""
     for t in _TIPOS:
         if B.sin_tildes(plano).startswith(B.sin_tildes(t).lower()):
@@ -111,9 +112,35 @@ def _analizar_nombre(nombre: str) -> tuple[str, str, str]:
         materia = mm.group("materia").strip()
     elif tipo:
         resto = plano[len(tipo):].lstrip(" ,")
+        # SE QUITA EL PREAMBULO DE NUMERO Y FECHA. «Ley 35/2006, de 28 de
+        # noviembre, del Impuesto sobre la Renta...»: sin quitarlo, la materia
+        # salia como «35/2006, de 28 de noviembre, del Impuesto sobre...» y su
+        # acronimo era «322NIRPFMPLISRNRP». Con la Ley del IVA no se notaba
+        # porque su titulo acaba en la materia y la cogia la otra rama.
+        resto = re.sub(
+            r"^\d+/\d{4}\s*,?\s*(?:de\s+\d{1,2}\s+de\s+[a-záéíóú]+\s*,?\s*)?",
+            "", resto, flags=re.I)
         resto = re.sub(r"^(?:de[l]?\s+|la\s+|el\s+)", "", resto, flags=re.I)
         materia = resto.strip(" .,")
     return tipo, numero, materia
+
+
+def es_materia_de_impuesto(materia: str) -> bool:
+    """¿Esta materia nombra un impuesto?
+
+    Se decide por como se titulan las normas, no por una lista de normas: una
+    ley de un tributo se llama «Impuesto sobre ...» -sobre el Valor Anadido,
+    sobre la Renta de las Personas Fisicas, sobre Sociedades-. La General
+    Tributaria no: se llama «General Tributaria», porque no es de ningun
+    impuesto en particular, y ese es exactamente el papel que se quiere
+    distinguir.
+
+    Se comprueba el PRINCIPIO de la materia y no si la palabra aparece en algun
+    sitio: «Reglamento de los Impuestos Especiales» empieza por impuesto, pero
+    «Ley de medidas para la prevencion del fraude en los impuestos» no es la
+    ley de ningun impuesto.
+    """
+    return B.sin_tildes(materia or "").strip().lower().startswith("impuesto")
 
 
 def _generar_alias(tipo: str, numero: str, materia: str) -> set:
@@ -213,7 +240,10 @@ class Registro:
             for c in cuerpos_de_norma(titulos[norma_id], norma_id, maximo + 1):
                 self.cuerpos[c.clave] = c
 
-        self.materia_dominante = self._materia_dominante()
+        # Se deja calculada la lista de materias de impuesto para no rehacerla
+        # en cada llamada; `materia_dominante` desaparece porque con dos
+        # impuestos dentro la pregunta «cual domina» ya no significa nada.
+        self.materias_propias = self.materias_de_impuesto()
 
     # ------------------------------------------------------------- el papel
     #
@@ -241,28 +271,55 @@ class Registro:
     IMPUESTO = "impuesto"
     GENERAL = "general"
 
-    def _materia_dominante(self) -> str:
-        """La materia de la que va este corpus: la que mas cuerpos comparten."""
-        cuenta: dict[str, int] = {}
+    def materias_de_impuesto(self) -> set:
+        """Las materias del corpus que nombran un impuesto. Puede haber varias.
+
+        ANTES ERA UNA SOLA: «la materia dominante», la que mas cuerpos
+        compartian. Con una ley de impuesto y unas cuantas generales bastaba.
+        Con DOS impuestos dentro deja de tener sentido: el IVA y el IRPF son
+        los dos normas de impuesto y solo uno puede ser dominante, asi que el
+        otro quedaba clasificado como norma general y competia penalizado.
+        """
+        return {(c.materia or "").strip().lower()
+                for c in self.cuerpos.values()
+                if es_materia_de_impuesto(c.materia)}
+
+    def impuestos(self) -> set:
+        """Los impuestos que este corpus puede contestar, por sus siglas.
+
+        Salen del titulo de las normas cargadas: «Impuesto sobre el Valor
+        Anadido» -> IVA, «Impuesto sobre la Renta de las Personas Fisicas» ->
+        IRPF. No hay lista escrita a mano en ninguna parte; si manana se
+        ingiere Sociedades, aparece IS sin que nadie lo escriba.
+        """
+        return {_acronimo(c.materia) for c in self.cuerpos.values()
+                if es_materia_de_impuesto(c.materia)}
+
+    def nombres_de_impuesto(self) -> list:
+        """Los mismos, con su nombre entero, para poder decirlos en cristiano."""
+        vistos, salida = set(), []
         for c in self.cuerpos.values():
-            m = (c.materia or "").strip().lower()
-            # Las materias que el titulo no deja limpias salen como "58/2003,
-            # de 17 de diciembre, ...": llevan cifras y no nombran una materia.
-            if not m or re.search(r"\d", m):
-                continue
-            cuenta[m] = cuenta.get(m, 0) + 1
-        if not cuenta:
-            return ""
-        return max(cuenta.items(), key=lambda kv: (kv[1], -len(kv[0])))[0]
+            m = (c.materia or "").strip()
+            if es_materia_de_impuesto(m) and m.lower() not in vistos:
+                vistos.add(m.lower())
+                salida.append(m)
+        return sorted(salida)
 
     def papel_de_norma(self, norma_id: str) -> str:
-        """IMPUESTO si alguno de sus cuerpos trata la materia propia del corpus."""
-        if not self.materia_dominante:
-            return self.IMPUESTO      # corpus de una sola materia: todo es propio
+        """IMPUESTO si alguno de sus cuerpos trata la materia de ALGUN impuesto.
+
+        «Alguno», no «el dominante»: ver `materias_de_impuesto`. Y basta con
+        que lo sea UNO de sus cuerpos, que es lo que hace que un real decreto
+        aprobatorio -cuyo cuerpo 0 no nombra materia ninguna- herede el papel
+        del reglamento que aprueba.
+        """
+        propias = self.materias_de_impuesto()
+        if not propias:
+            return self.IMPUESTO      # corpus sin impuestos nombrados: todo es propio
         for c in self.cuerpos.values():
             if c.norma_id != norma_id:
                 continue
-            if (c.materia or "").strip().lower() == self.materia_dominante:
+            if (c.materia or "").strip().lower() in propias:
                 return self.IMPUESTO
         return self.GENERAL
 
@@ -275,6 +332,17 @@ class Registro:
 
     def por_clave(self, clave: str):
         return self.cuerpos.get(clave)
+
+    def encaja_con_varios(self, designacion: str) -> bool:
+        """¿Esta designacion nombra a MAS DE UNA de las normas cargadas?
+
+        Es la diferencia entre «no la tengo» y «no se cual de las que tengo».
+        `resolver` ya lo sabe -se niega por eso- pero lo dice dentro de un
+        motivo en prosa; aqui se pregunta en limpio para poder decirselo bien
+        a quien lee la respuesta.
+        """
+        _clave, motivo = self.resolver(designacion)
+        return "encaja con" in (motivo or "")
 
     def resolver(self, designacion: str, cuerpo_actual: str = "",
                  cola: str = "") -> tuple:

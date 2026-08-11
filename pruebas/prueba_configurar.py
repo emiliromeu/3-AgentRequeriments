@@ -164,7 +164,18 @@ r = limpio()
 s = r.stdout
 comprobar("dice que los dos botones estan siempre",
           "los dos botones" in s.lower(), s[:160])
-comprobar("dice las normas cargadas", "722" in s)
+# EL NUMERO SE PREGUNTA AL CORPUS, NO SE ESCRIBE. Estaba fijado a 722 y al
+# ingerir Renta paso a 1114: la comprobacion se puso roja sin que nada se
+# hubiera roto. Un literal que hay que actualizar a mano cada vez que el
+# sistema crece es una alarma que acaba desconectada.
+import fase4 as _f4  # noqa: E402
+
+_ix, _g = _f4.cargar_corpus()
+comprobar(f"dice cuantos preceptos hay cargados, y son {len(_ix.docs)}",
+          str(len(_ix.docs)) in s, s[:200])
+comprobar("y nombra las normas, una por una",
+          all(c.etiqueta[:18] in s for c in _ix.normas.cuerpos.values()),
+          [c.etiqueta[:18] for c in _ix.normas.cuerpos.values()])
 comprobar("y cuantas consultas de la DGT hay", "consultas de la DGT" in s)
 comprobar("y cuantas resoluciones", "resoluciones economico" in s)
 comprobar("y lo que cuesta CADA boton",

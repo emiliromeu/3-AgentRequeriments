@@ -110,11 +110,45 @@ se hizo.
 **NO ENCONTRADO**
 
 - con **Consultar la ley**: *«No hay respaldo suficiente. Abajo tienes los articulos encontrados para mirarlos tu.»*
-- con **Consultar también el criterio**: *«No hay respaldo suficiente en la ley, y en la copia guardada todavia no hay criterio sobre esto. La copia se llena poco a poco: que no este no quiere decir que no exista. Abajo tienes los articulos encontrados.»*
+- con **Consultar también el criterio**: *«No hay respaldo suficiente en la ley, y en NUESTRA copia de criterio todavia no hay nada sobre esto. Que no este aqui no quiere decir que no exista: la copia es parcial y se llena poco a poco. Abajo tienes los articulos encontrados.»*
 
 Lo segundo **no es una avería**. La copia local tiene 241 consultas de la DGT,
 no las doscientas mil que hay publicadas: que tu duda no esté todavía es lo
 normal, y se irá llenando. Los artículos de abajo siguen siendo buenos.
+
+### «No hay criterio guardado» no es «no hay criterio»
+
+Es la confusión que más caro sale, así que va con todas las letras.
+
+La copia de criterio que tiene esta herramienta **es nuestra y es parcial**. La
+DGT publica decenas de miles de consultas y el TEAC otras tantas resoluciones;
+aquí hay las que se han ido descargando, tema a tema.
+
+Cuando el segundo botón dice que no encuentra nada, está diciendo **«no está en
+esta copia»**, no «no existe». Son cosas distintas y la segunda no la puede
+afirmar esta herramienta.
+
+Si el asunto es importante, en la fuente puede haber criterio que aquí no está:
+
+| | dónde |
+|---|---|
+| consultas de la **DGT** | PETETE — `petete.tributos.hacienda.gob.es` |
+| doctrina del **TEAC** y resoluciones de los TEAR | DYCTEA |
+
+### El criterio guardado es todo de IVA
+
+La herramienta cubre **dos impuestos con la ley**: IVA y Renta. Pero la copia
+local de criterio —las consultas de la DGT y las resoluciones— **es toda de
+IVA**.
+
+Para una pregunta de **Renta**, el botón «Consultar también el criterio» no va a
+encontrar nada. No una vez: **ninguna**. La respuesta saldrá igual, hecha con la
+Ley del IRPF y su Reglamento, y el recuadro de arriba dirá que no había criterio
+guardado sobre eso.
+
+**No es un fallo y no hay que insistir**: es que esa copia aún no se ha llenado.
+Para preguntas de Renta, el primer botón hace exactamente lo mismo y cuesta
+menos.
 
 ### Y debajo, dos bloques que no son lo mismo
 

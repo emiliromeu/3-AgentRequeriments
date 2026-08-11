@@ -62,7 +62,13 @@ print("\n=== 1. UNA CONSULTA QUE NO SUPERA LA VERIFICACION ===")
 # material nombraba la norma con el titulo del documento del BOE y el
 # verificador no lo resolvia. Eso era un fallo del material -arreglado en la
 # fase 18- y esta prueba se apoyaba en el sin saberlo.
-v.caja.insert("1.0", "plazo para presentar el modelo 303")
+# LA PREGUNTA DICE DE QUE IMPUESTO ES, y no es cosmetico: desde que la puerta
+# de materia rechaza «desconocido», una pregunta sin impuesto identificable se
+# para ANTES de llegar al verificador, y esta suite existe para probar lo que
+# pasa DESPUES del verificador. El modelo 303 es la declaracion del IVA y el
+# analizador de verdad lo sabe; el del motor de ensayo es un tocon que solo
+# reconoce la palabra literal.
+v.caja.insert("1.0", "plazo para presentar el modelo 303 del IVA")
 v.ejercicio.set("2023")
 v._revisar_boton()
 v._lanzar()

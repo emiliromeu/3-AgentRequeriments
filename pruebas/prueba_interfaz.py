@@ -53,6 +53,37 @@ def bombear(segundos=0.4):
             return
         time.sleep(0.01)
 
+def tecla(k):
+    """Pulsa una tecla en la respuesta, con el foco garantizado.
+
+    EL FALLO DE FOCO, CERRADO EN UN SOLO SITIO. Corriendo sin nadie delante la
+    ventana no es la activa y el sistema le quita el foco ENTRE tecla y tecla:
+    `event_generate` se pierde en silencio y la comprobacion sale roja sin que
+    nada este mal. Estaba puesto a mano en unos bloques y no en otros, y por eso
+    fallaba una de cada tres ejecuciones, con una tecla distinta cada vez.
+    """
+    # Se comprueba QUE LA TECLA HA LLEGADO, y si no, se reintenta UNA vez.
+    #
+    # `focus_force` no basta: el sistema puede quitarle el foco a la ventana
+    # entre el force y el evento, y entonces `event_generate` se pierde sin
+    # error. Medido: fallaba una de cada tres ejecuciones, con una tecla
+    # distinta cada vez, lo que la hacia parecer un fallo del scroll.
+    #
+    # Se mira la vista antes y despues: si no se ha movido NADA, o el foco no
+    # esta donde tiene que estar, se repite. Un solo reintento; si tampoco
+    # llega, la comprobacion sale roja, que es lo correcto.
+    for intento in (1, 2):
+        antes_de = v.texto.yview()
+        raiz.focus_force()
+        v.texto.focus_set()
+        bombear(0.2)
+        if str(raiz.focus_get() or "") != str(v.texto):
+            continue
+        v.texto.event_generate(k, when="now")
+        bombear(0.3)
+        if v.texto.yview() != antes_de or k in ("<Home>",):
+            return
+
 
 def esperar(cond, limite=120):
     fin = time.time() + limite
@@ -615,7 +646,7 @@ v.texto.focus_set()
 bombear(0.4)
 comprobar("el lienzo puede recibir el teclado",
           raiz.focus_get() is not None, "nadie tiene el foco")
-for tecla, sube in (("<Next>", False), ("<Prior>", True), ("<End>", False),
+for pulsacion, sube in (("<Next>", False), ("<Prior>", True), ("<End>", False),
                     ("<Home>", True)):
     v.texto.yview_moveto(0.5)
     antes = v.texto.yview()[0]
@@ -625,29 +656,21 @@ for tecla, sube in (("<Next>", False), ("<Prior>", True), ("<End>", False),
     # un fallo de la ventana -delante de una persona esta activa- pero sin
     # esto la prueba solo comprobaria la primera tecla y daria las otras por
     # buenas.
-    raiz.focus_force()
-    v.texto.focus_set()
-    bombear(0.15)
-    v.texto.event_generate(tecla, when="now")
-    bombear(0.2)
+    tecla(pulsacion)
     ahora = v.texto.yview()[0]
-    comprobar(f"{tecla} {'sube' if sube else 'baja'} la vista",
+    comprobar(f"{pulsacion} {'sube' if sube else 'baja'} la vista",
               (ahora < antes) if sube else (ahora > antes),
               f"{antes:.3f} -> {ahora:.3f}")
-raiz.focus_force(); v.texto.focus_set(); bombear(0.15)
 v.texto.yview_moveto(0.5)
-v.texto.event_generate("<Down>", when="now")
-bombear(0.2)
+tecla("<Down>")
 comprobar("<Down> baja un poco", v.texto.yview()[0] > 0.5,
           str(v.texto.yview()[0]))
-raiz.focus_force(); v.texto.focus_set(); bombear(0.15)
-v.texto.event_generate("<Up>", when="now")
-v.texto.event_generate("<Up>", when="now")
-bombear(0.2)
+tecla("<Up>"); tecla("<Up>")
 comprobar("<Up> sube", v.texto.yview()[0] < 0.5, str(v.texto.yview()[0]))
-raiz.focus_force(); v.texto.focus_set(); bombear(0.15)
-v.texto.event_generate("<End>", when="now")
-bombear(0.3)
+# El `focus_force` va pegado a CADA tecla, no una vez arriba: corriendo sin
+# nadie delante el sistema le quita el foco a la ventana entre tecla y tecla, y
+# `event_generate` se pierde en silencio. Es el mismo fallo de foco de siempre.
+tecla("<End>")
 comprobar("<End> llega hasta el FINAL DEL TODO", v.texto.yview()[1] > 0.999,
           str(v.texto.yview()))
 

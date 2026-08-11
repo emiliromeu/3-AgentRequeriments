@@ -84,7 +84,13 @@ class MotorQueTarda(MotorQueSiempreFalla):
 
 
 ix, g = fase4.cargar_corpus()
-PREGUNTA = "deduccion de cuotas soportadas en vehiculos turismo"
+# La pregunta NOMBRA EL IMPUESTO. Los bloques 1 a 5 usan un motor propio cuyo
+# analisis ya dice «IVA»; el bloque 6 usa el motor de ensayo tal cual, y su
+# analizador es un tocon que solo reconoce la palabra literal. Desde que la
+# puerta de materia rechaza «desconocido», sin nombrarlo la consulta se para
+# antes de llamar al modelo y nunca se llega a probar el techo, que es lo que
+# esta suite existe para proteger.
+PREGUNTA = "deduccion de cuotas soportadas de IVA en vehiculos turismo"
 
 
 def correr(motor):

@@ -46,7 +46,24 @@ CORPUS = RAIZ / "datos" / "corpus"
 DIR_TRAZAS = RAIZ / "datos" / "trazas"
 ANCHO = 78
 
-TOPE_MATERIAL = 5   # cuantos preceptos ve el redactor. Mas no es mejor: diluye.
+# CUANTOS PRECEPTOS PUEDEN SER CANDIDATOS. NO es cuantos se envian: el corte
+# por pertinencia decide despues, y descarta algo en el 62,7% de las consultas
+# -medido sobre 984 selecciones reales en disco-. Subir el techo no inunda el
+# material: solo ensancha quien puede presentarse, y el umbral sigue mandando.
+#
+# DE 5 A 6, Y POR QUE. El corte por puesto es fragil y cada norma que entra lo
+# empeora: con la LGT se cayo el articulo 89 y con Sociedades el 19 de la
+# LIRPF, que es el que enumera los gastos deducibles del trabajo. Con 6 vuelve.
+#
+# Lo que cuesta, medido sobre el banco y las dos de Renta: 13 consultas de 19
+# mandan algun precepto mas, +1.512 tokens de media en esas y +1.034 sobre
+# todas, o sea un 14% mas de material y SIETE DECIMAS DE CENTIMO por consulta.
+#
+# Y OJO CON UNA INTUICION FALSA: no suben solo las que llenaban el tope. El
+# corte compara cada precepto contra la cobertura del PRIMERO, no es un
+# prefijo, asi que un candidato en el puesto 6 con cobertura alta entra aunque
+# el 4o y el 5o se hayan descartado. Por eso hay consultas que pasan de 2 a 3.
+TOPE_MATERIAL = 6
 MAX_INTENTOS = 2    # el original y UN reintento con los motivos exactos
 
 
@@ -240,13 +257,12 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         print(f"   sospechas: art. {', '.join(analisis.articulos_sospechados)}")
 
     # ---------------------------------------------------- MATERIA
-    if analisis.impuesto not in EST.IMPUESTOS_EN_CORPUS:
+    entra, motivo_materia = EST.puerta_de_materia(analisis.impuesto, ix.normas)
+    if not entra:
         apartado("2. Materia")
-        print(f"   la duda es de {analisis.impuesto} y el corpus solo cubre el IVA")
-        return _sin_respaldo(
-            res, tr, ejercicio_cli, [], None, motor,
-            f"la consulta es de {analisis.impuesto} y este corpus solo cubre el IVA",
-        )
+        print(f"   {motivo_materia}")
+        return _sin_respaldo(res, tr, ejercicio_cli, [], None, motor,
+                             motivo_materia)
 
     # ---------------------------------------------------- EJERCICIO
     ejercicio, explicacion = AN.resolver_ejercicio(pregunta, analisis, ejercicio_cli)
@@ -553,13 +569,27 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     # diferencia entre los dos botones se vea sin leerse las dos respuestas
     # enteras y compararlas a ojo.
     if res["con_criterio"] and informe is not None:
+        # DE QUE MATERIA ERA LO QUE SE PUSO DELANTE. Sin esto la ventana no
+        # puede distinguir «habia criterio de esta materia y no sostiene la
+        # respuesta» de «lo que habia era de otro impuesto», y las dos frases
+        # dicen cosas muy distintas a quien las lee.
+        cache_dgt = DGT.CacheDGT()
+        en_material = list((res.get("dgt") or {}).get("consultas") or [])
+        misma, otra = [], []
+        for num in en_material:
+            c = cache_dgt.leer(num)
+            suyos = DGT.impuestos_de(c, ix.normas) if c is not None else set()
+            (misma if analisis.impuesto in suyos else otra).append(num)
         res["aporte"] = {
             "consultas_dgt": sorted({d.referencia_citada for d in informe.dictamenes
                                      if d.estado == VF.VERIFICADA and d.norma == "dgt"}),
             "resoluciones": sorted({d.referencia_corpus for d in informe.dictamenes
                                     if d.estado == VF.VERIFICADA and d.norma == "teac"}),
-            "consultas_en_material": list((res.get("dgt") or {}).get("consultas") or []),
+            "consultas_en_material": en_material,
             "resoluciones_en_material": list((res.get("teac") or {}).get("criterios") or []),
+            "impuesto": analisis.impuesto,
+            "en_material_misma_materia": misma,
+            "en_material_otra_materia": otra,
         }
 
     if dictamen.estado == EST.NO_ENCONTRADO:
@@ -611,6 +641,15 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         "preceptos": dictamen.preceptos, "senales": dictamen.senales,
         "avisos_de_cobertura": dictamen.cobertura,
         "limites_del_corpus": dictamen.linea_estructural,
+        # QUE CRITERIO SE LE PUSO DELANTE. Se calculaba, llegaba a la ventana
+        # y NO quedaba en el expediente: dentro de seis meses, discutiendo una
+        # respuesta, no habria forma de saber que se miro. Es el requisito de
+        # la fase 4 -que todo lo que decide una respuesta quede escrito- y no
+        # se estaba cumpliendo.
+        "aporte": res.get("aporte") or {},
+        "dgt": res.get("dgt") or {},
+        "teac": res.get("teac") or {},
+        "recorte": res.get("recorte") or {},
     })
     res["codigo"] = 0
     return res
@@ -790,8 +829,24 @@ def modo_comprobaciones(args) -> int:
 
     ix, grafo = cargar_corpus()
 
-    def ejecutar(pregunta, ejercicio=None):
+    def ejecutar(pregunta, ejercicio=None, impuesto=None):
+        """Una consulta con el motor de ensayo.
+
+        `impuesto` fuerza lo que diria el analizador. Hace falta porque el
+        motor de ensayo no analiza: dice «IVA» si la pregunta lleva la palabra
+        y «desconocido» en cualquier otro caso. Sin forzarlo no se puede probar
+        la puerta de materia, que es una regla del sistema y no del modelo.
+        """
         motor = MOD.crear_motor("ensayo")
+        if impuesto:
+            analizar = motor.analizar
+
+            def analizar_con_impuesto(sistema, preg, esquema):
+                r = analizar(sistema, preg, esquema)
+                r.datos["impuesto"] = impuesto
+                return r
+
+            motor.analizar = analizar_con_impuesto
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             res = consultar(pregunta, ejercicio, motor, ix, grafo)
@@ -806,9 +861,39 @@ def modo_comprobaciones(args) -> int:
     casos.append(("el ano escrito en la pregunta se acepta sin --ejercicio",
                   r["ejercicio"] == 2023, f"ejercicio {r['ejercicio']}"))
 
-    r, s = ejecutar("retencion del IRPF de un alquiler de vivienda habitual", 2023)
-    casos.append(("tema fuera de la Ley del IVA -> NO ENCONTRADO",
-                  r["codigo"] == 2, f"codigo {r['codigo']}, estado {r['estado']}"))
+    # LA PUERTA DE MATERIA. Esta comprobacion usaba una pregunta de IRPF como
+    # «tema fuera del corpus», y desde que Renta esta ingerida ya no lo es: la
+    # contesta, que es justo lo que se buscaba al ingerirla. Se cambia por un
+    # impuesto que sigue fuera.
+    #
+    # Y se le fuerza el impuesto al analizador a proposito. Sin forzarlo, esta
+    # comprobacion era mas floja de lo que parecia: el motor de ensayo dice
+    # «desconocido» a todo lo que no lleve la palabra IVA, la puerta deja pasar
+    # «desconocido», y lo unico que frenaba era el corte por pertinencia.
+    # Medido: antes de Renta, «tipo de gravamen del Impuesto sobre Sociedades»
+    # YA salia CRITERIO CLARO con el motor de ensayo. Lo que la paraba de
+    # verdad era el caso concreto del IRPF, no la regla.
+    # EL IMPUESTO DE FUERA SE PREGUNTA AL CORPUS, NO SE ESCRIBE.
+    #
+    # Esta comprobacion ha caducado TRES veces por el mismo motivo: se escribia
+    # a mano un impuesto «de fuera» -primero IRPF, luego IS- y a la ingesta
+    # siguiente estaba dentro. La comprobacion se ponia roja sin que nada se
+    # hubiera roto, que es la peor clase de alarma: la que se aprende a ignorar.
+    #
+    # Ahora se coge el primero del catalogo del analizador que el corpus NO
+    # cubra. El dia que se ingiera ITP-AJD, esta linea buscara otro sola.
+    fuera = next((x for x in AN.IMPUESTOS
+                  if x not in ("otro", "desconocido")
+                  and x not in ix.normas.impuestos()), None)
+    if fuera is None:
+        casos.append(("tema fuera del corpus -> NO ENCONTRADO", True,
+                      "el corpus cubre TODOS los impuestos del catalogo: "
+                      "no queda ninguno con el que probar la puerta"))
+    else:
+        r, s = ejecutar(f"una duda de {fuera}", 2023, impuesto=fuera)
+        casos.append((f"tema fuera del corpus ({fuera}) -> NO ENCONTRADO",
+                      r["codigo"] == 2,
+                      f"codigo {r['codigo']}, estado {r['estado']}"))
 
     r, s = ejecutar('deduccion IVA turismo. FRAGMENTO SOSPECHOSO: el porcentaje '
                     'de deduccion aplicable a los turismos sera siempre del 100 '

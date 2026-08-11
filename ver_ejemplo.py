@@ -12,11 +12,17 @@ TODO SALE DEL EXPEDIENTE. NADA ESCRITO A MANO.
 ----------------------------------------------------------------------------
 La primera version de este guion llevaba un diccionario escrito por mi con el
 estado, los avisos, los preceptos y las consultas de la DGT. Parecia inofensivo
-y no lo era: DE LAS TRES REFERENCIAS QUE ENSEÑABA, LAS TRES ESTABAN INVENTADAS
--las consultas V2759-21 y V0187-20 y la resolucion 00/02195/2019 no existen en
-ninguna parte- y ademas tapaban las dos que el texto SI cita de verdad. Alguien
-mirando la pantalla habria visto un numero de consulta con toda la pinta de ser
-real al lado de una respuesta autentica.
+y no lo era: LAS TRES REFERENCIAS QUE ENSEÑABA ME LAS SAQUE DE LA CABEZA y
+ninguna es la que ese expediente cita de verdad. Ademas tapaban las dos
+autenticas -V0160-23 y V0041-07-, que si estan en el texto.
+
+Y AL COMPROBARLO DESPUES SALIO PEOR DE LO QUE PARECIA. Escribi aqui que esas
+tres «no existen en ninguna parte» y solo habia mirado nuestra copia local. En
+la fuente: V2759-21 y V0187-20 EXISTEN, son consultas reales de la DGT;
+00/02195/2019 no consta en DYCTEA. O sea que la pantalla enseñaba dos numeros de
+consulta AUTENTICOS pegados a una respuesta que no es la suya, que es peor que
+un numero falso: un numero falso no lleva a ningun sitio, y uno autentico lleva
+a un documento que no dice lo que aqui se le atribuye.
 
 Un ejemplo inventado en material de demostracion es una cita falsa con otro
 nombre. Asi que aqui NO se escribe ningun dato: se lee el `resultado.json` del

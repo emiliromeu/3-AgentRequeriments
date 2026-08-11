@@ -29,6 +29,174 @@ indistinguibles de material auténtico.
 **Se incumplió el 10 de agosto de 2026** y por eso está escrito aquí arriba. Ver
 la fase 25.
 
+### Las dos caras de la misma comprobación
+
+La regla de arriba tiene una hermana que descubrí al incumplirla, y es la misma
+equivocación mirada del otro lado.
+
+**Comprobar solo contra la copia local lleva a dos errores opuestos:**
+
+| | qué se hace | qué sale |
+|---|---|---|
+| **inventar lo que falta** | escribir a mano un dato que no se tiene | una cita falsa con formato de real |
+| **negar lo que existe** | leer «no está en mi copia» y escribir «no existe» | una afirmación sobre el mundo que no se puede sostener |
+
+Los dos salen de lo mismo: **confundir nuestro disco con la realidad.** Y el
+segundo es más traicionero, porque parece rigor.
+
+**Lo que pasó, con nombres:**
+
+- Escribí en `ver_ejemplo.py` que las consultas **V2759-21** y **V0187-20** «no
+  existen en ninguna parte». **Existen las dos** — comprobado en PETETE. Yo solo
+  había mirado `datos/dgt/`.
+- Escribí que la resolución **08/02042/2022** del TEAR de Cataluña era «un número
+  inventado con formato de cita real». **Existe** — está en DYCTEA, de
+  21/09/2022, sobre créditos incobrables.
+- De las cuatro referencias que declaré inexistentes, la única de la que se
+  puede decir algo parecido es **00/02195/2019**, y ni siquiera: lo correcto es
+  **«no consta en DYCTEA»**, que solo publica los criterios seleccionados. Una
+  resolución puede existir sin criterio publicado.
+
+**Y el error de bulto no era el que yo creía.** Pensaba que el problema del
+guion de demostración era enseñar números falsos. Era peor: enseñaba **dos
+números de consulta AUTÉNTICOS** pegados a una respuesta que no es la suya. Un
+número inventado no lleva a ningún sitio; uno auténtico lleva a un documento
+real que no dice lo que se le atribuye, y quien lo abra para comprobar se
+encontrará otra cosa.
+
+> **LA REGLA, ENTERA:** para afirmar que algo **existe**, hay que haberlo leído.
+> Para afirmar que **no existe**, hay que haber mirado **la fuente** — PETETE o
+> DYCTEA—, no nuestra copia. Y si solo se ha mirado la copia, lo que se puede
+> decir es exactamente eso: **«no está en nuestra copia»**.
+
+Es la misma frase que la ventana le dice al usuario desde la fase 27. Yo tardé
+un día más que el código en aprenderla.
+
+## ⚠️ UN INSTRUMENTO QUE SE EQUIVOCA EN SILENCIO CONTAMINA TODO
+
+> **En los guiones de medición, NADA DE RESPALDOS que devuelvan algo cuando la
+> consulta falla.** Que devuelvan cero o que revienten.
+
+Un guion de medición comparaba `decision == "ENVIADO"` y el campo vale
+`"enviado"`, en minúsculas. La lista salía **siempre vacía**. Y llevaba esto:
+
+```python
+claves = [d["clave"] for d in detalle if d.get("decision") == "ENVIADO"] \
+         or [d["clave"] for d in detalle]      # ← el respaldo
+```
+
+El `or` convirtió un error de comparación en **un número plausible**: en vez de
+medir lo que el corte envía, medía **todos los candidatos**. Salió «19 de 19
+consultas mandan 6 preceptos», que contradecía una traza real donde el corte
+mandó 3 de 5 — y esa contradicción es lo único que lo destapó.
+
+**Sin el respaldo, la lista habría salido vacía y el error se ve al instante.**
+
+Con ese guion se tomaron tres medidas del coste de subir el tope, y **las tres
+eran el techo, no el coste**. Hubo que rehacerlas contra las **984
+`seleccion.json` que hay en disco**, que es lo que el corte decidió de verdad y
+no lo que un guion cree que decidió.
+
+**Cuando haya datos reales guardados, se leen. Reproducir es el último recurso**,
+y si se reproduce, se valida contra los datos reales antes de usarlo para
+decidir: la reproducción arreglada da 47,4% de llenado sobre el banco frente al
+37,3% real, misma forma, y por eso se pudo usar.
+
+## ⚠️ EL CORTE POR PUESTO ES FRÁGIL, Y CADA NORMA LO EMPEORA
+
+> **Ya ha pasado dos veces, y volverá a pasar.** No es mala suerte: es el
+> mecanismo.
+
+El buscador ordena por BM25 y se envían los N primeros. **El puesto de un
+artículo no depende solo de él: depende de todos los demás.** Cada norma que
+entra cambia el IDF de los términos, y dos documentos separados por décimas
+intercambian el sitio.
+
+| cuándo | qué se cayó | por qué |
+|---|---|---|
+| al ingerir la **LGT** | art. **89** LIVA, del puesto 3 al 5 | 335 preceptos nuevos |
+| al ingerir **Sociedades** | art. **19** LIRPF, del 5 al 6 | 298 nuevos; lo desplazó **una disposición de la propia LIRPF**, por 0,2 puntos |
+
+En los dos casos el artículo desplazado era **el que sostenía la respuesta**: el
+89 es la rectificación de cuotas repercutidas; el 19, los gastos deducibles del
+trabajo.
+
+**SUBIR EL TOPE COMPRA MARGEN, NO RESUELVE LA CAUSA.** De 5 a 6 devuelve el
+art. 19 hoy; a la cuarta norma volverá a caerse otro, y el tope no puede subir
+indefinidamente sin diluir el material y pagarlo en cada consulta.
+
+**La solución de fondo es la COBERTURA MARGINAL**, analizada y pendiente desde
+hace días: en vez de cortar por puesto, seguir añadiendo preceptos mientras cada
+uno aporte términos de la consulta que los anteriores no cubren, y parar cuando
+el siguiente no añada nada. Un corte por lo que aporta no se mueve porque entre
+una ley de otro impuesto.
+
+### Mientras tanto: el tope sube de 5 a 6
+
+**Decisión de Emili, el 11 de agosto de 2026**, y el motivo importa porque
+contradice la letra de su propia regla.
+
+La regla que se puso era: *«si el coste real es de unas pocas consultas, se
+aplica; si es en todas, no»*. La medición dijo **13 de 19**, o sea dos tercios:
+por la letra, no se aplicaba.
+
+**Se aplicó igual, y con razón.** La regla suponía que el coste caería
+**concentrado** en unas pocas consultas caras. Lo que la medición enseña es que
+cae **repartido y pequeño**: +1.034 tokens de media, un **14%** más de material,
+**siete décimas de céntimo** por consulta. Lo que importa es **el coste total
+contra lo que compra**, no en cuántas consultas se reparte.
+
+Y lo que compra es que un artículo que sostiene la respuesta deje de caerse: con
+el tope a 5 la primera consulta de Renta enviaba **2 preceptos** y el artículo 19
+—los gastos deducibles del trabajo, media pregunta— no llegaba; con 6 envía 3 y
+entra, con cobertura 0,57.
+
+**El argumento que lo cierra:** el corte descarta algo en el **62,7%** de las
+consultas —medido sobre 984 selecciones reales—, así que subir el techo **no
+inunda el material**. Solo ensancha **quién puede ser candidato**; el umbral
+sigue decidiendo. De hecho ninguna consulta manda 6: la de Renta pasa de 2 a 3.
+
+## ⚠️ LA CONDICIÓN 2 SE REVOCÓ, Y CONVIENE SABER POR QUÉ
+
+Al ingerir Sociedades se puso una condición: *«las dos consultas de Renta siguen
+funcionando; si baja, Sociedades no entra»*. **Bajó**, y aun así entró.
+
+**Quien la revocó: Emili**, con el argumento de que la regla apuntaba a
+**contaminación** —que artículos de Sociedades se colaran en respuestas de otros
+impuestos— y se midió que **no la hubo: cero preceptos de IS en los diez
+primeros** de esas consultas. Lo que hubo fue **reordenamiento estadístico**
+entre vecinos de la misma norma, que es el mismo mecanismo que ya se aceptó al
+ingerir la LGT.
+
+Queda escrito porque una condición revocada sin dejar rastro es una condición
+que la próxima vez no se pone. **La regla no era mala: apuntaba a lo que había
+que vigilar y lo vigiló.** Lo que hizo falta fue distinguir entre las dos causas
+posibles de que un número empeore.
+
+## ⚠️ ABIERTO: LA NORMA QUE VA DETRÁS DE LA REFERENCIA
+
+Anterior a la ingesta de Sociedades, y sin cerrar. **Para septiembre.**
+
+El extractor de remisiones busca el nombre de la norma **delante** de la
+referencia. Cuando el texto lo pone **detrás**, no lo encuentra y da la remisión
+por interna:
+
+```
+«se añade una disposición adicional octava AL TEXTO REFUNDIDO de la Ley
+ del Impuesto sobre Sociedades, aprobado por Real Decreto Legislativo 4/2004»
+        → resuelve a la disposición adicional octava de la PROPIA LIRPF
+```
+
+Son cinco casos conocidos, todos en la disposición final segunda de la LIRPF, y
+**estaban así antes de Sociedades** —comprobado contra el corpus de 7 cuerpos—.
+Al ingerir el IS pasaron temporalmente a resolverse contra la Ley 27/2014, que
+era peor; el arreglo del cualificador las devolvió al error anterior.
+
+**Lo que se sabe:** las disposiciones no pasan por `_ambito`, que es donde vive
+la regla de «lo que va delante y lo que va detrás». Hay que encontrar su camino
+y aplicarles la misma propiedad. **Ante la duda, nada**: preferible pendiente
+que interna falsa.
+
 ## ⚠️ HOY EN PRODUCCIÓN HAY DOS ESTADOS, NO TRES
 
 > **Con la DGT y el TEAC apagados —que es como está hoy— `CRITERIO DISCUTIDO`
@@ -2398,17 +2566,22 @@ para mirar cualquier expediente.
 ### Encontrado y arreglado
 
 **`GUIA.md` — la hoja que se imprime y se deja en la mesa.** El ejemplo de
-formatos de cita mostraba `{Resolucion del TEAR de Cataluña 08/02042/2022/00/00}`.
-**No existe**, y las otras dos citas de ese mismo bloque sí son reales y con sus
-fechas correctas (`00/06614/2024/00/00, de 21/05/2026` y `V1601-22, de
-01/07/2022`), lo que la hacía leerse igual de auténtica. Sustituida por
-`07/02872/2023/00/00, de 29/04/2025`, que está en la copia local.
+formatos de cita mostraba `{Resolucion del TEAR de Cataluña 08/02042/2022/00/00}`,
+que no estaba en nuestra copia local. Sustituida por `07/02872/2023/00/00, de
+29/04/2025`, que sí está y por tanto se puede comprobar sin salir a la red.
+
+> **CORRECCIÓN (fase 28).** Aquí escribí que esa resolución **«no existe»**, y
+> es falso: **existe**. Es una resolución real del TEAR de Cataluña de
+> **21/09/2022** sobre créditos incobrables, y aparece en DYCTEA en cuanto se
+> busca por ese concepto. Lo único que comprobé fue que no estaba en nuestra
+> copia. **El cambio se queda; la razón era falsa.** Ver «Las dos caras de la
+> misma comprobación», al principio de este documento.
 
 Y un defecto de paso: **el sistema no sabe escribir «TEAR de Cataluña»**.
 `etiqueta_de` no tiene mapa de unidades y produce «Resolucion del 07». El
 ejemplo enseñaba un formato que el propio agente no puede emitir.
 
-**`agente_fiscal/redactor.py`** llevaba la misma cita inventada en un docstring
+**`agente_fiscal/redactor.py`** llevaba la misma cita en un docstring
 —era el origen de la de la guía—. Verificado que **no llega al prompt**: no está
 en `SISTEMA`, es documentación para quien lea el código. Corregida igual.
 

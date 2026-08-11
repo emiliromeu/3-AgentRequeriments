@@ -454,6 +454,32 @@ def _agrupar_por_precepto(consultas: list, normas=None) -> dict:
     return grupos
 
 
+def impuestos_de(consulta, normas) -> set:
+    """De que impuesto(s) trata una consulta, segun su campo `normativa`.
+
+    Hace falta para no mentir en pantalla. La copia local se llenó con
+    consultas de IVA, y cuando llega una pregunta de Renta el seleccionador
+    trae algunas por COINCIDENCIA DE NUMERO DE ARTICULO -el 30 existe en las
+    dos leyes-. Decir entonces «se le pusieron delante 3 consultas y ninguna
+    sostiene la respuesta» da a entender que se ha mirado el criterio de Renta,
+    y no se ha mirado: lo que se miro era de otro impuesto.
+
+    Se resuelve la normativa a cuerpos y se mira la materia de cada uno. Una
+    misma consulta puede tratar de dos impuestos a la vez, y varias lo hacen.
+    """
+    from .normas import _acronimo, es_materia_de_impuesto
+
+    salida = set()
+    for par in pares_de_normativa(getattr(consulta, "normativa", "") or "", normas):
+        clave = getattr(par, "clave", None)
+        if not clave:
+            continue
+        cuerpo = normas.cuerpos.get(clave[0])
+        if cuerpo is not None and es_materia_de_impuesto(cuerpo.materia):
+            salida.add(_acronimo(cuerpo.materia))
+    return salida
+
+
 def leer_criterio(consultas: list, preceptos_verificados: list,
                   normas=None) -> Lectura:
     """Convierte las consultas citadas en señales de estado. LO CALCULA EL CODIGO.

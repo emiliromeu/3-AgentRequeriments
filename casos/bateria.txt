@@ -218,9 +218,9 @@ El articulo 71 del Reglamento del IVA establece que «2. Las declaraciones-liqui
 --- CASO: s-remision-cruzada-lleva-a-la-LEY
 esperado: VERIFICADA
 ejercicio: 2023
-motivo: FASE 6, EL CASO QUE MANDA. "articulo 8 de la Ley del Impuesto" tiene que llevar al 8 de la LEY. El fragmento es del articulo 8 de la Ley 37/1992; si el sistema lo resolviera contra el articulo 8 del REGLAMENTO, el literal no estaria y esto saldria en rojo
+motivo: FASE 6, EL CASO QUE MANDA. "articulo 8 de la Ley del Impuesto sobre el Valor Anadido" tiene que llevar al 8 de la LEY. El fragmento es del articulo 8 de la Ley 37/1992; si el sistema lo resolviera contra el articulo 8 del REGLAMENTO, el literal no estaria y esto saldria en rojo. NOMBRA EL IMPUESTO desde que Renta esta ingerida: con dos leyes de impuesto dentro, "la Ley del Impuesto" a secas ya no identifica ninguna (ver el caso s4)
 texto:
-El articulo 8 de la Ley del Impuesto dispone que «Uno. Se considerará entrega de bienes la transmisión del poder de disposición sobre bienes corporales, incluso si se efectúa mediante cesión de títulos representativos de dichos bienes.».
+El articulo 8 de la Ley del Impuesto sobre el Valor Añadido dispone que «Uno. Se considerará entrega de bienes la transmisión del poder de disposición sobre bienes corporales, incluso si se efectúa mediante cesión de títulos representativos de dichos bienes.».
 --- FIN
 
 
@@ -236,9 +236,9 @@ El articulo 8 del Reglamento del Impuesto sobre el Valor Añadido dispone que «
 --- CASO: s2-el-mismo-nombre-pero-el-texto-del-reglamento
 esperado: NO_VERIFICADA
 ejercicio: 2023
-motivo: FASE 6, la cara B del anterior. Mismo nombre de norma, pero el fragmento es del articulo 8 del REGLAMENTO. Como la cita dice "de la Ley del Impuesto", debe comprobarse contra la LEY, no encontrarlo, y salir NO VERIFICADA
+motivo: FASE 6, la cara B del anterior. Mismo nombre de norma, pero el fragmento es del articulo 8 del REGLAMENTO. Como la cita dice "de la Ley del Impuesto sobre el Valor Anadido", debe comprobarse contra la LEY, no encontrarlo, y salir NO VERIFICADA
 texto:
-El articulo 8 de la Ley del Impuesto establece que «1. La renuncia a las exenciones reguladas en los números 20.º y 22.º del apartado uno del artículo 20 de la Ley del Impuesto sobre el Valor Añadido, deberá comunicarse fehacientemente al adquirente con carácter previo o simultáneo a la entrega de los correspondientes bienes.».
+El articulo 8 de la Ley del Impuesto sobre el Valor Añadido establece que «1. La renuncia a las exenciones reguladas en los números 20.º y 22.º del apartado uno del artículo 20 de la Ley del Impuesto sobre el Valor Añadido, deberá comunicarse fehacientemente al adquirente con carácter previo o simultáneo a la entrega de los correspondientes bienes.».
 --- FIN
 
 
@@ -257,7 +257,7 @@ El articulo 8 de la Ley del Impuesto establece que «1. La renuncia a las exenci
 --- CASO: dgt-consulta-que-no-existe
 esperado: NO_VERIFICABLE
 ejercicio: 2023
-motivo: se cita una consulta que no existe en ninguna parte. No hay documento contra el que comprobar el texto, asi que NO se da por buena. NO_VERIFICABLE, nunca VERIFICADA: es la trampa comoda de dar por bueno lo que no se ha mirado
+motivo: se cita una consulta que NO ESTA EN LA COPIA LOCAL -serie 9xxx y año 2099, o sea que ademas no puede existir-. Sin documento delante no hay contra que comprobar el texto, asi que NO se da por buena. NO_VERIFICABLE, nunca VERIFICADA: es la trampa comoda de dar por bueno lo que no se ha mirado. El verificador dice «no la tengo», que es lo unico que sabe: para decir «no existe» habria que mirar PETETE, y el verificador no sale a la red
 texto:
 El criterio administrativo confirma que «la modificacion de la base imponible exige que el destinatario haya sido declarado en concurso» [Consulta DGT V9999-99, de 01/01/2099 — https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V9999-99].
 --- FIN
@@ -309,7 +309,7 @@ El criterio administrativo indica que «El articulo 22 del Reglamento del IRPF r
 --- CASO: teac-criterio-que-no-existe
 esperado: NO_VERIFICABLE
 ejercicio: 2023
-motivo: se cita un criterio del TEAC que no existe en ninguna parte. Sin documento no hay contra que comprobar: NO_VERIFICABLE, nunca VERIFICADA
+motivo: se cita un criterio del TEAC que NO ESTA EN LA COPIA LOCAL (serie 9xxx, año 2099). Sin documento no hay contra que comprobar: NO_VERIFICABLE, nunca VERIFICADA. Lo que se afirma es «no lo tengo», no «no existe»: eso ultimo exigiria mirar DYCTEA
 texto:
 La doctrina del tribunal confirma que «La modificacion de la base imponible exige el cumplimiento de los requisitos» {Criterio TEAC 00/99999/2099/00/00, de 01/01/2099 — https://serviciostelematicosext.hacienda.gob.es/TEAC/DYCTEA/criterio.aspx?id=00/99999/2099/00/0/1}.
 --- FIN
@@ -375,4 +375,22 @@ ejercicio: 2023
 motivo: el engaño al reves, y tambien engaña: es doctrina del TEAC presentada como resolucion de un TEAR. Quien lo lea descartara como caso aislado algo que SI vincula a toda la Administracion
 texto:
 El tribunal regional señala que «La modificacion de la base imponible exige el cumplimiento de los requisitos» {Resolucion del TEAR de Cataluña 00/09001/2024/00/00, de 15/03/2025 — https://serviciostelematicosext.hacienda.gob.es/TEAC/DYCTEA/criterio.aspx?id=00/09001/2024/00/0/1}.
+--- FIN
+
+
+--- CASO: s4-ley-del-impuesto-a-secas-con-dos-impuestos-dentro
+esperado: NO_VERIFICABLE
+ejercicio: 2023
+motivo: RENTA INGERIDA. Mientras el corpus tuvo un solo impuesto, "la Ley del Impuesto" era una designacion suficiente y los casos s y s2 la usaban. Con la Ley 35/2006 dentro encaja con DOS cuerpos -la del IVA y la del IRPF- y el resolutor se niega, que es la regla de oro: ante la duda, nada. El fragmento es literal del articulo 8 de la Ley del IVA, asi que si algun dia esto saliera VERIFICADA seria porque el sistema ha elegido una de las dos por su cuenta
+texto:
+El articulo 8 de la Ley del Impuesto dispone que «Uno. Se considerará entrega de bienes la transmisión del poder de disposición sobre bienes corporales, incluso si se efectúa mediante cesión de títulos representativos de dichos bienes.».
+--- FIN
+
+
+--- CASO: t-texto-refundido-no-es-la-ley
+esperado: NO_VERIFICABLE
+ejercicio: 2023
+motivo: SOCIEDADES INGERIDA. «Texto refundido de la Ley del Impuesto sobre Sociedades» CONTIENE letra por letra el nombre de la Ley 27/2014 y es OTRA norma: el texto refundido es el RDLeg 4/2004, al que la 27/2014 derogo. Resolverlas a la misma atribuye un articulo a una ley que no lo tiene. El fragmento es literal del articulo 18 de la Ley 27/2014, asi que si esto saliera VERIFICADA seria porque el sistema ha dado por buena la designacion equivocada. Una designacion que contiene el nombre de una norma NO es esa norma
+texto:
+El texto refundido de la Ley del Impuesto sobre Sociedades establece en su articulo 18 que «Las operaciones efectuadas entre personas o entidades vinculadas se valorarán por su valor de mercado.».
 --- FIN

@@ -303,6 +303,26 @@ def _contexto_estructural(pila: list[tuple[int, str]]) -> list[str]:
     return [titulo for _, titulo in pila]
 
 
+def _corte_por_firma(nodos: list) -> int | None:
+    """Donde acaba el decreto y empieza el texto que aprueba, o None.
+
+    Devuelve la POSICION del primer bloque que ya pertenece al texto aprobado:
+    el siguiente a la firma. None si la norma no aprueba nada, que es el caso
+    de cualquier ley.
+
+    La condicion es «firma seguida de ARTICULADO». Solo la firma no vale: una
+    ley tambien se firma, y detras puede llevar un anexo -la del IVA lo lleva-
+    que no es un cuerpo normativo aparte sino parte de la misma ley.
+    """
+    firma = next((i for i, bl in enumerate(nodos)
+                  if (bl.get("tipo") or "") == "firma"), None)
+    if firma is None:
+        return None
+    hay_articulado = any((bl.get("tipo") or "") == "precepto"
+                         for bl in nodos[firma + 1:])
+    return firma + 1 if hay_articulado else None
+
+
 def trocear(
     xml_bytes: bytes,
     norma_id: str,
@@ -337,10 +357,34 @@ def trocear(
     pila: list[tuple[int, str]] = []  # (nivel, titulo) de encabezados abiertos
 
     # --- deteccion del CUERPO, por estructura ---
-    # Un real decreto aprobatorio lleva dos articulados: el suyo y el del
-    # reglamento o texto refundido que aprueba (su anexo), que vuelve a
-    # empezar por el articulo 1. Se abre cuerpo nuevo cuando la numeracion
-    # REINICIA. No hay lista de normas especiales: es la propia estructura.
+    #
+    # Un real decreto aprobatorio lleva DOS articulados: el suyo -media docena
+    # de articulos- y el del reglamento o texto refundido que aprueba. Hay que
+    # separarlos porque el «articulo 1» de uno no es el del otro.
+    #
+    # LA SEÑAL ES LA FIRMA, y es una propiedad de como se escribe una norma,
+    # no un caso particular de ninguna: un real decreto SE FIRMA cuando acaba,
+    # y lo que viene despues de la firma ya no es el decreto, es el texto que
+    # aprueba. Medido en las cinco normas del corpus:
+    #
+    #     Ley 37/1992      firma en el bloque 304 de 306, 0 preceptos detras
+    #     Ley 58/2003      firma en el 447 de 447,        0 preceptos detras
+    #     Ley 35/2006      firma en el 272 de 272,        0 preceptos detras
+    #     RD 1624/1992     firma en el 10 de 186,       139 preceptos detras
+    #     RD 439/2007      firma en el 9 de 214,        162 preceptos detras
+    #
+    # Las tres leyes tienen la firma al final; los dos reales decretos
+    # aprobatorios, al principio y con un articulado entero detras. La regla
+    # es «firma seguida de articulado», no «firma»: la Ley del IVA lleva un
+    # anexo despues de firmar y ese anexo NO es un cuerpo aparte.
+    #
+    # ANTES SE MIRABA SI LA NUMERACION REINICIABA. Funcionaba con el RD del
+    # IVA -articulos 1 a 6 y luego otra vez el 1- y fallaba con el del IRPF,
+    # cuyo articulado propio es un unico «Articulo unico»: sin numero que
+    # comparar, el reinicio no se detectaba nunca. Y no se arregla dandole un
+    # numero a «unico», porque entonces el 1 del reglamento tampoco seria menor
+    # que el. Se queda como RESPALDO por si alguna norma parte sin firmar.
+    corte = _corte_por_firma(nodos)
     cuerpo_indice = 0
     maximo_articulo = 0
 
@@ -351,14 +395,21 @@ def trocear(
 
         cls = B.clasificar(titulo, id_bloque, tipo_boe)
 
+        if corte is not None and posicion == corte:
+            # Aqui acaba el decreto y empieza lo que aprueba.
+            cuerpo_indice += 1
+            maximo_articulo = 0
+            pila.clear()       # el arbol de titulos tambien empieza de cero
+
         if cls.tipo == B.ARTICULO and not cls.es_rango:
             m_num = re.match(r"(\d+)", cls.numero_norm)
             if m_num:
                 numero_actual = int(m_num.group(1))
-                if numero_actual < maximo_articulo:
+                # El respaldo solo actua si la firma no ha decidido ya.
+                if numero_actual < maximo_articulo and corte is None:
                     cuerpo_indice += 1
                     maximo_articulo = numero_actual
-                    pila.clear()   # el arbol de titulos tambien empieza de cero
+                    pila.clear()
                 else:
                     maximo_articulo = max(maximo_articulo, numero_actual)
 

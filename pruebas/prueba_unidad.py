@@ -68,10 +68,15 @@ comprobar("un TEAR NUNCA se llama «criterio»",
           "Criterio" not in T.etiqueta_de("TEAR de Cataluña"),
           T.etiqueta_de("TEAR de Cataluña"))
 
-print("\n  Y las dos REALES de la copia local, que fueron el defecto:")
+# LAS REGIONALES REALES DE LA COPIA. Eran DOS -las que cayeron probando- y al
+# sembrar el TEAC pasaron a decenas. El numero exacto no protege nada y caduca
+# en cuanto se siembra otra vez; lo que hay que garantizar es que HAYA alguna
+# con la que probar, y que NINGUNA se presente como criterio del TEAC.
+print("\n  Y las REALES de la copia local, que fueron el defecto:")
 regionales = [c for c in cache_real.todas() if not c.es_central]
-comprobar("siguen ahi las dos regionales", len(regionales) == 2,
-          str(len(regionales)))
+comprobar("hay resoluciones regionales con las que comprobarlo",
+          len(regionales) >= 2, str(len(regionales)))
+print(f"    {len(regionales)} en la copia; se comprueban todas")
 for c in regionales:
     print(f"    {c.resolucion}  [{c.unidad}]  {c.etiqueta}")
     comprobar(f"{c.resolucion}: la cita NO dice «Criterio TEAC»",

@@ -182,28 +182,8 @@ class Verificador:
     # ------------------------------------------------------------- nombres
 
     def nombrar(self, clave: str = "", registro: dict | None = None) -> str:
-        """«Articulo 8 de la Ley 37/1992». NUNCA «Articulo 8» a secas.
-
-        Desde que hay dos normas cargadas, un numero de articulo no identifica
-        nada: el 8 existe en la Ley y en el Reglamento, y son cosas distintas.
-        Un motivo que diga solo «Articulo 8» se puede leer de dos maneras, y un
-        motivo que se puede leer de dos maneras no sirve para auditar: el
-        verificador solo vale si un humano puede reconstruir el porque.
-
-        Todo mensaje que nombre un precepto pasa por aqui. Sin excepciones: la
-        que se deje hoy es la que manana vuelve a decir «no esta en el Articulo
-        8; el texto es del Articulo 8».
-        """
-        if registro is None:
-            doc = self.ix.por_clave.get(clave)
-            if doc is None:
-                return clave or "(precepto desconocido)"
-            registro = doc.registro
-        referencia = registro.get("referencia", "(sin referencia)")
-        cuerpo = self.ix.normas.por_clave(registro.get("cuerpo_clave", ""))
-        if not cuerpo:
-            return referencia
-        return f"{referencia} {_articulo_de(cuerpo.etiqueta)} {cuerpo.etiqueta}"
+        """«Articulo 8 de la Ley 37/1992». Lo hace `nombre_de`, ver abajo."""
+        return nombre_de(self.ix, clave, registro)
 
     def nombrar_varios(self, claves) -> str:
         """Lista de preceptos, cada uno con su norma y sin repetir."""
@@ -784,3 +764,30 @@ class Verificador:
                 f"VERIFICADAS (no hay verificacion parcial)",
             )
         return Informe(ACEPTADO, ejercicio, dictamenes, sueltas, "")
+
+
+def nombre_de(indice, clave: str = "", registro: dict | None = None) -> str:
+    """«Articulo 8 de la Ley 37/1992». NUNCA «Articulo 8» a secas.
+
+    Con dos normas cargadas un numero de articulo no identifica nada: el 8
+    existe en la Ley y en el Reglamento, y son cosas distintas. Con SEIS -y dos
+    leyes de impuesto- el «Articulo 30» existe cuatro veces. Un mensaje que se
+    puede leer de dos maneras no sirve para auditar: el verificador solo vale
+    si un humano puede reconstruir el porque.
+
+    TODO MENSAJE QUE NOMBRE UN PRECEPTO PASA POR AQUI. Sin excepciones: la que
+    se deje hoy es la que manana escribe «Articulo 30, Articulo 30» en la linea
+    de preceptos que sostienen la respuesta, sin decir cual es de la Ley y cual
+    del Reglamento. Eso es lo que paso, y por eso esto es una funcion de modulo
+    y no un metodo: para que `estado.py` pueda usar LA MISMA y no una copia.
+    """
+    if registro is None:
+        doc = indice.por_clave.get(clave)
+        if doc is None:
+            return clave or "(precepto desconocido)"
+        registro = doc.registro
+    referencia = registro.get("referencia", "(sin referencia)")
+    cuerpo = indice.normas.por_clave(registro.get("cuerpo_clave", ""))
+    if not cuerpo:
+        return referencia
+    return f"{referencia} {_articulo_de(cuerpo.etiqueta)} {cuerpo.etiqueta}"

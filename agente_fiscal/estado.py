@@ -72,6 +72,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from . import referencias as R
 from . import verificador as VF
 from . import vigencia as V
 
@@ -110,8 +111,50 @@ AUSENCIA_MAXIMA = 0.5    # que parte de la consulta no existe en todo el corpus
 # Cortar por pertinencia no es cortar por puesto, y esa es justo la diferencia.
 UMBRAL_MATERIAL = 0.70
 
-# Impuestos que este corpus puede contestar. Hoy solo hay una ley dentro.
-IMPUESTOS_EN_CORPUS = ("IVA", "desconocido")
+# LA PUERTA DE MATERIA SE COMPONE DE LAS NORMAS CARGADAS.
+#
+# Era una tupla escrita a mano -("IVA", "desconocido")- y tenia los dos fallos
+# que tiene siempre una lista a mano: se queda vieja el dia que entra otra
+# norma, y nadie se entera porque no falla, solo miente.
+#
+# Y «DESCONOCIDO» YA NO PASA. Pasaba, y era la puerta abierta a todo: si el
+# analizador no sabe de que impuesto es la pregunta, dejarla entrar significa
+# que lo unico que la para es el corte por pertinencia, que no esta para eso.
+# Medido antes de decidirlo: en las 66 consultas hechas con el modelo de verdad
+# NO HAY NI UNA «desconocido» -65 IVA y 1 IRPF-, asi que cerrar la puerta no
+# cuesta ninguna consulta legitima. El 29,6% de «desconocido» que aparecia en
+# las trazas venia del motor de ensayo, cuyo analizador es un tocon de una
+# linea que responde «IVA» si la pregunta lleva esa palabra.
+DESCONOCIDO = "desconocido"
+
+
+def impuestos_en_corpus(normas) -> set:
+    """Los impuestos que se pueden contestar, sacados de las normas cargadas."""
+    return set(normas.impuestos()) if normas is not None else set()
+
+
+def puerta_de_materia(impuesto: str, normas) -> tuple:
+    """¿Entra esta consulta? Devuelve (entra, motivo_en_cristiano).
+
+    El motivo se compone de las normas que hay dentro. Nada de frases fijas:
+    la frase «este corpus solo cubre el IVA» era verdad el dia que se escribio.
+    """
+    dentro = impuestos_en_corpus(normas)
+    nombres = normas.nombres_de_impuesto() if normas is not None else []
+    if len(nombres) > 1:
+        lista = ", ".join(nombres[:-1]) + " y " + nombres[-1]
+    else:
+        lista = nombres[0] if nombres else "ninguna norma de impuesto"
+
+    if impuesto == DESCONOCIDO or not impuesto:
+        return False, (
+            "no se ha podido determinar de que impuesto es la pregunta. Esta "
+            f"herramienta cubre {lista}: dilo en la pregunta y se vuelve a "
+            "intentar")
+    if impuesto not in dentro:
+        return False, (
+            f"la consulta es de {impuesto} y esta herramienta cubre {lista}")
+    return True, ""
 
 
 def pertinencia(indice, consulta: str, resultados) -> tuple[bool, str]:
@@ -363,16 +406,35 @@ class Dictamen:
             return ""
         refs = sorted({e["referencia"] for e in self.estructural})
         normas = sorted({n for e in self.estructural for n in e["normas"]})
+        ambiguas = sorted({n for e in self.estructural
+                           for n in e.get("ambiguas") or []})
         cuantos = f"{len(refs)} de los preceptos citados" if len(refs) > 1 \
             else refs[0]
-        corte = normas[:4]
-        resto = len(normas) - len(corte)
-        return (
-            f"{cuantos} remite" + ("n" if len(refs) > 1 else "") + " a "
-            + ", ".join(corte) + (f" y {resto} norma(s) mas" if resto else "")
-            + ", que no estan en el corpus. Es un limite permanente de la "
-              "herramienta, no algo de esta consulta"
-        )
+        partes = []
+        if normas:
+            corte = normas[:4]
+            resto = len(normas) - len(corte)
+            partes.append(
+                f"{cuantos} remite" + ("n" if len(refs) > 1 else "") + " a "
+                + ", ".join(corte)
+                + (f" y {resto} norma(s) mas" if resto else "")
+                + ", que no estan en el corpus")
+        if ambiguas:
+            corte = ambiguas[:3]
+            resto = len(ambiguas) - len(corte)
+            comillas = ", ".join(f"«{x}»" for x in corte)
+            partes.append(
+                ("y tambien" if partes else f"{cuantos} remite"
+                 + ("n" if len(refs) > 1 else ""))
+                + f" a {comillas}"
+                + (f" y {resto} mas" if resto else "")
+                + ", que NO identifica cual de las normas cargadas: no se ha "
+                  "podido resolver")
+        if not partes:
+            return ""
+        return "; ".join(partes) + (
+            ". Es un limite permanente de la herramienta, no algo de esta "
+            "consulta")
 
     def a_json(self) -> dict:
         return {
@@ -426,7 +488,13 @@ def calcular(
             ["ninguna cita verificada apunta a un precepto del corpus"],
         )
 
-    preceptos = [indice.por_clave[c].registro["referencia"] for c in claves]
+    # CON SU NORMA, y por la MISMA funcion que usa el verificador.
+    #
+    # Salia «Articulo 30, Articulo 30» -uno de la Ley y otro del Reglamento- y
+    # la linea no decia cual era cual. El nombrador correcto ya existia y su
+    # docstring dice «todo mensaje que nombre un precepto pasa por aqui, sin
+    # excepciones»: esta linea era la excepcion.
+    preceptos = [VF.nombre_de(indice, c) for c in claves]
 
     # LOS DOS CAJONES. Ver la cabecera del modulo: uno mueve el estado y el
     # otro no, y por eso no pueden compartir lista.
@@ -452,12 +520,20 @@ def calcular(
         # la norma no esta y no va a estar. Y es el aviso que mas salia: en las
         # 19 del banco era casi la mitad de todos los avisos de cobertura. Va
         # resumido al final, no repetido articulo por articulo arriba.
+        # AUSENCIA Y AMBIGUEDAD NO SON LO MISMO, Y HASTA AHORA SE DECIAN
+        # IGUAL. «Remite a la Ley del Impuesto, que no esta en el corpus» era
+        # falso: la Ley del Impuesto SI esta -dos veces, la del IVA y la del
+        # IRPF- y por eso no se resuelve. Decir «no la tengo» cuando lo que
+        # pasa es «no se cual de las que tengo» manda a buscar fuera lo que
+        # esta dentro.
         pendientes = grafo.pendientes_de(clave)
         if pendientes:
-            destinos = sorted(
-                {r.norma_externa or "norma sin identificar" for r in pendientes}
-            )
-            estructural.append({"referencia": ref, "normas": destinos})
+            fuera = sorted({r.norma_externa or "norma sin identificar"
+                            for r in pendientes if r.ambito != R.AMBIGUA})
+            dudosas = sorted({r.norma_externa or r.texto
+                              for r in pendientes if r.ambito == R.AMBIGUA})
+            estructural.append({"referencia": ref, "normas": fuera,
+                                "ambiguas": dudosas})
 
         # --- COBERTURA 3) una disposicion lo menciona y no se ha citado -----
         # El articulo parece cerrado y la excepcion vive al final de la ley.

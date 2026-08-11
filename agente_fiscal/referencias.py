@@ -304,7 +304,46 @@ _RE_DET_ANAFORICO = re.compile(
     r"mism[ao]s?|su[s]?)\b", re.IGNORECASE
 )
 
+# UNA DESIGNACION QUE CONTIENE EL NOMBRE DE UNA NORMA NO ES ESA NORMA.
+#
+# «Texto refundido de la Ley del Impuesto sobre Sociedades» lleva dentro, letra
+# por letra, el nombre de la Ley 27/2014. Y es OTRA norma: el texto refundido
+# es el RDLeg 4/2004, al que la Ley 27/2014 derogo. Resolverlas a la misma es
+# atribuir un articulo a una ley que no lo tiene.
+#
+# El resolutor ya lo hacia bien -con la designacion entera devuelve None-; lo
+# que fallaba es que nunca la recibia entera: el extractor busca el nombre a
+# partir de «de la Ley...» y el cualificador se quedaba delante, fuera de la
+# captura. Asi que se mira lo que hay DELANTE, igual que la regla de oro mira
+# lo que queda detras.
+#
+# Son formas de DERIVAR una norma de otra, y todas significan «no es esa»:
+#
+#     texto refundido de ...      el RDLeg que refunde una ley
+#     texto articulado de ...     el decreto que articula una ley de bases
+#     reglamento de desarrollo    la norma que desarrolla otra
+#     estatuto / codigo de ...    recopilaciones con nombre propio
+#
+# NO entra «Reglamento del Impuesto sobre...» a secas, que es el nombre propio
+# de una norma que SI tenemos cargada: lo que descalifica es el «de desarrollo
+# de», no la palabra reglamento.
+_RE_NORMA_DERIVADA = re.compile(
+    r"\b(?:texto\s+refundido|texto\s+articulado|reglamento\s+de\s+desarrollo|"
+    r"estatuto|c[oó]digo)\s+(?:de[l]?\s+)?$",
+    re.IGNORECASE,
+)
+# La misma familia, pero mirando HACIA DELANTE: «... al texto refundido de la
+# Ley del Impuesto sobre Sociedades». Aqui el cualificador va detras de la
+# referencia y por eso se ancla al principio.
+_RE_NORMA_DERIVADA_DELANTE = re.compile(
+    r"^(?:a[l]?\s+|de[l]?\s+|en\s+e[l]?\s+)?"
+    r"(?:texto\s+refundido|texto\s+articulado|reglamento\s+de\s+desarrollo)"
+    r"\s+(?:de[l]?\s+)?(?:la|el|los)?\s*[^,.;]{0,60}",
+    re.IGNORECASE,
+)
+
 VENTANA_CUALIFICADOR = 110   # cuanto se mira por delante buscando "de esta Ley"
+VENTANA_POSTERIOR = 60       # cuanto se mira DETRAS de la referencia
 VENTANA_DESIGNACION = 70     # cuanto se admite entre el numero y el nombre de la norma
 VENTANA_ANTERIOR = 160       # cuanto por detras buscando una norma ya nombrada
 
@@ -596,6 +635,17 @@ class GrafoRemisiones:
                     f"«{det.strip()} {nombre}» remite a una norma nombrada antes; "
                     f"no se resuelve"
                 )
+            # LO QUE VA DELANTE DEL NOMBRE. Ver `_RE_NORMA_DERIVADA`: si la
+            # designacion venia precedida de «texto refundido de», «texto
+            # articulado de» y demas, lo citado es una norma DERIVADA de esta,
+            # no esta. Ante la duda, nada.
+            derivada = _RE_NORMA_DERIVADA.search(ventana[:m.start()])
+            if derivada:
+                cual = " ".join(derivada.group(0).split())
+                return None, EXTERNA, f"{cual} {nombre}", (
+                    f"«{cual} {nombre}» no es «{nombre}»: es otra norma "
+                    f"derivada de ella, y no esta cargada; no se resuelve"
+                )
             clave, motivo = self.normas.resolver(
                 nombre, cuerpo_origen, cola=ventana[m.end():]
             )
@@ -603,6 +653,20 @@ class GrafoRemisiones:
                 ambito = INTERNA if clave == cuerpo_origen else CRUZADA
                 etiqueta = self.normas.por_clave(clave).etiqueta
                 return clave, ambito, etiqueta, motivo
+            # NO RESOLVER TIENE DOS CAUSAS Y NO SON LA MISMA.
+            #
+            #   la norma NO ESTA        -> EXTERNA. Se puede decir «no la
+            #                              tengo», y es un limite permanente.
+            #   ENCAJA CON VARIAS       -> AMBIGUA. La tengo, y mas de una vez:
+            #                              lo que no se es cual. Decir «no esta
+            #                              en el corpus» manda a buscar fuera
+            #                              lo que esta dentro.
+            #
+            # Se distinguen desde que hay dos leyes de impuesto cargadas: «la
+            # Ley del Impuesto» encaja con la del IVA y con la del IRPF, y el
+            # Reglamento del IRPF la nombra asi en casi todos sus articulos.
+            if self.normas.encaja_con_varios(nombre):
+                return None, AMBIGUA, nombre, motivo
             return None, EXTERNA, nombre, motivo
 
         # Sin designacion. Si justo antes hay "el referido/citado..." o un "su",
@@ -616,6 +680,25 @@ class GrafoRemisiones:
             return None, AMBIGUA, (m2.group(0) if m2 else ""), (
                 "se menciona «el referido/citado articulo» sin decir de que norma"
             )
+
+        # LA NORMA PUEDE VENIR DESPUES, Y ENTONCES NO ES INTERNA.
+        #
+        # «se añade una disposicion adicional octava AL TEXTO REFUNDIDO de la
+        # Ley del Impuesto sobre Sociedades, aprobado por Real Decreto
+        # Legislativo 4/2004»: aqui el nombre de la norma va DETRAS de la
+        # referencia, asi que el extractor -que mira delante- no encuentra
+        # designacion y da la remision por interna. Y no lo es: es a una norma
+        # derivada que ademas esta derogada.
+        #
+        # Se mira una ventana corta por delante, lo justo para pillar el
+        # cualificador pegado. Ante la duda, nada: PENDIENTE, no interna.
+        despues = texto[fin:fin + VENTANA_POSTERIOR] if fin else ""
+        m_der = _RE_NORMA_DERIVADA_DELANTE.match(despues.lstrip(" ,"))
+        if m_der:
+            cual = " ".join(m_der.group(0).split())[:60]
+            return None, EXTERNA, cual, (
+                f"la referencia va seguida de «{cual}»: es una norma derivada "
+                f"de otra, no la norma en la que estamos; no se resuelve")
 
         # Un articulo a secas es interno a SU cuerpo.
         return cuerpo_origen, INTERNA, "", "sin designacion: interna a su cuerpo"
