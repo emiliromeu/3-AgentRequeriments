@@ -36,6 +36,12 @@ RAIZ = Path(__file__).resolve().parent
 DIR_CRUDO = RAIZ / "datos" / "crudo"
 DIR_CORPUS = RAIZ / "datos" / "corpus"
 
+# CUANTOS BLOQUES SIN RECONOCER SE ADMITEN AL INGERIR. Medido sobre las doce
+# normas del corpus, 2.554 bloques: CERO en todas. La catalana, cuyo Codi
+# numera «611-1» en vez de «Articulo 12»: 66,2%. Ver la puerta en
+# `modo_ingerir` para por que 5% y no 0%.
+TOPE_SIN_RECONOCER = 0.05
+
 ANCHO = 78
 
 
@@ -268,7 +274,8 @@ def modo_inspeccionar(norma_id: str, descargar: bool) -> int:
 # ------------------------------------------------------------------ modo 2
 
 
-def modo_ingerir(norma_id: str, descargar: bool) -> int:
+def modo_ingerir(norma_id: str, descargar: bool,
+                 forzar: bool = False) -> int:
     titulo(f"INGERIR  {norma_id}")
 
     apartado("1. Origen")
@@ -284,6 +291,74 @@ def modo_ingerir(norma_id: str, descargar: bool) -> int:
         citables, descartados = P.trocear(xml_bytes, norma_id, norma_titulo, url_html)
     except P.ErrorParseo as e:
         print(f"  [FALLO] {e}")
+        return 1
+
+    # ------------------------------------------- LA PUERTA DEL TROCEO
+    #
+    # NO SE INGIERE UNA NORMA QUE EL TROCEADOR NO HA ENTENDIDO.
+    #
+    # El caso que lo destapo: el libro sexto del Codi tributari de Catalunya
+    # numera sus articulos «611-1», «621-2», «641-14», y `bloques.py` espera
+    # «Articulo 12». Resultado del troceo: 10 citables -el articulo unico, las
+    # disposiciones y el anexo- y 151 bloques SIN RECONOCER, o sea LOS 160
+    # ARTICULOS. Se habria escrito una norma vacia con aspecto de norma
+    # ingerida: fichero, sello y linea de resumen, todo correcto, y ni un
+    # articulo dentro. Nada lo impedia.
+    #
+    # EL UMBRAL SALE DE LOS DATOS, NO DE UNA INTUICION. Troceadas las doce
+    # normas del corpus -2.554 bloques- el resultado es exactamente el mismo en
+    # todas: CERO bloques sin reconocer. La catalana: 66,2%. No hay zona gris
+    # que repartir; lo normal es cero y lo roto es dos tercios.
+    #
+    # Se pone en 5% y no en 0% a proposito: un bloque raro en una norma de
+    # cuatrocientos no es una norma incomprendida, y una puerta que se cierra
+    # por eso se acaba forzando siempre, que es como se deja de mirar. Lo que
+    # tiene que parar es el caso catastrofico, y cualquier umbral entre 0 y 66
+    # lo para. Cero no se pierde de vista: por debajo del 5% se avisa igual.
+    #
+    # La segunda regla es para las normas pequeñas, donde un porcentaje miente:
+    # con 20 bloques, 4 sin reconocer son un 20%, pero con 6 citables y 7 sin
+    # reconocer el articulado esta roto aunque el porcentaje sea bajo.
+    sin_reconocer = [r for r in descartados if r["tipo"] == B.DESCONOCIDO]
+    total_bloques = len(citables) + len(descartados)
+    proporcion = len(sin_reconocer) / total_bloques if total_bloques else 0.0
+    demasiados = proporcion > TOPE_SIN_RECONOCER or len(sin_reconocer) > len(citables)
+
+    if sin_reconocer:
+        apartado("Bloques que el troceador NO ha reconocido")
+        print(f"  reconocidos como precepto citable : {len(citables)}")
+        print(f"  reconocidos como estructura       : "
+              f"{len(descartados) - len(sin_reconocer)}")
+        print(f"  SIN RECONOCER                     : {len(sin_reconocer)} "
+              f"de {total_bloques} ({proporcion:.1%})")
+        print()
+        print("  Ejemplos de lo que no se ha entendido:")
+        for r in sin_reconocer[:5]:
+            etiqueta = (r.get("referencia") or r.get("rubrica")
+                        or r.get("id_bloque") or "(sin rotulo)")
+            # El BOE separa «Articulo» del numero con un espacio DURO. Se
+            # cambia por uno normal solo para enseñarlo: un rotulo que no se
+            # puede copiar ni buscar es un mal diagnostico. Lo que se trocea
+            # no se toca.
+            print(f"    - {str(etiqueta).replace(chr(160), ' ')[:66]}")
+        if len(sin_reconocer) > 5:
+            print(f"    ... y {len(sin_reconocer) - 5} mas")
+
+    if demasiados and not forzar:
+        print()
+        titulo("NO SE INGIERE: EL TROCEADOR NO ENTIENDE ESTA NORMA")
+        print(f"  {len(sin_reconocer)} de {total_bloques} bloques "
+              f"({proporcion:.1%}) no se han reconocido, y de las doce normas")
+        print("  del corpus NINGUNA pasa de cero. Casi siempre significa que")
+        print("  esta norma numera sus articulos de otra forma.")
+        print()
+        print("  Ingerirla ahora escribiria una norma con aspecto de completa y")
+        print("  sin articulado dentro, y eso no da error mas adelante: da")
+        print("  respuestas peores sin que nadie sepa por que.")
+        print()
+        print(f"  Si aun asi hace falta:  python fase1.py ingerir {norma_id} "
+              f"--forzar")
+        print("  (queda anotado en el sello, para que se vea siempre.)")
         return 1
 
     DIR_CORPUS.mkdir(parents=True, exist_ok=True)
@@ -314,7 +389,11 @@ def modo_ingerir(norma_id: str, descargar: bool) -> int:
     # EL SELLO, EN EL MISMO SITIO EN QUE SE ESCRIBE. Si se sellara aparte,
     # habria un momento en que el corpus esta escrito y sin sello, y ese
     # momento es justo el que se quiere hacer imposible. Ver `sellos`.
-    sello = SELLOS.sellar(destino)
+    sello = SELLOS.sellar(
+        destino,
+        forzado=(f"ingerida con --forzar: {len(sin_reconocer)} de "
+                 f"{total_bloques} bloques ({proporcion:.1%}) sin reconocer"
+                 if demasiados else ""))
 
     print(f"\n  corpus      -> {destino}")
     print(f"  descartados -> {destino_desc}")
@@ -522,13 +601,24 @@ def main(argv: list[str]) -> int:
         action="store_true",
         help="fuerza descarga nueva en vez de reutilizar el ultimo crudo",
     )
+    # LA SALIDA DE EMERGENCIA, Y QUE DEJE RASTRO. Una puerta sin forma de
+    # abrirla acaba borrada del codigo el dia que estorba; una que se abre sin
+    # dejar constancia es peor que no tenerla, porque despues nadie sabe que
+    # esa norma entro saltandose la comprobacion. Queda en el sello.
+    ap.add_argument(
+        "--forzar",
+        action="store_true",
+        help="ingiere aunque el troceador no entienda la norma (queda "
+             "anotado en el sello)",
+    )
     args = ap.parse_args(argv)
 
     try:
         if args.modo == "inspeccionar":
             return modo_inspeccionar(args.norma_id, args.descargar)
         if args.modo == "ingerir":
-            return modo_ingerir(args.norma_id, args.descargar)
+            return modo_ingerir(args.norma_id, args.descargar,
+                                args.forzar)
         return modo_verificar(args.norma_id)
     except boe_api.ErrorBOE as e:
         print(f"\n[FALLO BOE] {e}", file=sys.stderr)

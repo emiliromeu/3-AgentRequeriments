@@ -3347,3 +3347,99 @@ corpus SIN TOCAR: 12 normas · 1.960 preceptos · sello correcto
 banco 16/19 sin cambios · fase3 39/39 · fase4 5/5
 llamadas a la API ... 0
 ```
+
+---
+
+# Fase 37 · `fase1.py ingerir` se niega cuando no entiende la norma
+
+La catalana se habría ingerido con **151 bloques sin reconocer y 10 citables**:
+una norma vacía con aspecto de ingerida —fichero, sello y resumen, todo
+correcto, y ni un artículo dentro—. **Nada lo impedía**: se cazó troceando en
+memoria a mano. Y lo peor no es ingerirla: es que después **no da error**. Da
+respuestas peores en silencio.
+
+## El umbral sale de los datos, no de una intuición
+
+Troceadas las doce normas del corpus —**2.554 bloques**— el resultado es el mismo
+en todas:
+
+| | bloques | sin reconocer |
+|---|---:|---:|
+| las 12 del corpus | 2.554 | **0 (0,0 %)** |
+| la catalana | 228 | **151 (66,2 %)** |
+
+**No hay zona gris que repartir**: lo normal es cero y lo roto es dos tercios.
+
+**Se pone en 5 % y no en 0 % a propósito.** Un bloque raro en una norma de
+cuatrocientos no es una norma incomprendida, y una puerta que se cierra por eso
+se acaba forzando siempre — que es como se deja de mirar. Lo que tiene que parar
+es el caso catastrófico, y cualquier umbral entre 0 y 66 lo para. Cero no se
+pierde de vista: **por debajo del 5 % se avisa igual**, con los mismos números.
+
+**Segunda regla, para las normas pequeñas**, donde un porcentaje miente: si hay
+**más bloques sin reconocer que citables**, tampoco entra. Con 20 bloques, 4 sin
+reconocer son un 20 %; pero 6 citables contra 7 sin reconocer es un articulado
+roto aunque el porcentaje salga bajo.
+
+## El mensaje sirve para diagnosticar
+
+```
+  reconocidos como precepto citable : 10
+  reconocidos como estructura       : 67
+  SIN RECONOCER                     : 151 de 228 (66.2%)
+
+  Ejemplos de lo que no se ha entendido:
+    - Artículo 611-1
+    - Artículo 611-2
+    ... y 146 mas
+
+NO SE INGIERE: EL TROCEADOR NO ENTIENDE ESTA NORMA
+  ... Casi siempre significa que esta norma numera sus articulos de otra forma.
+  Ingerirla ahora escribiria una norma con aspecto de completa y sin
+  articulado dentro, y eso no da error mas adelante: da respuestas peores
+  sin que nadie sepa por que.
+  Si aun asi hace falta:  python fase1.py ingerir BOE-A-2024-6951 --forzar
+```
+
+**Con el ejemplo se diagnostica en el momento**: se ve «Artículo 611-1» y ya se
+sabe que el problema es la numeración, sin abrir el código.
+
+## Forzar se puede, pero queda escrito
+
+Una puerta sin forma de abrirla acaba borrada el día que estorba; **una que se
+abre sin dejar constancia es peor que no tenerla**, porque después nadie sabe que
+esa norma entró saltándose la comprobación.
+
+`--forzar` lo anota **en el sello**, que es el sitio que se mira para saber si el
+corpus está entero, y la pantalla «Qué hay dentro» lo canta:
+
+```json
+"forzado": "ingerida con --forzar: 151 de 228 bloques (66.2%) sin reconocer"
+```
+> Corpus comprobado: las 13 normas cuadran con su suma de control (2026-08-11).
+> **AVISO: 1 entraron forzadas (BOE-A-2024-6951).**
+
+No se llama problema de integridad —su sello cuadra— pero tampoco pasa por
+normal. Probado de punta a punta y **deshecho**: el corpus se queda en 12.
+
+## Dos cosas que aprendí arreglando la prueba
+
+- **El rótulo de un bloque no reconocido vive en `referencia`, no en `rubrica`**,
+  que viene vacía. Mi prueba miraba `rubrica`, sacaba `a6` y acusaba al código de
+  no enseñar ejemplos, que sí los enseñaba.
+- **El BOE separa «Artículo» del número con un espacio DURO** (`\xa0`). La
+  comparación fallaba por un carácter invisible. Ahora el mensaje lo cambia por
+  uno normal **sólo para enseñarlo** —lo que se trocea no se toca—: un rótulo que
+  no se puede copiar ni buscar es un mal diagnóstico.
+- Y comprobado que **el espacio duro NO era la causa** del no reconocimiento:
+  `Artículo\xa012` se reconoce sin problema. La causa es `611-1`, y sólo esa.
+
+## Comprobaciones
+
+```
+14 suites verdes (la nueva: prueba_troceo, con dos controles negativos)
+las 12 normas reingieren con codigo 0 y cero avisos
+la catalana sale con codigo 1 y no escribe nada
+banco 16/19 sin cambios · fase3 39/39 · fase4 5/5 · corpus intacto
+llamadas a la API ... 0
+```

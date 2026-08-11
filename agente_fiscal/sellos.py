@@ -72,13 +72,21 @@ def leer(directorio: Path) -> dict:
         return {}
 
 
-def sellar(ruta: Path, hoy: str | None = None) -> dict:
-    """Apunta el estado de UNA norma recien ingerida. Devuelve su sello."""
+def sellar(ruta: Path, hoy: str | None = None, forzado: str = "") -> dict:
+    """Apunta el estado de UNA norma recien ingerida. Devuelve su sello.
+
+    `forzado` es por que se salto la puerta del troceo, si se salto. Se guarda
+    EN EL SELLO a proposito, que es el sitio que se mira para saber si el
+    corpus esta entero: una norma que entro saltandose una comprobacion tiene
+    que poder verse meses despues sin acordarse de nada.
+    """
     ruta = Path(ruta)
     directorio = ruta.parent
     sellos = leer(directorio)
     sello = medir(ruta)
     sello["sellado"] = hoy or date.today().isoformat()
+    if forzado:
+        sello["forzado"] = forzado
     sellos[_norma_de(ruta)] = sello
     ruta_de_sellos(directorio).write_text(
         json.dumps(sellos, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
@@ -158,9 +166,14 @@ def estado(rutas: list) -> dict:
                 "frase": f"AVISO: {len(problemas)} norma(s) no cuadran con su "
                          f"sello."}
     fechas = [s.get("sellado", "") for s in sellos.values() if s.get("sellado")]
-    return {
-        "sellado": True, "normas": len(rutas), "problemas": [],
-        "frase": (f"Corpus comprobado: las {len(rutas)} normas cuadran con su "
-                  f"suma de control" + (f" ({min(fechas)})" if fechas else "")
-                  + "."),
-    }
+    # UNA NORMA FORZADA NO ES UN PROBLEMA DE INTEGRIDAD -su sello cuadra- PERO
+    # TAMPOCO ES NORMAL. Se dice en la misma linea, porque quien mira esta
+    # pantalla lo hace justo para saber si puede fiarse de una respuesta.
+    forzadas = sorted(n for n, s in sellos.items() if s.get("forzado"))
+    frase = (f"Corpus comprobado: las {len(rutas)} normas cuadran con su suma "
+             f"de control" + (f" ({min(fechas)})" if fechas else "") + ".")
+    if forzadas:
+        frase += (f" AVISO: {len(forzadas)} entraron forzadas "
+                  f"({', '.join(forzadas)}).")
+    return {"sellado": True, "normas": len(rutas), "problemas": [],
+            "forzadas": forzadas, "frase": frase}
