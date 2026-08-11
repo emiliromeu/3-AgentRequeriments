@@ -188,14 +188,36 @@ for codigo, esperado, que in [
               f"{clave_} ({como})")
     comprobar(f"  y dice que fue POR CODIGO", "por codigo" in como, como)
 
+# UN CODIGO NO MAPEADO YA NO SE DA POR PERDIDO: SE MIRA EL NOMBRE.
+#
+# Esta prueba exigia lo contrario -«NO se intenta adivinar por el nombre»- y
+# era lo correcto mientras `MAPA_DYCTEA` cubriera el corpus. Con tres entradas
+# y trece normas dejo de serlo: 118 criterios del TEAC se guardaron y NO HABIA
+# FORMA DE ENCONTRARLOS, y 147 de sus referencias eran a la Ley 35/2006, al RD
+# 439/2007 y a la Ley 19/1991, que estan cargadas.
+#
+# Esa es la evidencia independiente que cambia la expectativa. Lo que NO
+# cambia, y por eso siguen las dos comprobaciones de abajo: el nombre se
+# resuelve con el resolutor de siempre, que tiene su regla de oro y devuelve
+# vacio si duda.
 clave_, como = T.resolver_norma("Impuesto sobre Sucesiones", N, "09:99:99:00:00")
-print(f"    codigo no mapeado -> clave={clave_!r} · {como}")
-comprobar("un codigo NO mapeado no resuelve a ninguna norma nuestra",
+print(f"    codigo no mapeado, nombre que no tenemos -> {clave_!r} · {como}")
+comprobar("un codigo no mapeado con nombre que NO tenemos sigue sin resolver",
           clave_ == "", clave_)
-comprobar("y lo dice: es una norma que no tenemos",
-          "no mapeado" in como or "no tenemos" in como, como)
-comprobar("NO se intenta adivinar por el nombre",
-          "nombre" not in como, como)
+
+clave_, como = T.resolver_norma(
+    "Ley 35/2006 Impuesto sobre la Renta de las Personas Físicas", N,
+    "09:99:99:00:00")
+print(f"    codigo no mapeado, nombre que SI tenemos -> {clave_!r} · {como}")
+comprobar("pero si el nombre es una norma nuestra, AHORA si se encuentra",
+          clave_ == "BOE-A-2006-20764#0", f"{clave_} ({como})")
+comprobar("  y dice que fue por nombre, no por codigo", "nombre" in como, como)
+
+clave_, como = T.resolver_norma("Ley 29/1987 Impuesto sobre Sucesiones y "
+                                "Donaciones", N, "09:99:99:00:00")
+comprobar("y la MISMA forma con una norma que no tenemos NO se resuelve: "
+          "que mande el numero no es que encaje con lo que sea",
+          clave_ == "", f"{clave_} ({como})")
 
 # =================================== 6. CONTROL NEGATIVO
 print("\n=== 6. LA PRUEBA SABE PONERSE ROJA ===")

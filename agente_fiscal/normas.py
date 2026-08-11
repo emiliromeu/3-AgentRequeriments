@@ -521,6 +521,30 @@ class Registro:
                 re.sub(r"\s+", " ", designacion).strip(" .,;:").split()[consumidas:]
             )
             sobra = (resto_original + " " + (cola or "")).strip(" ,;:.")
+
+            # LO QUE SOBRA PUEDE SER SU PROPIO NOMBRE, DICHO OTRA VEZ.
+            #
+            # DYCTEA escribe «Ley 35/2006 Impuesto sobre la Renta de las
+            # Personas Fisicas»: el numero y la materia pegados, sin coma. El
+            # alias «ley 35/2006» casa, y lo que sobra -«Impuesto sobre la
+            # Renta...»- no es otra norma: es LA MISMA, nombrada dos veces.
+            # Sin esta excepcion se rechazaba, y 147 criterios del TEAC
+            # quedaban en la despensa sin poder encontrarse.
+            #
+            # NO AFLOJA LA REGLA DE ORO. Solo se admite si lo que sobra es la
+            # materia o el nombre DE ESE MISMO CUERPO: «Ley 58/2003» detras de
+            # «la Ley» sigue siendo otra norma, porque «58/2003» no es la
+            # materia de la Ley del IVA.
+            if _RE_DISCRIMINANTE.match(sobra) and len(candidatos) == 1:
+                suyo = B.sin_tildes(candidatos[0].materia or "")
+                nombre_suyo = B.sin_tildes(candidatos[0].nombre or "")
+                sobra_plana = B.sin_tildes(sobra)
+                if suyo and (sobra_plana.startswith(suyo)
+                             or (nombre_suyo and sobra_plana.startswith(nombre_suyo))):
+                    return candidatos[0].clave, (
+                        f"designa a {candidatos[0].etiqueta} (su nombre "
+                        f"repetido detras del numero)")
+
             if _RE_DISCRIMINANTE.match(sobra):
                 # Se dice QUE alias caso y QUE sobro: sin las dos mitades el
                 # mensaje parece repetir el nombre y no se entiende por que se

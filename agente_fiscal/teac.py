@@ -196,6 +196,14 @@ def activa() -> bool:
 # La salida no es adivinar mejor, es dejar de adivinar: DYCTEA identifica cada
 # norma con un CODIGO estable, y ese codigo no es ambiguo. Se mapea una vez,
 # a mano, y aqui esta a la vista de cualquiera:
+# ATAJO, NO CATALOGO. Estos tres codigos se resuelven sin mirar el nombre
+# porque estan comprobados uno a uno. NO es la lista de lo que se cubre: lo que
+# no este aqui se resuelve POR NOMBRE, con el resolutor de siempre.
+#
+# Fue una lista de cobertura durante un tiempo y costo caro: con tres entradas
+# y trece normas en el corpus, 118 criterios del TEAC se guardaron y no habia
+# forma de encontrarlos. Es el cuarto mapa de tres normas que aparece en este
+# proyecto -NUMERO_NORMA, DESIGNACION, sembrar_teac.NORMAS_CORPUS y este-.
 MAPA_DYCTEA = {
     # codigo DYCTEA        designacion nuestra, que el resolutor entiende sola
     "02:07:01:00:00": "Ley 37/1992",
@@ -256,10 +264,21 @@ def resolver_norma(nombre: str, normas=None, codigo: str = "") -> tuple:
     cod = codigo or _codigo_de(nombre)
     if cod:
         designacion = MAPA_DYCTEA.get(cod)
-        if not designacion:
-            return "", f"codigo {cod} no mapeado: es una norma que no tenemos"
-        clave, _motivo = normas.resolver(designacion)
-        return (clave or ""), f"por codigo {cod}"
+        if designacion:
+            clave, _motivo = normas.resolver(designacion)
+            return (clave or ""), f"por codigo {cod}"
+        # CODIGO NO MAPEADO: SE MIRA EL NOMBRE, NO SE DA POR PERDIDA.
+        #
+        # Antes se devolvia vacio aqui mismo -«es una norma que no tenemos»- y
+        # era verdad mientras el mapa cubriera el corpus. Con tres entradas y
+        # trece normas dejo de serlo: 118 criterios del TEAC quedaban en la
+        # despensa SIN PODER ENCONTRARSE, y 147 de sus referencias eran a la
+        # Ley 35/2006, al RD 439/2007 y a la Ley 19/1991, que estan cargadas.
+        #
+        # El codigo sigue mandando cuando esta mapeado, que es el camino
+        # exacto. Lo que cambia es el «si no, me rindo»: ahora se prueba el
+        # nombre con el resolutor de siempre, que tiene su propia regla de oro
+        # y devuelve vacio si duda.
 
     # Sin codigo: el respaldo de siempre, con su regla de siempre.
     from . import dgt as _D
