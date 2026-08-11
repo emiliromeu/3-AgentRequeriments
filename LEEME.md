@@ -3857,3 +3857,65 @@ da por RESUELTA, porque son normas que no tenemos.
 17 suites verdes · bateria 39/39 · fase4 5/5 · banco 25/31
 trece sellos intactos · llamadas a la API ... 0
 ```
+
+---
+
+# Fase 43 · Un caso adversario sin su positivo se aprueba estrechando
+
+## LA REGLA
+
+**Cuando una regla puede fallar en dos direcciones, el caso adversario va
+acompañado de su positivo.** Si sólo está el adversario, la forma más barata de
+aprobarlo es estrechar la regla hasta que no resuelva nada — y eso pasa la prueba
+mientras rompe el sistema en silencio.
+
+De dónde sale: el resolutor aprendió a leer «Ley 35/2006 Impuesto sobre la Renta
+de las Personas Físicas» —número y materia pegados, como escribe DYCTEA— porque
+sin eso **147 criterios del TEAC estaban en la despensa sin poder encontrarse**.
+Ese arreglo puede fallar por los dos lados:
+
+| caso | esperado | qué protege |
+|---|---|---|
+| `u` · «Ley 29/1987 Impuesto sobre Sucesiones» (**no la tenemos**) | NO_VERIFICABLE | que «mande el número» no sea «que encaje con lo que sea» |
+| `u2` · «Ley 35/2006 Impuesto sobre la Renta…» (**sí la tenemos**) | VERIFICADA | que arreglar el adversario no sea dejar de leer la designación |
+
+Con sólo `u`, la forma más segura de aprobarlo habría sido revertir el arreglo, y
+volverían los 147 inalcanzables. Con sólo `u2`, cualquier aflojamiento pasaría.
+
+**Y el fragmento del positivo lo escribí de memoria y salió NO_VERIFICADA**: el
+verificador haciendo su trabajo sobre mi propio caso de prueba. Copiado del
+corpus, y anotado dentro del caso para que no se repita.
+
+# La puerta de alcanzabilidad, y por qué mide la tanda
+
+**Bajar y no poder encontrarlo ocupa disco, parece cobertura y no lo es.** 118
+criterios se sembraron así y se descubrió **tres días después**, mirando a mano.
+Desde ahora, cada tanda dice cuánto de lo bajado se puede encontrar por (norma,
+artículo), y si no es el 100% devuelve código 1 y la cadena para.
+
+**Mide la tanda, no el acumulado.** Con el acumulado la cadena pararía siempre
+por los 65 que ya sabemos que no se leen —prosa del campo `normativa` de la DGT,
+diagnosticada y pendiente—, y **una puerta que salta siempre se acaba
+ignorando**. Lo que hay que cazar es material nuevo que se baje y no se encuentre.
+
+# El plan de la segunda tanda
+
+**543 artículos**, tres filtros en este orden:
+
+1. **Sólo lo recuperable** — fuera Sucesiones (72), ITP (26), medios de transporte
+   (1) y residuos (1): 100 artículos de golpe, sin perder nada, porque el agente
+   no los saca nunca.
+2. **Ni el articulado de los decretos aprobatorios.**
+3. **Sólo lo que da señal**: 2 o más remisiones entrantes, o presencia en el
+   banco. **450 entran por remisiones y 29 sólo por el banco.**
+
+El umbral sale de la distribución: 810 artículos tienen 1+ remisión, 500 tienen
+2+, 341 tienen 3+. Con 1 entra casi la mitad del corpus elegible y la cola son
+artículos mencionados una vez de pasada.
+
+Es la misma idea que la reserva de las remisiones: **lo que decide es a quién se
+le llama, no a quién se parece.**
+
+```
+GENERAL 219 · IVA 139 · IRPF 104 · IS 74 · IP 7
+```
