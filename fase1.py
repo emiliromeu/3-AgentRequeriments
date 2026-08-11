@@ -385,7 +385,30 @@ def modo_ingerir(norma_id: str, descargar: bool,
     tocados = informe.preceptos_tocados if informe.pendientes else set()
     culpables = ", ".join(sorted(r.id_norma for r in informe.pendientes))
 
+    # ------------------------------------------------- DE QUIEN ES LA NORMA
+    #
+    # El BOE lo dice en sus metadatos: `ambito` (Estatal / Autonomico) y
+    # `departamento` («Comunidad Autonoma de Cataluña»). No hace falta ninguna
+    # lista: se lee de la fuente, como todo lo demas.
+    #
+    # Se guarda en el precepto porque es ahi donde hace falta: la busqueda
+    # filtra preceptos, no normas.
+    ambito = ((meta.get("ambito") or {}).get("texto") or "").strip()
+    departamento = ((meta.get("departamento") or {}).get("texto") or "").strip()
+    comunidad = P.comunidad_de(ambito, departamento)
+    if comunidad:
+        apartado("Ambito territorial")
+        print(f"  ambito       : {ambito}")
+        print(f"  departamento : {departamento}")
+        print(f"  comunidad    : {comunidad}")
+        print("  Sus preceptos SOLO se recuperan si la consulta indica esa "
+              "comunidad.")
+
     for r in citables:
+        if ambito:
+            r["ambito"] = ambito
+        if comunidad:
+            r["comunidad"] = comunidad
         if informe.consolidado_hasta:
             r["consolidado_hasta"] = informe.consolidado_hasta
         num = str(r.get("numero") or "").strip()

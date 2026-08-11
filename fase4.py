@@ -117,8 +117,22 @@ def cargar_corpus():
     return ix, R.GrafoRemisiones(ix.docs)
 
 
+def impuesto_tiene_autonomica(ix, impuesto: str) -> bool:
+    """¿Hay preceptos autonomicos de ese impuesto en el corpus?
+
+    Es lo que decide si merece la pena avisar de que falta la comunidad: en una
+    consulta de IVA no hay tramo autonomico y el aviso seria ruido.
+    """
+    if not impuesto:
+        return False
+    return any(ix.normas.comunidad_de_precepto(d.registro)
+               and ix.normas.impuesto_de_precepto(d.registro) == impuesto
+               for d in ix.docs)
+
+
 def recuperar(ix, grafo, consulta: str, impuesto: str,
-              tope: int = TOPE_MATERIAL, naturaleza: str = ""):
+              tope: int = TOPE_MATERIAL, naturaleza: str = "",
+              comunidad: str = ""):
     """LA UNICA FORMA DE BUSCAR. -> (resultados, huerfanos, reserva)
 
     Existe para que no vuelva a pasar lo que ya ha pasado DOS VECES: un guion
@@ -158,7 +172,8 @@ def recuperar(ix, grafo, consulta: str, impuesto: str,
     if admitidos is not None and naturaleza == _AN.FONDO:
         admitidos = {impuesto}
 
-    return ix.buscar_del_impuesto(consulta, tope, admitidos, grafo)
+    return ix.buscar_del_impuesto(consulta, tope, admitidos, grafo,
+                                  comunidad=comunidad)
 
 
 def _fin(res: dict, tr) -> dict:
@@ -187,7 +202,8 @@ def _fin(res: dict, tr) -> dict:
 
 
 def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
-              progreso=None, con_criterio: bool | None = None) -> dict:
+              progreso=None, con_criterio: bool | None = None,
+              comunidad: str = "") -> dict:
     """Resuelve una duda. Imprime el proceso y DEVUELVE el resultado en dict.
 
     Devolver un dict (y no solo imprimir) es lo que permite que el banco de
@@ -261,6 +277,12 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         # a lo que se copia: quien pegue la respuesta en sus notas tiene que
         # poder saber si llevaba criterio administrativo o no.
         "con_criterio": False,
+        # CON QUE COMUNIDAD SE HIZO. Viaja al resultado, a la traza y a lo que
+        # se copia: una respuesta pegada en unas notas pierde la pantalla que
+        # la explicaba, y sin este dato no se sabe si lleva o no autonomica.
+        "comunidad": "",
+        # Lo que se pierde por no saber la comunidad, si se pierde algo.
+        "cobertura_territorial": "",
         # Tokens de esta consulta. Vacio si no se llego a llamar al modelo.
         "consumo": {},
     }
@@ -283,6 +305,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     tr = Traza(DIR_TRAZAS, pregunta)
     res["traza"] = str(tr.dir)
     res["con_criterio"] = res_con_criterio
+    res["comunidad"] = (comunidad or "").strip()
 
     titulo("CONSULTA FISCAL")
     print(f"pregunta : {pregunta}")
@@ -435,7 +458,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     # no filtrar. La reserva mantiene viva la remision entre impuestos.
     resultados, huerfanos, reserva = recuperar(
         ix, grafo, consulta, analisis.impuesto,
-        naturaleza=analisis.naturaleza)
+        naturaleza=analisis.naturaleza, comunidad=comunidad)
     if ix.normas.admitidos_para(analisis.impuesto) is None:
         print("   busqueda: en TODO el corpus "
               f"(el impuesto quedo en «{analisis.impuesto}»: no se filtra)")
@@ -469,6 +492,26 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     # ------------------------------------------- CORTE POR PERTINENCIA
     # El tope de arriba es un techo, no una cuota. Lo que decide que se manda
     # a redactar es si el precepto trata de lo que se pregunta, no su puesto.
+    # LO QUE CUESTA NO SABER LA COMUNIDAD, DICHO EN VOZ ALTA.
+    #
+    # No bloquea -ver la nota de `interfaz`- pero no puede pasar en silencio:
+    # sin comunidad la respuesta sale SOLO con normativa estatal, y en Renta o
+    # Patrimonio eso puede ser la mitad de la respuesta.
+    hay_autonomica = bool(ix.normas.comunidades())
+    if hay_autonomica and impuesto_tiene_autonomica(ix, analisis.impuesto):
+        com = (comunidad or "").strip()
+        tenemos = sorted(ix.normas.comunidades())
+        if not com:
+            res["cobertura_territorial"] = (
+                "esta respuesta NO incluye normativa autonomica: no se ha "
+                "indicado la comunidad del contribuyente. Si el caso la tiene, "
+                "indicala y vuelve a preguntar")
+        elif com not in tenemos:
+            res["cobertura_territorial"] = (
+                f"esta respuesta lleva SOLO normativa estatal: de {com} no hay "
+                f"normativa cargada. Ahora mismo solo esta "
+                f"{', '.join(tenemos)}")
+
     seleccion = EST.seleccionar_material(ix, consulta, resultados, grafo,
                                          reserva=reserva,
                                          naturaleza=analisis.naturaleza)

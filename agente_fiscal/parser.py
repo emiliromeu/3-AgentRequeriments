@@ -536,3 +536,35 @@ def _rubrica_de_texto(texto: str, titulo_bloque: str) -> str:
         resto = primera[len(titulo_bloque):].lstrip(" .")
         return resto.strip()
     return ""
+
+
+# ------------------------------------------------------- ambito territorial
+
+_RE_COMUNIDAD = re.compile(
+    r"^(?:comunidad\s+(?:autonoma|foral)\s+(?:de\s+|del\s+|de\s+la\s+)?|"
+    r"ciudad\s+de\s+|principado\s+de\s+|region\s+de\s+|"
+    r"comunidad\s+(?:de\s+|foral\s+de\s+)?)",
+    re.IGNORECASE)
+
+
+def comunidad_de(ambito: str, departamento: str) -> str:
+    """De que comunidad es una norma. Cadena vacia = estatal.
+
+    Se lee de los metadatos del BOE -`ambito` y `departamento`-, no de una
+    lista de comunidades: el dia que entre otra normativa autonomica funciona
+    sin escribir nada, igual que con los impuestos.
+
+    Del departamento se quita el preambulo administrativo y se queda el nombre
+    a secas: «Comunidad Autonoma de Cataluña» -> «Cataluña». Es lo que va a
+    escribir una persona en la ventana.
+    """
+    # OJO CON LOS ACENTOS: «autonómico».lower() NO contiene «autonom», porque
+    # la o lleva tilde. La primera version devolvia cadena vacia para TODAS las
+    # comunidades y parecia que el dato no estaba en el BOE.
+    from . import bloques as _B
+    if "autonom" not in _B.sin_tildes(ambito or ""):
+        return ""
+    bruto = (departamento or "").strip()
+    m = _RE_COMUNIDAD.match(_B.sin_tildes(bruto))
+    nombre = bruto[m.end():] if m else bruto
+    return nombre.strip(" .,")

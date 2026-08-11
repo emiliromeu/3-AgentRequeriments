@@ -247,6 +247,11 @@ class Registro:
 
     def __init__(self, docs):
         self.cuerpos: dict[str, Cuerpo] = {}
+        # Las comunidades se leen de los preceptos, no de los cuerpos: es un
+        # dato del registro, como el impuesto.
+        self._comunidades = {c for c in
+                             ((d.registro.get("comunidad") or "").strip()
+                              for d in docs) if c}
         vistos: dict[str, int] = {}
         for d in docs:
             r = d.registro
@@ -396,6 +401,22 @@ class Registro:
             if es_materia_de_impuesto(materia):
                 return _acronimo(materia)
         return self.impuesto_de_cuerpo(registro.get("cuerpo_clave") or "")
+
+    def comunidad_de_precepto(self, registro) -> str:
+        """De que comunidad es este precepto. Cadena vacia = estatal.
+
+        LA AUSENCIA DEL CAMPO SIGNIFICA ESTATAL, y es a proposito: las doce
+        normas estatales se ingirieron antes de que existiera y no llevan
+        `comunidad`. Volver a ingerirlas solo para escribir un campo vacio
+        cambiaria sus doce sellos -la herramienta que avisa de que el corpus se
+        ha movido- a cambio de nada. Lo que hay es lo correcto: sin comunidad,
+        estatal, que ademas es el valor seguro.
+        """
+        return (registro.get("comunidad") or "").strip()
+
+    def comunidades(self) -> set:
+        """Las comunidades de las que hay normativa cargada."""
+        return set(self._comunidades)
 
     def impuestos_de_norma(self, norma_id: str) -> set:
         """TODOS los impuestos que trata una norma. Puede ser mas de uno.

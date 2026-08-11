@@ -425,6 +425,17 @@ def en_cristiano(mensaje: str) -> str:
     return FALLO_GENERICO
 
 
+# Las diecisiete y las dos ciudades autonomas. Es una lista de nombres para
+# escribir mas rapido, NO una lista de cobertura: lo que se cubre lo dice el
+# corpus -`normas.comunidades()`- y hoy es solo Cataluña. Se puede escribir
+# cualquier otra cosa a mano; el campo no valida nada.
+COMUNIDADES = (
+    "", "Andalucía", "Aragón", "Asturias", "Baleares", "Canarias", "Cantabria",
+    "Castilla-La Mancha", "Castilla y León", "Cataluña", "Ceuta",
+    "Comunidad Valenciana", "Extremadura", "Galicia", "La Rioja", "Madrid",
+    "Melilla", "Murcia", "Navarra", "País Vasco",
+)
+
 RE_ENLACE = re.compile(r"https?://[^\s)\]}>,;]+")
 
 
@@ -766,6 +777,33 @@ class Ventana:
                  bg=PAPEL2, fg=TINTA2, font=self.fuente_menuda
                  ).pack(side="left")
 
+        # LA COMUNIDAD, AL LADO DEL AÑO Y POR EL MISMO MOTIVO.
+        #
+        # Es un dato que, si falta, hace que la respuesta salga impecable y a
+        # medias: en Renta y en Patrimonio media respuesta puede estar en la
+        # norma autonomica. Un aviso al pie no sirve -se lee una vez y se deja
+        # de ver-, asi que va donde va el año: en la pregunta.
+        #
+        # PERO NO BLOQUEA, Y ESA ES LA DIFERENCIA CON EL AÑO. Ver la nota
+        # larga en el LEEME: el año no tiene alternativa segura -cualquier año
+        # supuesto es un año equivocado- y la comunidad si la tiene: contestar
+        # solo con lo estatal, diciendolo. Ademas la ventana NO SABE de que
+        # impuesto es la pregunta hasta que el analizador la lee, o sea
+        # despues de pulsar; exigirla aqui obligaria a saberlo antes.
+        #
+        # Vacia por defecto y nunca se rellena sola, ni siquiera con Cataluña:
+        # rellenarla seria suponer donde vive el cliente.
+        tk.Label(fila, text="Comunidad:", bg=PAPEL2, fg=TINTA,
+                 font=self.fuente).pack(side="left", padx=(HUECO, 0))
+        self.comunidad = tk.StringVar()
+        self.caja_comunidad = ttk.Combobox(
+            fila, textvariable=self.comunidad, width=14, font=self.fuente,
+            state="normal", values=COMUNIDADES)
+        self.caja_comunidad.pack(side="left", padx=(HUECO2, HUECO2 - 4))
+        tk.Label(fila, text="solo si el caso tiene tramo autonomico",
+                 bg=PAPEL2, fg=TINTA2, font=self.fuente_menuda
+                 ).pack(side="left")
+
         tk.Frame(tarjeta, height=1, bg=FILETE).grid(
             row=3, column=0, sticky="ew", pady=(HUECO, HUECO))
 
@@ -1056,16 +1094,23 @@ class Ventana:
         self._reajustar()
 
     @staticmethod
-    def _eco(duda: str, ejercicio: str) -> str:
+    def _eco(duda: str, ejercicio: str, comunidad: str = "") -> str:
         """La pregunta, recortada, en la barra de arriba de la respuesta.
 
         Leyendo una respuesta larga es facil perder de vista que se pregunto
         exactamente, y sobre todo CON QUE AÑO: media respuesta depende de eso.
+        Y desde que hay normativa autonomica, con que COMUNIDAD: media
+        respuesta de Renta puede depender de eso igual.
         """
         duda = " ".join((duda or "").split())
         if len(duda) > 90:
             duda = duda[:88].rsplit(" ", 1)[0] + "…"
-        return f"«{duda}»    ·    ejercicio {ejercicio}" if duda else ""
+        if not duda:
+            return ""
+        eco = f"«{duda}»    ·    ejercicio {ejercicio}"
+        if comunidad:
+            eco += f"    ·    {comunidad}"
+        return eco
 
     def _nueva_consulta(self) -> None:
         """Vuelve a preguntar CON LA PREGUNTA ANTERIOR PUESTA.
@@ -1487,13 +1532,15 @@ class Ventana:
         self.barra.start(12)
         self.paso.configure(text="Preparando la consulta...")
 
+        comunidad = self.comunidad.get().strip()
         hilo = threading.Thread(target=self._trabajar,
-                                args=(duda, ejercicio, con_criterio),
+                                args=(duda, ejercicio, con_criterio,
+                                      comunidad),
                                 daemon=True)
         hilo.start()
 
     def _trabajar(self, duda: str, ejercicio: int,
-                  con_criterio: bool = False) -> None:
+                  con_criterio: bool = False, comunidad: str = "") -> None:
         """Corre FUERA del hilo de la ventana: tkinter no es reentrante."""
         import contextlib
         import io
@@ -1508,7 +1555,8 @@ class Ventana:
             with contextlib.redirect_stdout(buf):
                 res = fase4.consultar(duda, ejercicio, self.motor, self.ix,
                                       self.grafo, progreso=progreso,
-                                      con_criterio=con_criterio)
+                                      con_criterio=con_criterio,
+                                      comunidad=comunidad)
             print(buf.getvalue())
             self.avisos.put(("hecho", res))
         except Exception:  # noqa: BLE001
@@ -1787,7 +1835,8 @@ class Ventana:
         self._mostrar("respuesta")
         self.eco_pregunta.configure(
             text=self._eco(self.caja.get("1.0", "end").strip(),
-                           self.ejercicio.get().strip()))
+                           self.ejercicio.get().strip(),
+                           res.get("comunidad") or ""))
 
         # 1. Fallos: ni estado ni texto, solo la frase.
         if res.get("fallo"):
@@ -1819,12 +1868,19 @@ class Ventana:
         # no la ventana por su cuenta: si algun dia no coincidieran, mandaria
         # lo que de verdad se uso.
         self.con_criterio = bool(res.get("con_criterio"))
+        self.comunidad_usada = res.get("comunidad") or ""
+        self.aviso_territorial = res.get("cobertura_territorial") or ""
         self._pintar_estado(estado, explicacion(estado, self.con_criterio),
                             estado)
         self.etiqueta_hecha_con.configure(text=HECHA_CON[self.con_criterio])
         self._pintar_aporte(res)
-        self._pintar_avisos(res.get("senales") or [],
-                            res.get("cobertura") or [],
+        # El aviso territorial va con los de cobertura, que es lo que es: no
+        # es un desacuerdo entre textos -eso mueve el estado- sino algo que no
+        # se ha podido mirar. Va el PRIMERO porque puede ser media respuesta.
+        coberturas = list(res.get("cobertura") or [])
+        if res.get("cobertura_territorial"):
+            coberturas.insert(0, res["cobertura_territorial"])
+        self._pintar_avisos(res.get("senales") or [], coberturas,
                             res.get("estructural") or "")
 
         # 2. El texto: SOLO si paso el verificador. `respuesta` viene vacia
@@ -2209,10 +2265,19 @@ class Ventana:
         nadie sabra si aquello llevaba criterio administrativo o no."""
         if not self.respuesta_actual:
             return
+        # LA COMUNIDAD VIAJA CON EL TEXTO, por el mismo motivo que el modo:
+        # una respuesta de Renta pegada en unas notas no dice, por si sola, si
+        # llevaba la deduccion autonomica de Cataluña o si salio estatal.
+        cabecera = HECHA_CON[getattr(self, "con_criterio", False)]
+        com = getattr(self, "comunidad_usada", "")
+        if com:
+            cabecera += f" · comunidad: {com}"
+        aviso = getattr(self, "aviso_territorial", "")
         self.raiz.clipboard_clear()
         self.raiz.clipboard_append(
-            f"[{HECHA_CON[getattr(self, 'con_criterio', False)]}]\n\n"
-            + self.respuesta_actual)
+            f"[{cabecera}]\n"
+            + (f"[AVISO: {aviso}]\n" if aviso else "")
+            + "\n" + self.respuesta_actual)
         self.copiado.configure(text="copiado")
         self.raiz.after(2000, lambda: self.copiado.configure(text=""))
 

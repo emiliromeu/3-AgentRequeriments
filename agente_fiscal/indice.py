@@ -277,7 +277,7 @@ class Indice:
         return orden[:tope], huerfanos
 
     def buscar_del_impuesto(self, consulta: str, tope: int, admitidos,
-                            grafo=None):
+                            grafo=None, comunidad: str = ""):
         """Como `buscar`, filtrando por impuesto. -> (dentro, huerfanos, reserva)
 
         `admitidos` son los CODIGOS DE IMPUESTO que pueden competir; la cadena
@@ -302,8 +302,22 @@ class Indice:
         Ley 19/1991 cuando habla de planes de pensiones exentos. Lo que decide
         quien esta en la reserva es A QUIEN SE LLAMA, no a quien se parece.
         """
+        # LA NORMATIVA AUTONOMICA SOLO ENTRA SI SE SABE DONDE RESIDE.
+        #
+        # Sin comunidad no se recupera NINGUNA: es la misma regla de siempre
+        # -ante la duda, nada- y aqui es especialmente clara, porque una
+        # deduccion autonomica de otra comunidad no es «menos exacta», es de
+        # otro sitio. Con comunidad, solo la de esa comunidad.
+        #
+        # Se aplica ANTES del tope, como el filtro de impuesto: si se aplicara
+        # despues, los puestos se gastarian en preceptos que van a descartarse.
+        def _del_sitio(r) -> bool:
+            c = self.normas.comunidad_de_precepto(r.doc.registro)
+            return not c or c == comunidad
+
         orden, huerfanos = self.buscar(consulta, tope=tope if admitidos is None
                                        else len(self.docs))
+        orden = [r for r in orden if _del_sitio(r)]
         if admitidos is None:
             return orden[:tope], huerfanos, []
 
@@ -321,5 +335,7 @@ class Indice:
                     continue
                 if self.normas.admite(d.registro, admitidos):
                     continue          # ya podia competir; si no salio, no venia al caso
+                if not _del_sitio(Resultado(d, 0.0)):
+                    continue          # de otra comunidad: no entra ni por remision
                 llamados[d.clave] = Resultado(d, 0.0)
         return dentro, huerfanos, list(llamados.values())

@@ -3679,3 +3679,91 @@ consultas guardadas : 243
 
 Verificado en disco: V2530-23 (26 KB, 24.127 caracteres de contestación) y
 V1309-23 (16 KB, 15.001). Consultas reales, completas y legibles.
+
+---
+
+# Fase 41 · La residencia es como el año, no como un aviso
+
+Con el Codi tributari de Catalunya dentro, una pregunta de Renta o de Patrimonio
+recuperaba artículos catalanes **sin que nadie hubiera dicho dónde vive el
+cliente**. Y una deducción autonómica de otra comunidad no es «menos exacta»: es
+de otro sitio. La respuesta salía impecable, con su cita literal y su enlace, y
+estaba mal para el 84% de España.
+
+## Por qué va donde va el año
+
+**Un aviso al pie se lee una vez y se deja de ver.** El año está en la pregunta
+porque es un dato que, si falta, hace que la respuesta salga impecable y
+equivocada — y nadie lo nota. La comunidad falla exactamente igual, así que va al
+lado, en la pregunta, y no en una nota debajo del texto.
+
+## Por qué NO bloquea, que es la diferencia
+
+**El año no tiene alternativa segura: cualquier año supuesto es un año
+equivocado.** La comunidad sí la tiene — contestar sólo con lo estatal — y
+entonces lo correcto no es bloquear, es **contestar y declarar lo que falta**.
+
+Y hay una razón de fábrica: **la ventana no sabe de qué impuesto es la pregunta
+hasta que el analizador la lee**, o sea después de pulsar. Hacerla obligatoria
+«sólo cuando el impuesto tiene tramo autonómico» exigiría saber el impuesto antes
+de tener el impuesto. Así que el campo es **siempre opcional**, y quien decide si
+su ausencia cuesta algo es `fase4`, donde el impuesto ya se conoce:
+`impuesto_tiene_autonomica()`. En una consulta de IVA no salta: un aviso que sale
+siempre es decoración.
+
+## La regla
+
+| comunidad | qué se recupera |
+|---|---|
+| Cataluña | los preceptos catalanes **y** los estatales |
+| vacía | **ninguno** autonómico, y se dice |
+| Madrid u otra | **ninguno**, y se dice que sólo hay Cataluña cargada |
+
+Medido con «deducción autonómica por alquiler»: con Cataluña salen 4 artículos
+del Codi y el 612-3 es **el primero**; sin comunidad y con Madrid, **cero**, y las
+dos dan exactamente el mismo resultado estatal.
+
+**Ni por remisión se cuela.** La remisión cruza de impuesto —eso no se negocia—
+pero no cruza de comunidad: un precepto catalán no entra en una consulta de
+Madrid porque otro lo mencione.
+
+## De dónde sale el dato
+
+Del BOE, no de una lista: sus metadatos traen `ambito: Autonómico` y
+`departamento: Comunidad Autónoma de Cataluña`. `parser.comunidad_de` recorta el
+preámbulo administrativo y deja «Cataluña», que es lo que escribe una persona. El
+día que entre normativa de otra comunidad funciona sin escribir nada.
+
+**La lista de las 19 del desplegable no es una lista de cobertura**: es para
+escribir más rápido. Lo que se cubre lo dice el corpus, `normas.comunidades()`, y
+hoy es sólo Cataluña.
+
+## La ausencia del campo significa estatal
+
+Las doce normas estatales se ingirieron antes de que existiera `comunidad` y no
+lo llevan. Reingerirlas sólo para escribir un campo vacío cambiaría **sus doce
+sellos** —la herramienta que avisa de que el corpus se ha movido— a cambio de
+nada. Sin comunidad, estatal: que además es el valor seguro.
+
+## Y en la respuesta
+
+La comunidad se ve **en el eco, junto al año y al modo**, y **viaja en lo que se
+copia**, con su aviso si lo hubo. Una respuesta de Renta pegada en unas notas no
+dice, por sí sola, si llevaba la deducción autonómica catalana o si salió
+estatal.
+
+## Un carácter invisible, otra vez
+
+`"autonom" not in "autonómico".lower()` es **True**: la o lleva tilde. La primera
+versión devolvía cadena vacía para todas las comunidades y parecía que el dato no
+estaba en el BOE. Se pasa por `sin_tildes`, que es lo que hace el resto del
+proyecto. Van dos con caracteres que no se ven — el espacio duro del BOE fue la
+otra.
+
+## Comprobaciones
+
+```
+16 suites verdes (la nueva: prueba_residencia, con tres controles negativos)
+banco 25/31 con las mismas rojas · bateria 39/39 · fase4 5/5
+llamadas a la API ... 0
+```
