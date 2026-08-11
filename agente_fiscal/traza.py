@@ -18,10 +18,32 @@ from pathlib import Path
 
 
 class Traza:
+    """El expediente de una consulta.
+
+    NO PUEDE TIRAR LA CONSULTA. Antes, cualquier fallo de disco -el disco
+    lleno, el directorio sin permiso, la carpeta borrada a mitad- salia de aqui
+    como un `OSError` sin coger, y eso acababa en una traza de Python en la
+    terminal. Medido: reventaba en los tres momentos, al abrir, a mitad y al
+    cerrar. Y en la ventana salia el mensaje generico, «vuelve a intentarlo»,
+    que con el disco lleno es un consejo inutil: va a fallar igual.
+
+    Pero TAMPOCO PUEDE FALLAR EN SILENCIO. Una respuesta sin expediente no se
+    puede reconstruir dentro de seis meses, y quien la enseñe tiene derecho a
+    saberlo. Asi que se apunta -`self.roto`- y quien llama lo enseña.
+
+    Se guarda el PRIMER fallo, no el ultimo: con el disco lleno vienen doce
+    seguidos y el que explica lo que paso es el primero.
+    """
+
     def __init__(self, raiz: Path, pregunta: str, sello: str | None = None):
         self.sello = sello or datetime.now().strftime("%Y%m%dT%H%M%S")
         self.dir = raiz / self.sello
-        self.dir.mkdir(parents=True, exist_ok=True)
+        # Por que no se ha podido guardar el expediente. Vacio = todo bien.
+        self.roto: str = ""
+        try:
+            self.dir.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            self.roto = f"no se ha podido crear {self.dir}: {e}"
         self.pasos: list[dict] = []
         # Una linea por llamada al modelo: que paso, que modelo y que tokens.
         # Va aparte de los pasos porque se suma, y porque el expediente tiene
@@ -35,12 +57,18 @@ class Traza:
 
     # --------------------------------------------------------------- basico
 
-    def escribir(self, nombre: str, contenido: str) -> Path:
+    def escribir(self, nombre: str, contenido: str) -> Path | None:
+        """Escribe un fichero del expediente. `None` si no se ha podido."""
         ruta = self.dir / nombre
-        ruta.write_text(contenido, encoding="utf-8")
+        try:
+            ruta.write_text(contenido, encoding="utf-8")
+        except OSError as e:
+            if not self.roto:
+                self.roto = f"no se ha podido escribir {nombre}: {e}"
+            return None
         return ruta
 
-    def json(self, nombre: str, datos) -> Path:
+    def json(self, nombre: str, datos) -> Path | None:
         return self.escribir(nombre, json.dumps(datos, ensure_ascii=False, indent=2))
 
     def paso(self, nombre: str, detalle: str = "", **extra) -> None:
@@ -163,7 +191,12 @@ class Traza:
             lineas.append(f"- {p['hora']}  {p['paso']}"
                           + (f" — {p['detalle']}" if p["detalle"] else ""))
         lineas += ["", "## Ficheros", ""]
-        for f in sorted(self.dir.iterdir()):
-            lineas.append(f"- `{f.name}` ({f.stat().st_size} bytes)")
+        try:
+            for f in sorted(self.dir.iterdir()):
+                lineas.append(f"- `{f.name}` ({f.stat().st_size} bytes)")
+        except OSError as e:
+            if not self.roto:
+                self.roto = f"no se ha podido listar {self.dir}: {e}"
+            lineas.append("- (no se ha podido listar el directorio)")
         self.escribir("expediente.md", "\n".join(lineas) + "\n")
         return self.dir

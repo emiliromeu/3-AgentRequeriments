@@ -2863,3 +2863,131 @@ fase3 · fase4 ..... 39/39 · 5/5
 banco de IVA ...... 16/19, sin cambios de veredicto
 llamadas a la API ... 4  (las dos consultas en catalán, autorizadas)
 ```
+
+---
+
+# Fase 31 · Los fallos de entorno a mitad de consulta
+
+Nunca se habían probado en caliente. Se simulan **durante** una consulta —con el
+análisis ya pagado y el material ya buscado—, que es cuando hacen daño.
+**Suite nueva: `pruebas/prueba_caidas.py`**, con tres controles negativos.
+
+## Lo que ya estaba bien
+
+Los cuatro fallos de API a mitad —**se va internet, 429, 500, se acaba el
+crédito**— ya se manejaban enteros: sin reventar, sin enseñar texto, marcados
+como `fallo="modelo"` (no como criterio) y **con el expediente cerrado y
+completo**. La traducción a frase de persona sale de `en_cristiano` y no lleva
+nada técnico dentro.
+
+## Lo que estaba roto
+
+**1 · El disco lleno reventaba con `OSError`, en los tres momentos.** Al abrir la
+traza, a mitad y al cerrar. En la terminal, traza de Python con la ruta del disco
+dentro. En la ventana el `except Exception` lo convertía en el mensaje genérico
+—«vuelve a intentarlo»—, que con el disco lleno es un consejo inútil: va a fallar
+igual.
+
+**La decisión, escrita:** un fallo de disco **no tira la consulta** —la respuesta
+ya está verificada y pagada, esconderla no ayuda a nadie— **pero no pasa en
+silencio**. `Traza` apunta el primer fallo en `self.roto`, `_fin` lo pasa al
+resultado, y la ventana cambia el pie: donde decía «Expediente guardado en …»
+—señalando a una carpeta que no existe— ahora avisa de que no ha quedado
+guardada. Una respuesta sin expediente no se puede reconstruir dentro de seis
+meses, y quien la enseñe tiene derecho a saberlo.
+
+**2 · La respuesta cortada salía como NO ENCONTRADO.** Cuando el modelo se queda
+sin espacio (`stop_reason: max_tokens`), el trozo pasaba al verificador, que lo
+tumbaba —bien tumbado: acaba con una comilla abierta— y la consulta salía como
+**NO ENCONTRADO** con el motivo «el texto no contiene ninguna cita con fragmento
+literal». Es cierto y **apunta al sitio equivocado**: quien lo lee entiende que
+la ley no dice nada de su caso, cuando lo que ha pasado es que la respuesta se
+cortó por la mitad. Ahora se mira el `stop_reason` y se dice. No se reintenta:
+saldría cortada otra vez por el mismo sitio.
+
+**3 · Un 500 caía en el mensaje genérico**, que manda a avisar a Emili por algo
+que se arregla solo en un minuto. Regla propia para 5xx.
+
+**4 · Y la regla del año tenía una TERCERA copia.** En `interfaz._revisar_boton`,
+escrita a mano —`isdigit` y el rango—, aparte de la de `leer_ejercicio` y la que
+tenía `fase4.main`. Coincidían hoy, que es lo que hace peligroso este patrón:
+**coinciden hasta que alguien arregla una y no las otras.** Y `_lanzar` hacía
+`int()` a pelo sobre la caja, fiándose del estado de otro widget.
+
+## Un doble mal puesto tapa justo lo que se quiere probar
+
+La primera versión de la prueba del disco sustituía `Traza.escribir` **entera**,
+o sea el método que **contiene** el `try/except`. Con ese doble, cualquier
+arreglo dentro de esa función es invisible: la prueba seguía en rojo después de
+arreglarlo. Un disco lleno falla en `Path.write_text`, y ahí es donde hay que
+romperlo.
+
+**Regla: el doble se pone en la capa que falla de verdad, no en la que la llama.
+Si se sustituye la función que contiene la protección, se está probando el doble.**
+
+## El caso que más preocupaba, con números
+
+**Si falla entre el analizador y el redactor, ¿se pierde el análisis?** Sí: no
+hay reanudación. `analisis.json` se escribe en el expediente y **no lo lee
+nadie** salvo `ver_ejemplo.py`, para enseñar el año.
+
+**Pero lo que se pierde es tres centésimas de céntimo.** Medido sobre 2.660
+llamadas reales en disco:
+
+| paso | llamadas | media | total |
+|---|---:|---:|---:|
+| análisis | 1.160 | 0,03 cts | 40 cts |
+| redacción | 1.500 | 0,24 cts | 359 cts |
+
+**El análisis es el 10% del gasto.** Cuando la caída es entre los dos, la mitad
+cara —la redacción— todavía no se ha pagado. Construir una reanudación ahorraría
+0,03 céntimos por caída. **No se construye.**
+
+## Repaso de entradas sin comprobar
+
+Después de que el año pasara tres semanas sin validarse, se repasó todo lo que
+entra de fuera. **Lo que está bien:**
+
+- `ver_ejemplo.py` con `../../etc`, `/etc`, `«no existe; rm -rf»` o vacío: los
+  cuatro salen con el mensaje de siempre y código 1.
+- `fase3 verificar` con un fichero que no está, `fase1 inspeccionar` con un
+  identificador inventado, `petete consulta ../../etc/passwd`: mensaje claro.
+- **15 de las 16 lecturas de JSON** del proyecto están protegidas contra fichero
+  corrupto.
+- El corpus vacío y el corpus **cortado a mitad** se detectan los dos, y el
+  segundo dice **en qué línea**.
+
+**Lo que queda anotado, sin arreglar:**
+
+- **`sembrar_teac.py:69`** lee `catalogo.json` sin coger `JSONDecodeError`. Es un
+  guion de mantenimiento que ejecuto yo, no el departamento.
+- **`ver_ejemplo.py` acepta una ruta absoluta** (`DIR_TRAZAS / "/etc"` da `/etc`
+  en pathlib). No revienta y solo lee, pero mira fuera de `datos/trazas/`.
+- **La ventana no avisa de la longitud hasta que se pulsa.** El tope funciona y
+  no cuesta ni una llamada, pero se descubre después de pegar.
+- **Un corpus truncado en un límite de línea válido no se detecta.** Cargaría
+  menos preceptos en silencio. Haría falta una suma de control.
+
+## Las dos medidas que faltaban, con modelo real
+
+Cuatro llamadas, dos consultas.
+
+**`deducion iva coche`** —con faltas y sin tildes— sale **CRITERIO CLARO, 7 de 7
+citas verificadas**, artículo 95. El analizador lo entiende y propone
+`vehiculo automovil de turismo`, `bien de inversion`, `presuncion de afectacion
+del cincuenta por ciento`. **No hace falta corregir nada.**
+
+**La regla de las comillas angulares se respeta.** Consulta en catalán sobre la
+rectificación de cuotas: 7 aperturas, 7 cierres, y **las siete son texto literal
+de la ley en castellano**. Ni una palabra en catalán entrecomillada. Y la
+referencia salió entera en castellano dentro de una frase en catalán:
+`«…» (articulo 89 de la Ley 37/1992, <enlace>)`. **CRITERIO CLARO, 7/7.**
+
+## Comprobaciones
+
+```
+11 suites ......... verdes  (la nueva: prueba_caidas)
+fase3 · fase4 ..... 39/39 · 5/5
+banco de IVA ...... 16/19, sin cambios de veredicto
+llamadas a la API ... 4  (las dos medidas pendientes, autorizadas)
+```

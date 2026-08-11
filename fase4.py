@@ -117,6 +117,28 @@ def cargar_corpus():
     return ix, R.GrafoRemisiones(ix.docs)
 
 
+def _fin(res: dict, tr) -> dict:
+    """El ultimo paso de TODA salida de `consultar`: dice si hay expediente.
+
+    Un fallo de disco ya no tira la consulta -ver `Traza`-, pero entonces hay
+    que decirlo, porque una respuesta sin expediente no se puede reconstruir
+    dentro de seis meses y quien la enseñe tiene derecho a saberlo. Antes esto
+    no podia ni plantearse: el `OSError` salia sin coger y lo que se veia era
+    una traza de Python.
+
+    Pasa por aqui hasta la salida de exito, a proposito: si algun dia se añade
+    un `return` nuevo que no lo haga, el resultado se quedara sin el campo y la
+    ventana lo cantara en vez de callarselo.
+    """
+    res["expediente"] = not tr.roto
+    if tr.roto:
+        res["aviso_expediente"] = (
+            "esta consulta NO ha quedado guardada en el expediente "
+            f"({tr.roto}). La respuesta es buena, pero dentro de unos meses no "
+            "se va a poder reconstruir: guardala tu si la vas a usar.")
+    return res
+
+
 # ------------------------------------------------------------------ consultar
 
 
@@ -174,6 +196,9 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         # realidad no se ha ejecutado.
         "fallo": None,          # None | "modelo" | "analisis"
         "traza": None,
+        # Si el expediente ha quedado escrito en disco. Lo rellena `_fin`.
+        "expediente": True,
+        "aviso_expediente": "",
         # Que llego al redactor y que se quedo fuera en el corte.
         "preceptos_enviados": [],
         "preceptos_descartados": [],
@@ -202,7 +227,15 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     if hasattr(motor, "reiniciar_reloj"):
         motor.reiniciar_reloj()
 
-    DIR_TRAZAS.mkdir(parents=True, exist_ok=True)
+    # UN FALLO DE DISCO NO TIRA LA CONSULTA, PERO NO PASA EN SILENCIO. Ver
+    # `Traza`: el expediente se apunta como roto y sigue. Lo que no puede
+    # pasar es ninguna de las dos cosas de antes: ni una traza de Python en la
+    # terminal, ni enseñar una respuesta haciendo creer que quedo guardada.
+    try:
+        DIR_TRAZAS.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        print(f"\n[AVISO] no se ha podido preparar {DIR_TRAZAS}: {e}",
+              file=sys.stderr)
     tr = Traza(DIR_TRAZAS, pregunta)
     res["traza"] = str(tr.dir)
     res["con_criterio"] = res_con_criterio
@@ -234,7 +267,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         res["motivo"] = ("no se ha escrito ninguna pregunta: describe la duda "
                          "en una o dos lineas")
         tr.cerrar({"estado": "SIN PREGUNTA", "caracteres": len(pregunta or "")})
-        return res
+        return _fin(res, tr)
 
     # ---------------------------------------------------- LONGITUD
     if len(pregunta or "") > TOPE_PREGUNTA:
@@ -252,7 +285,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
             f"{TOPE_PREGUNTA:,}: resume la duda en unas lineas")
         tr.cerrar({"estado": "PREGUNTA DEMASIADO LARGA",
                    "caracteres": len(pregunta), "tope": TOPE_PREGUNTA})
-        return res
+        return _fin(res, tr)
 
     # ---------------------------------------------------- LLAMADA 1
     paso("Analizando la pregunta...")
@@ -273,7 +306,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
             print(f"\n[FALLO DEL MODELO] {e}", file=sys.stderr)
             res["motivo"] = str(e)
             res["fallo"] = "modelo"
-            return res
+            return _fin(res, tr)
 
         tr.gasto(f"analisis {intento}", resp)
         tr.json(f"analisis_{intento}_crudo.json", resp.crudo)
@@ -296,7 +329,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
                    "errores": errores})
         res["motivo"] = "; ".join(errores)
         res["fallo"] = "analisis"
-        return res
+        return _fin(res, tr)
 
     res["analisis"] = {
         "impuesto": analisis.impuesto,
@@ -336,7 +369,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         res["codigo"] = 3
         res["estado"] = "FALTA EJERCICIO"
         res["motivo"] = explicacion
-        return res
+        return _fin(res, tr)
 
     print(f"   ejercicio: {ejercicio}  ({explicacion})")
 
@@ -502,12 +535,35 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
             print(f"\n[FALLO DEL MODELO] {e}", file=sys.stderr)
             res["motivo"] = str(e)
             res["fallo"] = "modelo"
-            return res
+            return _fin(res, tr)
 
         tr.gasto(f"redaccion {intento}", resp)
         tr.json(f"redaccion_{intento}_crudo.json", resp.crudo)
         borrador = resp.texto
         tr.escribir(f"borrador_{intento}.txt", borrador)
+
+        # LA RESPUESTA HA LLEGADO CORTADA. La API lo dice: `stop_reason` es
+        # «max_tokens» cuando el modelo se ha quedado sin sitio a mitad de
+        # frase. Sin mirarlo, el trozo pasaba al verificador, que lo tumbaba
+        # -bien tumbado, porque acaba con una comilla abierta- y la consulta
+        # salia como NO ENCONTRADO con el motivo «el texto no contiene ninguna
+        # cita con fragmento literal». Es cierto y apunta al sitio equivocado:
+        # quien lo lee entiende que la ley no dice nada de su caso, cuando lo
+        # que ha pasado es que la respuesta se corto por la mitad.
+        #
+        # No se reintenta: saldria cortada otra vez por el mismo sitio.
+        if (resp.crudo or {}).get("stop_reason") == "max_tokens":
+            apartado("PARADA: la respuesta del modelo llego cortada")
+            print("  El modelo se quedo sin espacio y la respuesta se corto a")
+            print("  mitad. No se enseña un trozo: media respuesta de fiscal")
+            print("  es peor que ninguna, porque lo que falta suele ser la")
+            print("  excepcion.")
+            tr.paso("redaccion", f"intento {intento}: cortada por max_tokens")
+            tr.cerrar({"estado": "RESPUESTA CORTADA", "intento": intento})
+            res["motivo"] = ("la respuesta del modelo llego cortada por su "
+                             "longitud: no se enseña media respuesta")
+            res["fallo"] = "modelo"
+            return _fin(res, tr)
 
         paso("Comprobando cada cita contra el texto oficial...")
         informe = verificador.verificar_texto(borrador, ejercicio, exigir_norma=True)
@@ -706,7 +762,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         "recorte": res.get("recorte") or {},
     })
     res["codigo"] = 0
-    return res
+    return _fin(res, tr)
 
 
 def _parada_por_tope(res, tr, motor, error, donde: str) -> dict:
@@ -732,7 +788,7 @@ def _parada_por_tope(res, tr, motor, error, donde: str) -> dict:
     res["fallo"] = "tope"
     res["topes"] = topes
     res["codigo"] = 1
-    return res
+    return _fin(res, tr)
 
 
 def _sin_respaldo(res, tr, ejercicio, registros, informe, motor, motivo) -> dict:
@@ -770,7 +826,7 @@ def _sin_respaldo(res, tr, ejercicio, registros, informe, motor, motivo) -> dict
     res["codigo"] = 2
     res["estado"] = EST.NO_ENCONTRADO
     res["motivo"] = motivo
-    return res
+    return _fin(res, tr)
 
 
 # ---------------------------------------------------------------- arranque

@@ -394,6 +394,18 @@ FALLOS = (
      "Falta la configuracion. Avisa a Emili."),
     (("rate limit", "429", "overloaded", "529"),
      "El servicio esta saturado ahora mismo. Prueba dentro de un minuto."),
+    # LA RESPUESTA SE CORTO POR LARGA. No es una averia: es que cabia menos de
+    # lo que hacia falta, y la unica salida util es preguntar algo mas
+    # concreto. Decir «vuelve a intentarlo» aqui manda a repetir lo mismo.
+    (("cortada", "max_tokens"),
+     "La respuesta se ha cortado por su longitud. Prueba a preguntar una sola "
+     "cosa, mas concreta."),
+    # 5xx: es fallo del servidor, no de la consulta ni de la conexion. El
+    # consejo bueno es esperar, igual que con el 429; sin esto caia en el
+    # mensaje generico, que manda a avisar a Emili por algo que se arregla
+    # solo en un minuto.
+    (("500", "502", "503", "504", "internal server error", "bad gateway"),
+     "El servicio ha fallado por su lado. Prueba dentro de un minuto."),
 )
 FALLO_GENERICO = ("No se ha podido completar la consulta. Vuelve a intentarlo; "
                   "si sigue igual, avisa a Emili.")
@@ -1375,12 +1387,12 @@ class Ventana:
         if self.trabajando or self.motor is None:
             return
         duda = self.caja.get("1.0", "end").strip()
-        ejercicio = self.ejercicio.get().strip()
-        valido = (
-            ejercicio.isdigit()
-            and AN.EJERCICIO_MINIMO <= int(ejercicio) <= AN.EJERCICIO_MAXIMO
-        )
-        estado = "normal" if (duda and valido) else "disabled"
+        # LA REGLA DEL AÑO, UNA SOLA VEZ. Aqui habia una TERCERA copia escrita
+        # a mano -isdigit y el rango-, aparte de la de `leer_ejercicio` y la
+        # que tenia `fase4.main`. Coincidian hoy, que es lo que hace peligroso
+        # este patron: coinciden hasta que alguien arregla una y no las otras.
+        año, _motivo = AN.leer_ejercicio(self.ejercicio.get())
+        estado = "normal" if (duda and año is not None) else "disabled"
         self.boton.configure(state=estado)
         if self.boton_criterio is not None:
             self.boton_criterio.configure(state=estado)
@@ -1389,7 +1401,13 @@ class Ventana:
 
     def _lanzar(self, con_criterio: bool = False) -> None:
         duda = self.caja.get("1.0", "end").strip()
-        ejercicio = int(self.ejercicio.get().strip())
+        # Sin `int()` a pelo sobre lo que hay en la caja: hoy no puede fallar
+        # porque el boton solo se enciende con un año valido, pero eso es
+        # fiarse del estado de OTRO widget. Se pregunta a quien manda.
+        ejercicio, _motivo = AN.leer_ejercicio(self.ejercicio.get())
+        if ejercicio is None:      # el boton no deberia estar encendido
+            self._revisar_boton()
+            return
         self.trabajando = True
         self.con_criterio = con_criterio
         self.boton.configure(state="disabled", text="Consultando...")
@@ -1706,9 +1724,16 @@ class Ventana:
             self._sin_nada_que_copiar()
             self._escribir_sin_respaldo(res)
 
-        self.pie_respuesta.configure(
-            text=f"Expediente guardado en {res.get('traza', '(sin traza)')}"
-        )
+        # EL PIE NO PUEDE AFIRMAR QUE ALGO ESTA GUARDADO SIN SABERLO. Con el
+        # disco lleno seguia diciendo «Expediente guardado en ...» señalando a
+        # una carpeta que no existe. Lo dice `fase4`, que es quien escribe.
+        if res.get("expediente", True):
+            self.pie_respuesta.configure(
+                text=f"Expediente guardado en {res.get('traza', '(sin traza)')}")
+        else:
+            self.pie_respuesta.configure(
+                text="AVISO: esta consulta NO ha quedado guardada en el "
+                     "expediente. Si la vas a usar, copiala tu.")
 
     def _pintar_estado(self, titulo: str, explicacion: str, clave: str) -> None:
         """El estado, con el filete de la maqueta y SIN teñir el fondo.
