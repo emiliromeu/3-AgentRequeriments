@@ -3095,3 +3095,82 @@ fase1 verificar ... las 7 normas correctas antes de sellar
 banco de IVA ...... 16/19, sin cambios de veredicto
 llamadas a la API ... 0
 ```
+
+---
+
+# Fase 34 · Los códigos de impuesto salen del corpus
+
+## La pantalla se contradecía a sí misma
+
+Entró la Ley del Patrimonio y el corpus empezó a decir que cubría Patrimonio.
+Pero `AN.IMPUESTOS` era un **enum escrito a mano** sin código para Patrimonio, así
+que una pregunta de Patrimonio salía como «otro» y se rechazaba con:
+
+> «la consulta es de **otro** y esta herramienta cubre Impuesto sobre Sociedades,
+> **Impuesto sobre el Patrimonio**, Impuesto sobre el Valor Añadido y…»
+
+La pantalla decía que cubría Patrimonio y se negaba a contestar de Patrimonio.
+
+**Es la tercera vez con el mismo patrón**: las tres copias de la regla del año y
+los dos caminos de la etiqueta del TEAC. **Cuando dos sitios tienen que decir lo
+mismo, uno lo dice y el otro lo lee.**
+
+`analizador.codigos(normas)`: los códigos salen de los títulos de las normas
+cargadas. Si mañana entra la Ley de Sucesiones, ISD aparece **sin que nadie
+escriba nada** — comprobado en la suite con un corpus imaginario.
+
+**`IMPUESTOS_FUERA` no es una lista de cobertura**, y por eso no la abre: es
+vocabulario, para que el rechazo pueda decir «la consulta es de ITP-AJD» en vez
+de «es de otro». Un rechazo que nombra el impuesto le dice al gestor que le hemos
+entendido y que no lo tenemos. Si alguno se ingiere, el corpus manda y `codigos`
+lo quita de ahí.
+
+Comprobado: **IP, IRPF, IS e IVA entran**; **ISD e ITP-AJD salen rechazados**
+nombrándose y enumerando bien lo que sí se cubre.
+
+## Lo que hay que decidir: la búsqueda no filtra por impuesto
+
+Abrir la puerta a Patrimonio destapa algo que ya estaba: **el `impuesto` del
+análisis no filtra la recuperación**. Se usa para la puerta y para el criterio,
+nada más. Medido:
+
+| términos de la pregunta | qué sale |
+|---|---|
+| «patrimonio neto, bienes y derechos, sujeto pasivo» | 5/5 de la Ley 19/1991 ✔ |
+| «obligación de declarar patrimonio neto» | 4/5 de la Ley 19/1991 ✔ |
+| «escala de gravamen del patrimonio» | **5/5 del IRPF** ✘ |
+| «exención de la vivienda habitual en patrimonio» | **5/5 del IRPF** ✘ |
+
+Con vocabulario propio del Patrimonio gana su ley; con vocabulario compartido
+—«escala», «vivienda habitual»— gana el IRPF entero. **El verificador no lo
+salva**: citar el art. 63 de la Ley 35/2006 verifica bien, porque la cita es
+literal y existe; lo que está mal es que no viene al caso, y eso el verificador
+no lo mira. Queda abierto y decidido por Emili.
+
+## «Qué hay dentro»: se pliega, no se desplaza
+
+Tercer crecimiento (41 líneas, tope 40). **No se sube el tope** —es la tercera
+vez— **y tampoco se resuelve desplazando**, aunque esa ventana ya se desplaza:
+esta pantalla contesta UNA pregunta —«¿está mi impuesto dentro?»— y **una
+respuesta que hay que ir a buscar bajando ya no es una respuesta de un vistazo**.
+
+Plegada: la lista de normas concretas se esconde tras un botón. Crece **una línea
+por impuesto en vez de tres**, y el detalle sigue entero. Medido: **37 plegada, 42
+abierta**, y la suite comprueba las dos cosas — que quepa y que al abrirla vuelvan
+los nombres. Un pliegue que esconde algo para siempre no es un pliegue: es un
+recorte.
+
+El desplazamiento se queda donde debe: de red por si acaso, no como forma de leer.
+
+## Una expectativa que no vuelva a caducar
+
+`prueba_caidas` llevaba «7 normas» escrito. Ahora lee `len(ix.rutas)`: se
+comprueba que la pantalla diga **las que hay**, y eso no caduca.
+
+## Comprobaciones
+
+```
+11 suites verdes · fase3 39/39 · fase4 5/5 · banco 16/19 sin cambios
+1.960 preceptos · 19 cuerpos · 12 normas · sello correcto
+llamadas a la API ... 0
+```

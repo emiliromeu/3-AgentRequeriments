@@ -1628,8 +1628,19 @@ class Ventana:
         #
         # Agrupado crece una linea por IMPUESTO, que es como piensa quien mira:
         # nadie viene a saber cuantos cuerpos normativos hay, viene a saber si
-        # su impuesto esta dentro. Las normas concretas siguen ahi, en gris y en
-        # una linea, porque el detalle importa cuando importa.
+        # su impuesto esta dentro.
+        #
+        # TERCER CRECIMIENTO: SE PLIEGA, NO SE DESPLAZA. Con doce normas la
+        # pantalla volvio a pasar de 40 lineas. Subir el tope no arregla nada
+        # -es la tercera vez- y desplazar tampoco, aunque esta ventana YA se
+        # desplaza: esta pantalla existe para contestar UNA pregunta -«¿esta mi
+        # impuesto dentro?»- y una respuesta que hay que ir a buscar bajando ya
+        # no es una respuesta de un vistazo.
+        #
+        # Plegado, la lista de normas concretas se esconde detras de un boton.
+        # Asi crece UNA linea por impuesto en vez de tres, y el detalle sigue
+        # estando entero para quien lo quiera. El desplazamiento se queda donde
+        # debe estar: de red por si acaso, no como forma de leer.
         titulo("NORMAS CARGADAS · es lo único que fundamenta")
         c = caja()
         total = 0
@@ -1650,15 +1661,41 @@ class Ventana:
                 nombre = cuerpo.etiqueta.split(",")[0]
                 if nombre not in g["normas"]:
                     g["normas"].append(nombre)
+            self._detalle_normas = []
             for nombre, g in sorted(grupos.items(),
                                     key=lambda kv: (kv[0] == "Normas generales",
                                                     kv[0])):
                 linea(c, nombre, f"{g['n']} artículos")
-                tk.Label(c, text="   " + " · ".join(g["normas"]), bg=PAPEL2,
-                         fg=TINTA3, font=self.fuente_menuda, anchor="w",
-                         justify="left", wraplength=520,
-                         padx=RELLENO).pack(fill="x")
+                sub = tk.Label(c, text="   " + " · ".join(g["normas"]),
+                               bg=PAPEL2, fg=TINTA3, font=self.fuente_menuda,
+                               anchor="w", justify="left", wraplength=520,
+                               padx=RELLENO)
+                self._detalle_normas.append(sub)
             linea(c, "", f"{total} en total")
+
+            # EL PLIEGUE. Empieza cerrado: quien abre esta pantalla viene a ver
+            # si su impuesto esta, no como se llama cada real decreto.
+            self._normas_abiertas = False
+            boton_pliegue = ttk.Button(c, style="Discreto.TButton")
+
+            def plegar() -> None:
+                self._normas_abiertas = not self._normas_abiertas
+                for w in self._detalle_normas:
+                    if self._normas_abiertas:
+                        w.pack(fill="x")
+                    else:
+                        w.pack_forget()
+                boton_pliegue.configure(
+                    text=("Ocultar las normas concretas"
+                          if self._normas_abiertas
+                          else f"Ver las {len(self.ix.rutas)} normas, una a una"))
+
+            boton_pliegue.configure(command=plegar)
+            plegar()
+            plegar()          # deja el rotulo puesto y el detalle cerrado
+            boton_pliegue.pack(anchor="w", padx=RELLENO, pady=(AIRE, 0))
+            self._pinchable(boton_pliegue)
+            self.boton_pliegue_normas = boton_pliegue
 
             # QUE EL CORPUS ESTA ENTERO, DICHO EN LA PANTALLA QUE SE ENSEÑA
             # PARA DUDAR DE UNA RESPUESTA. Un corpus truncado no da error: da

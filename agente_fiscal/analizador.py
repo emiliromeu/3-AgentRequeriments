@@ -14,13 +14,54 @@ las instrucciones se pueden desobedecer, esta no.
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
 
 EJERCICIO_MINIMO = 1993  # la Ley del IVA entra en vigor el 1-1-1993
 EJERCICIO_MAXIMO = 2100
 
-IMPUESTOS = ("IVA", "IRPF", "IS", "ITP-AJD", "IIEE", "otro", "desconocido")
+# LOS CODIGOS DE IMPUESTO SALEN DEL CORPUS, NO DE UNA LISTA.
+#
+# Aqui habia un enum escrito a mano -("IVA","IRPF","IS","ITP-AJD","IIEE",...)-
+# y el corpus derivaba los suyos del titulo de las normas. Dos fuentes de
+# verdad, y se descuadraron en cuanto entro la Ley del Patrimonio: el corpus
+# empezo a decir que cubria Patrimonio -la pantalla lo enseñaba- y el
+# analizador no tenia codigo para decirlo, asi que toda pregunta de Patrimonio
+# salia como «otro» y se rechazaba CON UN MENSAJE QUE ENUMERABA PATRIMONIO
+# ENTRE LO QUE SI SE CUBRE. La pantalla se contradecia a si misma.
+#
+# Es la tercera vez con el mismo patron: las tres copias de la regla del año y
+# los dos caminos de la etiqueta del TEAC. Cuando dos sitios tienen que decir
+# lo mismo, uno lo dice y el otro lo lee.
+#
+# Ahora: `codigos(normas)`. Si mañana se ingiere la Ley del Impuesto sobre
+# Sucesiones, ISD aparece sin que nadie escriba nada.
+
+# LO QUE NO CUBRIMOS PERO SABEMOS NOMBRAR. Esto NO es una lista de cobertura
+# -la cobertura la decide el corpus y solo el corpus-: es vocabulario, para que
+# el rechazo pueda decir «la consulta es de ITP-AJD» en vez de «es de otro».
+# Un rechazo que nombra el impuesto le dice al gestor que le hemos entendido y
+# que no lo tenemos; «otro» le deja pensando que no le hemos entendido.
+#
+# Si alguno de estos se ingiere algun dia, el corpus manda y deja de estar
+# fuera: `codigos` lo quita de aqui. Por eso anadir uno no abre nada.
+IMPUESTOS_FUERA = ("ITP-AJD", "ISD", "IIEE", "IBI", "IAE")
+
+SIN_CLASIFICAR = ("otro", "desconocido")
+
+
+def codigos(normas=None) -> tuple:
+    """Los codigos que el analizador puede devolver, para ESTE corpus.
+
+    Los primeros son los que se cubren -salen de los titulos de las normas
+    cargadas-; despues los que sabemos nombrar y no tenemos; y al final los dos
+    de siempre. Sin `normas` quedan solo estos ultimos, que es lo honrado: sin
+    corpus no se cubre nada.
+    """
+    dentro = sorted(normas.impuestos()) if normas is not None else []
+    fuera = [x for x in IMPUESTOS_FUERA if x not in dentro]
+    return tuple(dentro) + tuple(fuera) + SIN_CLASIFICAR
 
 # Tope de longitud de las listas. Ya NO va en el esquema (la API no admite
 # maxItems); se comprueba en `validar`, con el mismo rechazo y reintento.
@@ -43,7 +84,9 @@ MAX_TERMINOS = 12
 ESQUEMA = {
     "type": "object",
     "properties": {
-        "impuesto": {"type": "string", "enum": list(IMPUESTOS)},
+        # El enum lo rellena `esquema_de(normas)` con lo que haya en el corpus.
+        # Aqui queda la forma, no la lista.
+        "impuesto": {"type": "string", "enum": list(codigos())},
         # No se puede escribir ["integer", "null"]: hay que usar anyOf.
         "ejercicio": {"anyOf": [{"type": "integer"}, {"type": "null"}]},
         "ejercicio_fundamento": {"type": "string"},
@@ -61,6 +104,18 @@ ESQUEMA = {
     ],
     "additionalProperties": False,
 }
+
+def esquema_de(normas=None) -> dict:
+    """El esquema con los codigos de ESTE corpus dentro.
+
+    Se construye a cada consulta y no se guarda: si se cacheara, ingerir una
+    norma nueva no cambiaria el esquema hasta reiniciar, y eso es exactamente
+    el descuadre que esto viene a cerrar.
+    """
+    esquema = json.loads(json.dumps(ESQUEMA))     # copia honda, barata
+    esquema["properties"]["impuesto"]["enum"] = list(codigos(normas))
+    return esquema
+
 
 SISTEMA = """\
 Eres el clasificador de un sistema de consulta fiscal de una gestoria espanola.
@@ -109,8 +164,14 @@ class Analisis:
 _RE_NUM_ART = re.compile(r"^\d{1,3}(\s+[a-zA-Zaeiouáéíóú]+){0,2}$")
 
 
-def validar(datos) -> tuple[Analisis | None, list[str]]:
-    """Comprueba el JSON del analizador. Devuelve (analisis, errores)."""
+def validar(datos, normas=None) -> tuple[Analisis | None, list[str]]:
+    """Comprueba el JSON del analizador. Devuelve (analisis, errores).
+
+    `normas` es el registro del corpus: de ahi salen los codigos de impuesto
+    admitidos. Sin el se admiten solo los que no dependen del corpus, que es
+    lo que hace que un descuido -llamar sin pasarlo- se note en seguida en
+    vez de colar cualquier cosa.
+    """
     errores: list[str] = []
     if not isinstance(datos, dict):
         return None, ["la respuesta no es un objeto JSON"]
@@ -126,8 +187,9 @@ def validar(datos) -> tuple[Analisis | None, list[str]]:
         return None, errores
 
     impuesto = datos["impuesto"]
-    if impuesto not in IMPUESTOS:
-        errores.append(f"impuesto {impuesto!r} no esta en {IMPUESTOS}")
+    admitidos = codigos(normas)
+    if impuesto not in admitidos:
+        errores.append(f"impuesto {impuesto!r} no esta en {admitidos}")
 
     ejercicio = datos["ejercicio"]
     if ejercicio is not None:

@@ -28,6 +28,7 @@ sys.path.insert(0, str(RAIZ))
 
 import fase4  # noqa: E402
 from agente_fiscal import analizador as AN  # noqa: E402
+from agente_fiscal import estado as EST  # noqa: E402
 from agente_fiscal import modelo as MOD  # noqa: E402
 
 fallos = []
@@ -262,6 +263,56 @@ for pregunta in ("indemnizacion por despido en un ERE: que dice el Estatuto "
     comprobar(f"«{pregunta[:40]}...» sale por la puerta", res["codigo"] == 2,
               f"codigo {res['codigo']}")
 
+# ============================================ 3ter. LA PUERTA SALE DEL CORPUS
+print("\n=== 3ter. LOS IMPUESTOS QUE SE CUBREN SALEN DEL CORPUS ===")
+print("  Habia un enum escrito a mano y el corpus derivaba el suyo. Se")
+print("  descuadraron con la Ley del Patrimonio: la pantalla decia que la")
+print("  cubria y el analizador no tenia codigo para decirlo, asi que una")
+print("  pregunta de Patrimonio salia como «otro» y se rechazaba CON UN")
+print("  MENSAJE QUE ENUMERABA PATRIMONIO ENTRE LO QUE SI SE CUBRE.\n")
+
+del_corpus = sorted(ix.normas.impuestos())
+admitidos = AN.codigos(ix.normas)
+comprobar("todo lo que el corpus cubre lo puede decir el analizador",
+          all(i in admitidos for i in del_corpus), (del_corpus, admitidos))
+comprobar("y la puerta deja pasar exactamente eso, ni uno mas ni uno menos",
+          all(EST.puerta_de_materia(i, ix.normas)[0] for i in del_corpus)
+          and not any(EST.puerta_de_materia(i, ix.normas)[0]
+                      for i in AN.IMPUESTOS_FUERA if i not in del_corpus),
+          del_corpus)
+comprobar("sin corpus no se cubre nada: eso es lo honrado",
+          not [c for c in AN.codigos(None) if c not in AN.IMPUESTOS_FUERA
+               and c not in AN.SIN_CLASIFICAR], AN.codigos(None))
+
+for imp in del_corpus:
+    entra, _m = EST.puerta_de_materia(imp, ix.normas)
+    comprobar(f"{imp}: entra y se contesta", entra)
+FUERA_DE_VERDAD = [i for i in ("ISD", "ITP-AJD") if i not in del_corpus]
+for imp in FUERA_DE_VERDAD:
+    entra, motivo = EST.puerta_de_materia(imp, ix.normas)
+    comprobar(f"{imp}: NO entra (no tenemos su ley estatal)", not entra)
+    comprobar(f"  {imp}: y el mensaje lo nombra, no dice «otro»",
+              imp in motivo, motivo[:80])
+    for nombre in ix.normas.nombres_de_impuesto():
+        comprobar(f"  {imp}: y enumera «{nombre[:26]}…»", nombre in motivo,
+                  motivo[:90])
+
+print("\n  Y si mañana entra una ley nueva, funciona sin escribir nada:")
+
+
+class _NormasDePrueba:
+    """Un corpus imaginario que cubre Sucesiones. No toca nada de disco."""
+
+    def impuestos(self):
+        return set(ix.normas.impuestos()) | {"ISD"}
+
+
+futuro = _NormasDePrueba()
+comprobar("ISD pasa a estar admitido solo por estar en el corpus",
+          "ISD" in AN.codigos(futuro))
+comprobar("  y aparece UNA sola vez, no dos",
+          list(AN.codigos(futuro)).count("ISD") == 1, AN.codigos(futuro))
+
 # ===================================================== 3bis. EN LA VENTANA
 print("\n=== 3bis. Y LO QUE SE LEE EN LA VENTANA DICE LA VERDAD ===")
 print("  La ventana daba UNA frase fija para los tres motivos de parada:")
@@ -393,6 +444,21 @@ comprobar("(0) y al deshacerlo vuelven a leerse",
           not any("sin referencia" in d.motivo for d in
                   VF.Verificador(ix).verificar_texto(
                       borrador, 2023, exigir_norma=True).dictamenes))
+
+# (a00) los codigos vuelven a estar escritos a mano
+original_codigos = AN.codigos
+try:
+    AN.codigos = lambda normas=None: ("IVA", "IRPF", "IS", "ITP-AJD",
+                                      "IIEE", "otro", "desconocido")
+    perdidos = [i for i in ix.normas.impuestos() if i not in AN.codigos(ix.normas)]
+    print(f"    con el enum viejo, el corpus cubre {sorted(perdidos)} y el "
+          f"analizador no lo puede decir")
+    comprobar("(a00) con la lista escrita a mano vuelve el descuadre, "
+              "y el bloque 3ter lo cazaria", bool(perdidos), perdidos)
+finally:
+    AN.codigos = original_codigos
+comprobar("(a00) y al deshacerlo vuelven a cuadrar",
+          all(i in AN.codigos(ix.normas) for i in ix.normas.impuestos()))
 
 # (a0) el aviso de largo deja de mirar el tope
 original_avisar = interfaz.Ventana._avisar_del_largo

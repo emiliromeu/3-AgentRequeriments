@@ -423,9 +423,15 @@ if hijas:
               ventana.title())
 
     def textos(w, acc=None):
+        """Lo que se LEE, no lo que existe.
+
+        Se cuenta solo lo que tiene gestor de geometria: desde que la lista de
+        normas se pliega, las etiquetas del detalle siguen creadas pero no
+        estan puestas. Contarlas seria medir una pantalla que nadie ve.
+        """
         acc = [] if acc is None else acc
         try:
-            if isinstance(w, tk.Label):
+            if isinstance(w, tk.Label) and w.winfo_manager():
                 acc.append(str(w.cget("text")))
         except tk.TclError:
             pass
@@ -450,9 +456,37 @@ if hijas:
     comprobar("ni una ruta de fichero ni una variable de entorno",
               "AGENTE_DGT" not in dentro and "/Users" not in dentro
               and ".json" not in dentro, dentro[:120])
+    # EL TOPE NO SE SUBE. Es la tercera vez que esta pantalla crece; la
+    # respuesta ha sido plegar la lista de normas, no ensanchar el limite ni
+    # confiar en que se pueda desplazar. Esta pantalla contesta UNA pregunta
+    # -«¿esta mi impuesto dentro?»- y una respuesta que hay que ir a buscar
+    # bajando ya no es una respuesta de un vistazo.
     comprobar("y cabe en una pantalla: menos de 40 lineas",
               len([l for l in dentro.splitlines() if l.strip()]) < 40,
               str(len(dentro.splitlines())))
+
+    # Y EL DETALLE NO SE PIERDE, SOLO SE GUARDA. Un pliegue que esconde algo
+    # para siempre no es un pliegue: es un recorte.
+    comprobar("hay un boton para ver las normas una a una",
+              hasattr(v, "boton_pliegue_normas"))
+    if hasattr(v, "boton_pliegue_normas"):
+        comprobar("  y de entrada esta cerrado, que es lo que hace que quepa",
+                  v._normas_abiertas is False)
+        rotulo = str(v.boton_pliegue_normas.cget("text"))
+        comprobar("  el boton dice cuantas normas hay",
+                  any(ch.isdigit() for ch in rotulo), rotulo)
+        v.boton_pliegue_normas.invoke()
+        bombear(0.2)
+        abierto = "\n".join(textos(ventana))
+        comprobar("  al abrirlo vuelven los nombres de las normas",
+                  len(abierto.splitlines()) > len(dentro.splitlines())
+                  and "Ley 37/1992" in abierto,
+                  f"{len(dentro.splitlines())} -> {len(abierto.splitlines())}")
+        v.boton_pliegue_normas.invoke()
+        bombear(0.2)
+        comprobar("  y al cerrarlo vuelve a caber",
+                  len([l for l in "\n".join(textos(ventana)).splitlines()
+                       if l.strip()]) < 40)
     ventana.destroy()
     bombear(0.2)
 

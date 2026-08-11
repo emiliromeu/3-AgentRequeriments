@@ -297,7 +297,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         if errores:
             entrada = f"{pregunta}\n\n{AN.mensaje_reintento(errores)}"
         try:
-            resp = motor.analizar(AN.SISTEMA, entrada, AN.ESQUEMA)
+            resp = motor.analizar(AN.SISTEMA, entrada, AN.esquema_de(ix.normas))
         except MOD.TopeAlcanzado as e:
             return _parada_por_tope(res, tr, motor, e, "analisis")
         except MOD.ErrorModelo as e:
@@ -312,7 +312,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         tr.json(f"analisis_{intento}_crudo.json", resp.crudo)
         tr.escribir(f"analisis_{intento}_texto.json", resp.texto)
 
-        analisis, errores = AN.validar(resp.datos)
+        analisis, errores = AN.validar(resp.datos, ix.normas)
         tr.paso("analisis", f"intento {intento}: "
                 f"{'valido' if analisis else 'invalido'}", errores=errores)
         if analisis:
@@ -880,7 +880,10 @@ def modo_esquema(args) -> int:
     if not ok:
         print(f"[FALLA] {msg}", file=sys.stderr)
         return 1
-    ok, msg = MOD.comprobar_esquema(AN.ESQUEMA)
+    # El esquema con los codigos del corpus DE VERDAD dentro: es el que va a
+    # viajar a la API, asi que es el que hay que comprobar.
+    ix, _grafo = cargar_corpus()
+    ok, msg = MOD.comprobar_esquema(AN.esquema_de(ix.normas))
     print(("[ OK ] " if ok else "[FALLA] ") + msg)
     if not ok:
         print()
@@ -992,8 +995,8 @@ def modo_comprobaciones(args) -> int:
     #
     # Ahora se coge el primero del catalogo del analizador que el corpus NO
     # cubra. El dia que se ingiera ITP-AJD, esta linea buscara otro sola.
-    fuera = next((x for x in AN.IMPUESTOS
-                  if x not in ("otro", "desconocido")
+    fuera = next((x for x in AN.codigos(ix.normas)
+                  if x not in AN.SIN_CLASIFICAR
                   and x not in ix.normas.impuestos()), None)
     if fuera is None:
         casos.append(("tema fuera del corpus -> NO ENCONTRADO", True,

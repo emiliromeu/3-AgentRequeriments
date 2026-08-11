@@ -523,13 +523,13 @@ def comparar_analizador(ix, casos, modelos: list[str]) -> int:
         for caso in casos:
             pregunta = caso["consulta"] + " (ejercicio 2023)"
             try:
-                resp = motor.analizar(AN.SISTEMA, pregunta, AN.ESQUEMA)
+                resp = motor.analizar(AN.SISTEMA, pregunta, AN.esquema_de(ix.normas))
             except MOD.ErrorModelo as e:
                 print(f"  [FALLO] «{caso['consulta'][:40]}»: {e}")
                 filas.append({"caso": caso, "fallo": str(e)})
                 continue
 
-            analisis, errores = AN.validar(resp.datos)
+            analisis, errores = AN.validar(resp.datos, ix.normas)
             if analisis is None:
                 print(f"  [JSON RECHAZADO] «{caso['consulta'][:40]}»: "
                       f"{'; '.join(errores)[:70]}")
@@ -702,14 +702,14 @@ def bloque_5(reg: Registro, ix, motor, casos) -> None:
                     f"{caso['tope']} primeros con los terminos del analizador")
         try:
             resp = motor.analizar(AN.SISTEMA, caso["consulta"] + " (ejercicio 2023)",
-                                  AN.ESQUEMA)
+                                  AN.esquema_de(ix.normas))
         except MOD.ErrorModelo as e:
             reg.anota("5", f"de extremo a extremo: «{caso['consulta']}»",
                       esperado, f"fallo de llamada al modelo: {e}", FALLO,
                       ident=ident)
             continue
 
-        analisis, errores = AN.validar(resp.datos)
+        analisis, errores = AN.validar(resp.datos, ix.normas)
         if analisis is None:
             reg.anota("5", f"de extremo a extremo: «{caso['consulta']}»",
                       esperado,

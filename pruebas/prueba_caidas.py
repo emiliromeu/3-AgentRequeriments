@@ -378,8 +378,12 @@ raiz.update()
 pantallas = [v for v in raiz.winfo_children() if isinstance(v, tk.Toplevel)]
 comprobar("la pantalla se abre", len(pantallas) == 1, len(pantallas))
 leido = " | ".join(_textos(pantallas[0], []))
+# EL NUMERO SE LEE, NO SE ESCRIBE. Aqui ponia «7 normas» y caduco en cuanto
+# entro una tanda nueva: la prueba se puso roja sin que se hubiera roto nada,
+# que es la peor clase de alarma. Lo que se comprueba es que la pantalla diga
+# LAS QUE HAY, y eso no caduca.
 comprobar("y dice que el corpus esta comprobado",
-          "Corpus comprobado" in leido and "7 normas" in leido,
+          "Corpus comprobado" in leido and f"{len(ix.rutas)} normas" in leido,
           [t for t in leido.split(" | ") if "orpus" in t])
 comprobar("  con su marca de verde", "✓" in leido)
 comprobar("  y sin una ruta de fichero dentro",
