@@ -3767,3 +3767,93 @@ otra.
 banco 25/31 con las mismas rojas · bateria 39/39 · fase4 5/5
 llamadas a la API ... 0
 ```
+
+---
+
+# Fase 42 · El texto que una norma inserta en otra no es texto suyo
+
+## El diagnóstico de partida no era el que había
+
+La sospecha era: «el extractor busca la norma DELANTE de la referencia y hay
+textos que la ponen detrás». **Medido, eso ya estaba resuelto.** `_ambito` mira
+`texto[fin:fin+VENTANA]`, o sea **después** de la referencia, y desde la fase de
+Sociedades tiene la rama `_RE_NORMA_DERIVADA_DELANTE`, que caza «se añade una
+disposición adicional octava **al texto refundido** de la Ley del IS» y la deja
+en PENDIENTE. Esa rama funciona: es la que produce las entradas
+`[pendiente · externa]` que se ven junto a las malas.
+
+## Lo que sí estaba roto
+
+Leyendo el texto de la disposición final segunda de la LIRPF aparece el otro:
+
+> …se añade una disposición adicional octava al texto refundido de la Ley del IS
+> … **que quedará redactada de la siguiente manera: «Disposición adicional
+> octava. Tipo de gravamen… lo establecido en la disposición adicional novena de
+> esta Ley…»**
+
+**El bloque entrecomillado es texto del TRLIS, no de la LIRPF.** Dentro de él,
+«artículo 94» es el 94 del texto refundido y «de esta Ley» es el texto refundido.
+El escáner lo leía como texto propio y lo resolvía **interno a la LIRPF**:
+artículos reales, con texto real, que no son los que tocan — y el verificador los
+daría por buenos, porque existen y dicen lo que dicen.
+
+**103 remisiones resueltas a la norma equivocada**: 86 de la Ley del IRPF, 10 de
+la del IS, 2 del Reglamento del IVA, 1 de la Ley del Patrimonio.
+
+## La regla, general
+
+`_bloques_ajenos`: los tramos entre « » cuya frase de apertura **nombra otra
+norma**. Dentro de ellos no se resuelve nada como interno.
+
+**No todo bloque entrecomillado es ajeno**, y esa es la mitad que evita el falso
+positivo: lo normal es que una norma se modifique a sí misma —«se modifica el
+artículo 95, que queda redactado así: «…»»— y ahí lo interno es correcto. Se
+exige que la cabecera nombre otra norma y que no sea la suya.
+
+Y dentro de un bloque ajeno se distingue: **una designación explícita sigue
+valiendo** —«de la Ley 19/1991» es la Ley 19/1991 la cite quien la cite— pero una
+autorreferencia —«de esta Ley»— es la norma ajena.
+
+```
+              sin la regla  con la regla
+total                 5461          5461     <- no cambia: se detectan las mismas
+resueltas             3556          3453     <- 103 dejan de resolverse MAL
+externas               913          1027
+declinadas             151           141
+```
+
+**Trece sellos intactos** —esto no toca el troceo—, batería 39/39, banco 25/31 con
+las mismas rojas.
+
+## Y una cifra mía que era vieja
+
+Comparé contra un «antes» de 5.479 remisiones apuntado ayer y salía que el total
+cambiaba, lo cual era imposible. Era una cifra anterior a la reingesta de la
+catalana. Medido antes y después **en el mismo proceso**, el total no se mueve.
+Una cifra de ayer no es una medida de hoy.
+
+# El detector de anexos vuelve a tener banco
+
+`pruebas/prueba_anexos.py`. Protege que el artículo 95 de la Ley del IVA remita
+al **anexo del RDLeg 339/1990** —la definición de «automóvil de turismo», sin la
+cual no se puede decir si el vehículo del cliente lo es— y que esa remisión se
+detecte y quede PENDIENTE, con la norma nombrada.
+
+**Los dos controles negativos rompen el código de verdad:**
+
+- **quitar el detector entero**: el artículo 95 pasa de 1 remisión a anexo a **0**.
+  Es el estado anterior a la fase 8, cuando el escaneo sólo miraba «artículo N» y
+  disposiciones.
+- **dejar de exigir el número de la norma**: de 36 remisiones a **45**, y las 9 de
+  más son designaciones sin número —`Real Decreto Legislativo`, `Real Decreto`—
+  que no identifican nada. Es la versión que colaba el título del propio anexo.
+
+En el corpus: 41 preceptos mencionan «anexo» y sólo 36 son remisiones; ninguna se
+da por RESUELTA, porque son normas que no tenemos.
+
+## Comprobaciones
+
+```
+17 suites verdes · bateria 39/39 · fase4 5/5 · banco 25/31
+trece sellos intactos · llamadas a la API ... 0
+```

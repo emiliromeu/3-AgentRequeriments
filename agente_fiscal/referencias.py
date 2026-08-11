@@ -483,7 +483,53 @@ class GrafoRemisiones:
 
     # ------------------------------------------------------------ escaneo
 
+    # Lo que introduce un bloque que se inserta en OTRA norma. Es lo que
+    # escribe el BOE justo antes de abrir comillas: «se añade una disposicion
+    # adicional octava AL TEXTO REFUNDIDO de la Ley del Impuesto sobre
+    # Sociedades, aprobado por Real Decreto Legislativo 4/2004 ... que quedara
+    # redactada de la siguiente manera: «...»».
+    _RE_OTRA_NORMA = re.compile(
+        r"(texto refundido|texto articulado|"
+        r"Ley\s+(?:Org[aá]nica\s+)?\d+/\d{4}|"
+        r"Real\s+Decreto(?:\s+Legislativo|-ley)?\s+\d+/\d{4}|"
+        r"Reglamento\s+(?:General\b|del\b|de\s+los\b))",
+        re.IGNORECASE)
+
+    def _bloques_ajenos(self, texto: str, cuerpo_origen: str = "") -> list:
+        """Tramos de texto que esta norma INSERTA en otra. -> [(ini, fin, quien)]
+
+        UNA DISPOSICION QUE MODIFICA OTRA LEY LLEVA DENTRO EL TEXTO DE ESA
+        OTRA LEY, entre comillas. Y dentro de ese texto, «articulo 94» es el 94
+        DE LA NORMA MODIFICADA, no de la que lo contiene.
+
+        Sin esto se resolvian como INTERNAS: medido sobre el corpus, 99
+        remisiones -86 de la Ley del IRPF, 10 de la del IS, 2 del Reglamento
+        del IVA y 1 de la Ley del Patrimonio- apuntaban a un articulo real, con
+        texto real, que no es el que toca. Y el verificador las daria por
+        buenas, porque el articulo existe y dice lo que dice.
+
+        NO TODO BLOQUE ENTRECOMILLADO ES AJENO: lo normal es que una norma se
+        modifique a si misma -«se modifica el articulo 95, que queda redactado
+        asi: «...»»- y ahi lo interno es correcto. Se exige que la frase que
+        abre el bloque NOMBRE OTRA NORMA, y que no sea la suya.
+        """
+        propia = self.normas.por_clave(cuerpo_origen) if cuerpo_origen else None
+        etiqueta_propia = (propia.etiqueta if propia else "").lower()
+        fuera, ini = [], None
+        for m in re.finditer(r"[«»]", texto):
+            if m.group(0) == "«" and ini is None:
+                ini = m.end()
+            elif m.group(0) == "»" and ini is not None:
+                cabecera = texto[max(0, ini - 220):ini]
+                otra = self._RE_OTRA_NORMA.search(cabecera)
+                if otra and otra.group(0).lower() not in etiqueta_propia:
+                    fuera.append((ini, m.start(),
+                                  " ".join(otra.group(0).split())))
+                ini = None
+        return fuera
+
     def _remisiones_de(self, origen: str, texto: str, cuerpo_origen: str = ""):
+        self._ajenos = self._bloques_ajenos(texto, cuerpo_origen)
         for m in _RE_ART.finditer(texto):
             yield from self._leer_articulos(
                 origen, texto, m.end(), m.start(), cuerpo_origen
@@ -623,6 +669,19 @@ class GrafoRemisiones:
         real, con texto real, que no es el que toca — y el verificador la daria
         por buena. Antes 200 pendientes que una mal resuelta.
         """
+        # ¿ESTAMOS DENTRO DE TEXTO QUE ESTA NORMA INSERTA EN OTRA?
+        #
+        # Se mira lo PRIMERO, porque cambia el significado de todo lo demas:
+        # dentro del texto que la Ley del IRPF inserta en el texto refundido
+        # del IS, «articulo 94» y «de esta Ley» son los del texto refundido.
+        #
+        # Una designacion EXPLICITA de otra norma si vale ahi dentro -«de la
+        # Ley 19/1991» es la Ley 19/1991 la cite quien la cite-, asi que solo
+        # se corta cuando no hay designacion o cuando es una autorreferencia.
+        # Ver `_bloques_ajenos`.
+        ajeno = next((q for a, b, q in getattr(self, "_ajenos", ())
+                      if a <= inicio < b), "")
+
         delante = texto[fin: fin + VENTANA_CUALIFICADOR]
         # La designacion no siempre va pegada al numero: el BOE escribe
         # "articulo 22, apartados uno a siete de la Ley del Impuesto" y
@@ -664,6 +723,11 @@ class GrafoRemisiones:
             # Ley" es interna, por mucho que lleve "misma" dentro. Sin esta
             # excepcion, la Ley del IVA dejaba de resolver remisiones suyas
             # («articulo 107 de esta misma Ley»).
+            if ajeno and _RE_DEMOSTRATIVO.search(det):
+                return None, EXTERNA, ajeno, (
+                    f"«{det.strip()} {nombre}» dentro del texto que esta norma "
+                    f"inserta en «{ajeno}»: se refiere a esa, no a esta; no se "
+                    f"resuelve")
             if _RE_DET_ANAFORICO.search(det) and not _RE_DEMOSTRATIVO.search(det):
                 return None, AMBIGUA, nombre, (
                     f"«{det.strip()} {nombre}» remite a una norma nombrada antes; "
@@ -733,6 +797,16 @@ class GrafoRemisiones:
             return None, EXTERNA, cual, (
                 f"la referencia va seguida de «{cual}»: es una norma derivada "
                 f"de otra, no la norma en la que estamos; no se resuelve")
+
+        # ¿ESTAMOS DENTRO DE TEXTO QUE ESTA NORMA INSERTA EN OTRA?
+        #
+        # Entonces «articulo 94» es el 94 de la norma modificada, no de esta, y
+        # no hay forma de resolverlo: esa norma no esta cargada. Ante la duda,
+        # nada. Ver `_bloques_ajenos`.
+        if ajeno:
+            return None, EXTERNA, ajeno, (
+                f"esta dentro del texto que esta norma inserta en «{ajeno}»: "
+                f"la referencia es a esa norma, no a esta; no se resuelve")
 
         # Un articulo a secas es interno a SU cuerpo.
         return cuerpo_origen, INTERNA, "", "sin designacion: interna a su cuerpo"
