@@ -89,23 +89,21 @@ TEMAS = [
 ]
 
 # Como se nombra cada norma en el campo «normativa» de PETETE.
-NUMERO_NORMA = {"LIVA": "37/1992", "RIVA": "1624/1992", "LGT": "58/2003"}
-
-# Y como se llama cada una para NUESTRO resolutor, que es otra cosa: el numero
-# suelto («37/1992») es lo que entiende el buscador de PETETE, y no resuelve
-# contra el corpus. Dos mapas porque son dos idiomas.
-DESIGNACION = {
-    "LIVA": "Ley 37/1992",
-    "RIVA": "Reglamento del Impuesto sobre el Valor Añadido",
-    "LGT": "Ley 58/2003",
-}
-
-# La LGT entra en la siembra a partir de la segunda pasada. Motivo, medido: de
-# las 19 consultas del banco, SIETE se quedaban sin criterio ninguno, y los
-# articulos que les faltaban son casi todos de procedimiento -27, 135, 138,
-# 198, 203, 236, 239, 267-. La primera siembra solo miro IVA, asi que en
-# procedimiento la despensa estaba vacia por construccion, no por falta de
-# criterio en la fuente.
+# UNA SOLA REPRESENTACION DE LA NORMA, Y SALE DEL CORPUS.
+#
+# Aqui habia DOS mapas escritos a mano de tres normas cada uno -`NUMERO_NORMA`
+# con «LIVA -> 37/1992» y `DESIGNACION` con «LIVA -> Ley 37/1992»- de cuando el
+# corpus era solo IVA. Y la fila del plan llevaba una tercera forma, el nombre
+# completo. Tres representaciones de lo mismo que habia que mantener en
+# paralelo, y se descuadraron: al conectar el plan a `plan_siembra` la fila paso
+# a llevar «Ley 37/1992» y `modo_sembrar` seguia buscando «LIVA» en
+# `NUMERO_NORMA`. REVENTO A LOS NUEVE SEGUNDOS con un KeyError, sin bajar nada.
+#
+# Es el mismo patron de los cinco `ix.buscar` sueltos y de las tres copias de la
+# regla del ano. Ahora la fila lleva TODO lo que necesitan los tres consumidores
+# -clave de cuerpo, etiqueta, numero y articulo- y el numero lo da el corpus,
+# que ya lo sabe: hasta los reglamentos, que heredan el del real decreto que los
+# aprueba.
 
 
 def _numero_de_articulo(a: str) -> str:
@@ -135,11 +133,8 @@ def articulos_sin_criterio() -> list:
 
     ix, grafo = fase4.cargar_corpus()
     N = ix.normas
-    clave_de = {}
-    for etiqueta, designacion in DESIGNACION.items():
-        clave, _m = N.resolver(designacion)
-        if clave:
-            clave_de[clave] = etiqueta
+    # Del corpus, no de un mapa: cada cuerpo sabe como se llama.
+    clave_de = {c.clave: c.etiqueta.split(",")[0] for c in N.cuerpos.values()}
 
     cobertura: Counter = Counter()
     for c in DGT.CacheDGT().todas():
@@ -181,8 +176,11 @@ def construir_plan() -> list:
     siembra de la DGT son horas y se puede cortar, y si se corta a mitad lo
     bajado tiene que estar repartido, no todo en IVA otra vez.
     """
+    import fase4
     import plan_siembra
 
+    ix, _g = fase4.cargar_corpus()
+    N = ix.normas
     por_impuesto = plan_siembra.plan()
     listas = [por_impuesto.get(k) or [] for k in
               ("IVA", "IRPF", "IS", "IP", "GENERAL")]
@@ -196,9 +194,14 @@ def construir_plan() -> list:
             art = _numero_de_articulo(f["referencia"].replace("Articulo ", ""))
             if not art:
                 continue          # a PETETE se le busca por numero
+            cuerpo = N.por_clave(f["cuerpo_clave"])
             filas.append({
+                # La identidad, y con lo que se cruza contra la despensa.
+                "cuerpo": f["cuerpo_clave"],
+                # Como se enseña.
                 "norma": (f["cuerpo"] or "").split(",")[0],
-                "clave_cuerpo": f["cuerpo_clave"],
+                # Como lo busca PETETE: «37/1992 95».
+                "numero": (cuerpo.numero if cuerpo else ""),
                 "articulo": art,
                 "banco": 1 if "banco" in (f["porque"] or "") else 0,
                 "remisiones": f["puntos"],
@@ -254,21 +257,34 @@ def modo_sembrar(args) -> int:
             f"{args.por_articulo} por articulo")
     apuntar("=" * ANCHO)
 
+    # EL TOPE ES DE ESTA TANDA, NO DEL ACUMULADO.
+    #
+    # Se comparaba contra `len(av["descargadas"])`, que arrastra lo de pasadas
+    # anteriores. Con 228 ya descargadas, `--tope 2` paraba ANTES DE BAJAR
+    # NADA: «0 nuevas en esta pasada». O sea que la prueba en pequeño -bajar
+    # dos de verdad antes de lanzar horas- era imposible por construccion, y
+    # ademas `--tope 800` no significaba 800 nuevas sino 800 menos lo que ya
+    # hubiera. El TEAC ya lo contaba por tanda; este no.
     ya = len(av["descargadas"])
+    nuevas_tanda = 0
     if ya:
         apuntar(f"se retoma: {ya} consultas ya descargadas en pasadas anteriores")
 
     bajadas = 0
     for n, fila in enumerate(filas, 1):
         etiqueta = f"{fila['norma']} art. {fila['articulo']}"
-        if len(av["descargadas"]) >= args.tope:
-            apuntar(f"\n[tope] alcanzadas {args.tope} consultas: se para aqui")
+        if nuevas_tanda >= args.tope:
+            apuntar(f"\n[tope] {args.tope} consultas en esta tanda: se para aqui")
             break
 
         # --- 1. que consultas hay sobre este articulo -------------------
         pendientes = av["articulos"].get(etiqueta, {}).get("numeros")
         if pendientes is None:
-            consulta = f"{NUMERO_NORMA[fila['norma']]} {fila['articulo']}"
+            if not fila["numero"]:
+                apuntar(f"  [sin numero de norma] {etiqueta}: no se puede "
+                        f"buscar en PETETE")
+                continue
+            consulta = f"{fila['numero']} {fila['articulo']}"
             try:
                 campos = fuente._campos("", "", petete.TAB_VINCULANTES, 1)
                 campos = [(k, consulta if k == "VLCMP_3" else v)
@@ -302,9 +318,12 @@ def modo_sembrar(args) -> int:
 
         # --- 2. bajarlas, saltando lo que ya esta ------------------------
         for numero in pendientes:
-            if len(av["descargadas"]) >= args.tope:
+            if nuevas_tanda >= args.tope:
                 break
             if cache.tiene(numero):
+                # Ya estaba en disco de otra pasada: se apunta, pero NO cuenta
+                # para el tope de la tanda. El tope mide lo que se le pide a la
+                # fuente, que es lo que hay que dosificar.
                 if numero not in av["descargadas"]:
                     av["descargadas"].append(numero)
                     guardar_avance(av)
@@ -312,6 +331,7 @@ def modo_sembrar(args) -> int:
             try:
                 petete.obtener_consulta(numero, cache, fuente, verboso=False)
                 av["descargadas"].append(numero)
+                nuevas_tanda += 1
                 bajadas += 1
                 guardar_avance(av)   # tras CADA una: si se corta, no se pierde
                 apuntar(f"        + {numero}")
@@ -398,15 +418,16 @@ def modo_informe(args) -> int:
 
     filas = construir_plan()
     print(f"\n  COBERTURA POR ARTICULO (los de 0 son los temas sin criterio)")
-    print(f"  {'norma':5s} {'art':12s} {'consultas':>9s}  tema")
-    print("  " + "-" * 62)
+    print(f"  {'norma':<34s} {'art':12s} {'consultas':>9s}  tema")
+    print("  " + "-" * 76)
     ceros = []
     for f in filas:
-        n = cobertura.get((f["cuerpo"], f["articulo"]), 0)
+        n = cobertura.get((f["cuerpo"], f["articulo"].lower()), 0)
         marca = "" if n else "   <-- SIN CRITERIO"
         if not n:
             ceros.append(f"{f['norma']} {f['articulo']}")
-        print(f"  {f['norma']:5s} {f['articulo']:12s} {n:9d}  {f['tema']}{marca}")
+        print(f"  {f['norma'][:34]:<34s} {f['articulo']:12s} {n:9d}  "
+              f"{f['tema'][:28]}{marca}")
     print(f"\n  articulos con criterio : {len(filas) - len(ceros)}/{len(filas)}")
     if ceros:
         print(f"  SIN criterio           : {', '.join(ceros)}")

@@ -3620,3 +3620,62 @@ llamadas a la API ... 0
 lee una vez y se deja de ver; el año es obligatorio y bloquea porque una
 respuesta con la ley de otro ejercicio sale impecable y está mal, y la norma
 autonómica de otra comunidad falla exactamente igual. Es lo siguiente.
+
+---
+
+# Fase 40 · Lo que se lanza desatendido se prueba antes en pequeño
+
+## LA REGLA
+
+**Lo que se lanza desatendido se prueba antes con el MISMO comando y el mismo
+camino de código, sólo que con tope mínimo. Probar el modo barato no prueba el
+caro.**
+
+De dónde sale: al conectar los sembradores al plan cambié `construir_plan()` para
+que devolviera el nombre completo de la norma. Probé `sembrar.py plan` —que sólo
+imprime— y lancé `sembrar.py sembrar` —que baja durante horas—. **Reventó a los
+nueve segundos con un `KeyError` y no descargó nada.** Probé un modo y lancé otro.
+
+## El fallo: tres representaciones de la misma norma
+
+- `NUMERO_NORMA = {"LIVA": "37/1992", …}` — mapa a mano, tres normas
+- `DESIGNACION = {"LIVA": "Ley 37/1992", …}` — otro mapa a mano, las mismas tres
+- y la fila del plan, que pasó a llevar el nombre completo
+
+`modo_sembrar` buscaba `NUMERO_NORMA[fila['norma']]` y `modo_informe` esperaba un
+campo `cuerpo` que no existía. **Es el mismo patrón de los cinco `ix.buscar`
+sueltos y de las tres copias de la regla del año.**
+
+Ahora la fila lleva todo lo que necesitan los tres —`cuerpo`, `norma`, `numero`,
+`articulo`— y **el número lo da el corpus**, que ya lo sabe: hasta los
+reglamentos, que heredan el del real decreto que los aprueba. Fuera los dos
+mapas.
+
+## Y un segundo fallo que sólo aparece al probar en pequeño
+
+`--tope 2` **paró antes de bajar nada**: el tope se comparaba contra
+`len(av["descargadas"])`, que arrastra lo de pasadas anteriores. Con 228 ya
+descargadas, cualquier tope por debajo de 228 era una parada instantánea.
+
+Dos consecuencias, y la segunda es peor: **la prueba en pequeño era imposible por
+construcción**, y `--tope 800` no significaba 800 nuevas sino 800 menos lo que ya
+hubiera. El sembrador del TEAC ya contaba por tanda; éste no.
+
+Ahora el tope es **de la tanda**, y sólo cuenta lo que se le pide a la fuente:
+una consulta que ya estaba en disco se apunta pero no gasta tope, porque el tope
+existe para dosificar las peticiones.
+
+## La prueba, con el comando exacto
+
+```
+$ python sembrar.py sembrar --tope 2
+  [ 1/118] Ley 37/1992 art. 121 5 consulta(s): V0195-26, V2167-24, V2530-23, …
+        + V2530-23
+        + V1309-23
+[tope] 2 consultas en esta tanda: se para aqui
+siembra terminada: 2 nuevas en esta pasada, 230 en total
+consultas guardadas : 243
+```
+
+Verificado en disco: V2530-23 (26 KB, 24.127 caracteres de contestación) y
+V1309-23 (16 KB, 15.001). Consultas reales, completas y legibles.
