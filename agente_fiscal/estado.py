@@ -254,7 +254,8 @@ class Seleccion:
 
 
 def seleccionar_material(indice, consulta: str, resultados, grafo=None,
-                         umbral: float = UMBRAL_MATERIAL) -> Seleccion:
+                         umbral: float = UMBRAL_MATERIAL,
+                         reserva=None) -> Seleccion:
     """Que preceptos de los recuperados llegan al redactor.
 
     El tope de 5 sigue siendo el techo (lo aplica la busqueda), pero no es una
@@ -273,6 +274,29 @@ def seleccionar_material(indice, consulta: str, resultados, grafo=None,
     seleccion = Seleccion(umbral=umbral)
     if not resultados:
         return seleccion
+
+    # LA RESERVA: preceptos que NO compiten pero que la pasada 2 puede llamar.
+    #
+    # Desde que la busqueda filtra por impuesto, el precepto de OTRO impuesto
+    # al que remite uno elegido ya no aparece entre los recuperados, y la
+    # pasada 2 solo sabia readmitir de ahi. Sin esto, el articulo 4 de la Ley
+    # del Patrimonio -bienes exentos- dejaria de traer los articulos del IRPF
+    # a los que remite, que es exactamente la nota al pie por la que existe
+    # medio proyecto.
+    #
+    # La reserva la calcula quien llama (`fase4`) y son LOS DESTINOS DE LAS
+    # REMISIONES de los candidatos, no «los mejor puntuados de fuera». Se
+    # probaron las dos: por puntuacion no servia -el articulo 51 de la Ley
+    # 35/2006 no puntua para una pregunta de patrimonio, y aun asi es al que
+    # remite el articulo 4-. Lo que decide quien esta en la reserva es a quien
+    # se le llama, no a quien se parece.
+    #
+    # Se pegan al final y se marcan: mas simple que llevar dos listas por todo
+    # el recorrido, y no puede descuadrarse.
+    n_propios = len(resultados)
+    ya = {r.doc.clave for r in resultados}
+    resultados = list(resultados) + [r for r in (reserva or [])
+                                     if r.doc.clave not in ya]
 
     utiles = _raices_utiles(indice, consulta)
     coberturas = [cobertura_de(indice, utiles, r.doc.registro) for r in resultados]
@@ -324,7 +348,12 @@ def seleccionar_material(indice, consulta: str, resultados, grafo=None,
             "decision": "",
             "motivo": "",
         }
-        if i == 0:
+        if i >= n_propios:
+            # De la reserva: otro impuesto. Solo puede entrar por remision.
+            linea["decision"] = "descartado"
+            linea["motivo"] = ("es de otro impuesto: solo entraria si un "
+                               "precepto elegido lo remite")
+        elif i == 0:
             linea["decision"], linea["motivo"] = "enviado", "es el mejor resultado"
             elegidos_idx.append(i)
         elif es_apoyo(r.doc.registro):

@@ -3174,3 +3174,83 @@ comprueba que la pantalla diga **las que hay**, y eso no caduca.
 1.960 preceptos · 19 cuerpos · 12 normas · sello correcto
 llamadas a la API ... 0
 ```
+
+---
+
+# Fase 35 · La búsqueda filtra por impuesto
+
+El corpus ya sabía de qué impuesto es cada cuerpo —la regla del papel— y el
+analizador ya sabía de qué impuesto es la pregunta. **Faltaba unirlos.**
+
+Se recupera de los cuerpos del impuesto de la pregunta **más los generales**
+—LGT, RGAT, recaudación, sancionador, facturación—, que aplican a todos. Un
+cuerpo que no nombra impuesto es general por definición: no hay lista de normas
+generales escrita en ninguna parte.
+
+`normas.impuesto_de_cuerpo` resuelve también el caso del real decreto
+aprobatorio: los 8 artículos que aprueban el Reglamento del IRPF **son del
+IRPF**, aunque su rótulo no nombre materia ninguna.
+
+## Lo que arregla
+
+| pregunta de Patrimonio | antes | ahora |
+|---|---|---|
+| «patrimonio neto, bienes y derechos» | 3/5 Ley 19/1991 | **5/6** |
+| «obligación de declarar patrimonio neto» | 4/5 | **5/6** |
+| **«escala de gravamen»** | **5/5 del IRPF** | 0 del IRPF |
+| **«exención de la vivienda habitual»** | **5/5 del IRPF** | **6/6 Ley 19/1991** |
+
+**Y el verificador no salvaba ninguno de esos dos**: citar el artículo 63 de la
+Ley 35/2006 verifica bien, porque la cita es literal y el artículo existe. Lo que
+falla es que no viene al caso, y eso no lo mira nadie. Salía en pantalla con toda
+la seguridad del mundo.
+
+## La reserva: la nota al pie sigue cruzando de impuesto
+
+El pase de remisiones sólo readmitía preceptos **ya recuperados**. Con el filtro,
+el artículo de otro impuesto ya no está ahí, y la nota al pie se habría perdido
+en silencio. Hay **72 remisiones resueltas que cruzan de impuesto** en el corpus.
+
+**La primera versión de la reserva la llené con «los mejor puntuados de fuera» y
+no servía**: el artículo 51 de la Ley 35/2006 no puntúa nada para una pregunta de
+patrimonio, y aun así es al que remite el artículo 4 de la Ley 19/1991 cuando
+habla de planes de pensiones exentos. **Lo que decide quién está en la reserva es
+a quién se le llama, no a quién se parece.** La reserva son los destinos de las
+remisiones de los candidatos, y sólo entran si alguien los llama.
+
+Medido de punta a punta: «bienes y derechos exentos… plan de pensiones y
+participaciones» → entra el art. 4 de la Ley 19/1991 y, **por remisión**, los
+arts. 51, 13 y 68 de la Ley 35/2006, con su motivo escrito en la traza.
+
+## Si el impuesto no se sabe, no se filtra
+
+`cuerpos_para` devuelve `None` con vacío, nulo, `desconocido`, `otro` y con
+cualquier impuesto que no esté en el corpus. **Filtrar con un impuesto equivocado
+es peor que no filtrar**: sin filtro se compite de más y el corte por pertinencia
+hace su trabajo; con el filtro equivocado se pierde la ley que tocaba y no se
+nota. El control negativo (c) lo enseña: filtrando una pregunta de patrimonio
+como si fuera de IVA, la Ley 19/1991 desaparece entera.
+
+## Lo que cuesta
+
+Medido sobre las 19 preguntas del banco:
+
+```
+candidatos   6,0 -> 6,0     el tope se sigue llenando: el corpus da de sobra
+enviados     4,0 -> 3,9     el corte por pertinencia trabaja casi igual
+material distinto en 8 de 19
+```
+
+**El filtro no reduce el conjunto de candidatos** —cambia *cuáles* son los seis,
+no cuántos—, así que el corte por pertinencia sigue teniendo con qué trabajar.
+Ocho consultas mandan un juego distinto de artículos, con el mismo tamaño.
+
+## Comprobaciones
+
+```
+12 suites verdes (la nueva: prueba_filtro, con tres controles negativos)
+banco de IVA ...... 16/19, las mismas rojas, sin cambios de veredicto
+las dos de Renta .. 3/3 los mismos articulos, las dos
+fase3 · fase4 ..... 39/39 · 5/5
+llamadas a la API ... 0
+```

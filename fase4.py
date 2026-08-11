@@ -377,7 +377,28 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     paso("Buscando en la ley y el reglamento...")
     apartado("2. Busqueda en el corpus (fase 2, deterministica)")
     consulta = " ".join(analisis.terminos_busqueda)
-    resultados, huerfanos = ix.buscar(consulta, tope=TOPE_MATERIAL)
+    # SE BUSCA EN LA LEY DEL IMPUESTO DE LA PREGUNTA, MAS LAS GENERALES.
+    #
+    # El corpus ya sabia de que impuesto es cada cuerpo y el analizador ya
+    # sabia de que impuesto es la pregunta; lo que faltaba era unirlos. Sin
+    # unirlos, una pregunta de Patrimonio con vocabulario compartido -«escala
+    # de gravamen», «vivienda habitual»- recuperaba CINCO DE CINCO articulos
+    # del IRPF, y el verificador no lo salva: la cita es literal y correcta, lo
+    # que falla es que no viene al caso, y eso no lo mira nadie.
+    #
+    # `cuerpos_para` devuelve None si el impuesto no se ha podido determinar, y
+    # entonces no se filtra: filtrar con un impuesto equivocado es peor que no
+    # filtrar. La reserva mantiene viva la remision entre impuestos.
+    cuerpos = ix.normas.cuerpos_para(analisis.impuesto)
+    resultados, huerfanos, reserva = ix.buscar_del_impuesto(
+        consulta, TOPE_MATERIAL, cuerpos, grafo)
+    if cuerpos is None:
+        print("   busqueda: en TODO el corpus "
+              f"(el impuesto quedo en «{analisis.impuesto}»: no se filtra)")
+    else:
+        print(f"   busqueda: en los cuerpos de {analisis.impuesto} y en las "
+              f"normas generales ({len(cuerpos)} de "
+              f"{len(ix.normas.cuerpos)} cuerpos)")
     if huerfanos:
         print(f"   sin resultados para: {', '.join(huerfanos)}")
     for i, r in enumerate(resultados, 1):
@@ -402,7 +423,8 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     # ------------------------------------------- CORTE POR PERTINENCIA
     # El tope de arriba es un techo, no una cuota. Lo que decide que se manda
     # a redactar es si el precepto trata de lo que se pregunta, no su puesto.
-    seleccion = EST.seleccionar_material(ix, consulta, resultados, grafo)
+    seleccion = EST.seleccionar_material(ix, consulta, resultados, grafo,
+                                         reserva=reserva)
     tr.json("seleccion.json", seleccion.a_json())
     tr.corte(seleccion.a_json())
     tr.paso("corte de material",

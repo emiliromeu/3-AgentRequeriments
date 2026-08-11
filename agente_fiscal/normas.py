@@ -323,6 +323,45 @@ class Registro:
                 return self.IMPUESTO
         return self.GENERAL
 
+    def impuesto_de_cuerpo(self, clave_cuerpo: str) -> str:
+        """De que impuesto es este cuerpo. Cadena vacia = de ninguno.
+
+        Primero por su propia materia; si no la nombra -el cuerpo 0 de un real
+        decreto aprobatorio no la nombra nunca-, por la de sus hermanos de la
+        misma norma. Es la regla del papel aplicada al cuerpo: los ocho
+        articulos que aprueban el Reglamento del IVA son del IVA aunque su
+        rotulo no lo diga.
+        """
+        c = self.cuerpos.get(clave_cuerpo)
+        if c is None:
+            return ""
+        if es_materia_de_impuesto(c.materia):
+            return _acronimo(c.materia)
+        for otro in self.cuerpos.values():
+            if otro.norma_id == c.norma_id and es_materia_de_impuesto(otro.materia):
+                return _acronimo(otro.materia)
+        return ""
+
+    def cuerpos_para(self, impuesto: str):
+        """Donde se busca una pregunta de ESE impuesto. `None` = no filtrar.
+
+        Los cuerpos del impuesto MAS los generales -LGT, RGAT, recaudacion,
+        sancionador, facturacion-, que aplican a todos. Un cuerpo que no es de
+        ningun impuesto es general por definicion: no hay lista de normas
+        generales escrita en ninguna parte, se deduce de que su titulo no
+        nombra un impuesto.
+
+        DEVUELVE `None` SI EL IMPUESTO NO SE HA PODIDO DETERMINAR, y esa es la
+        regla que no se negocia: filtrar con un impuesto equivocado es peor que
+        no filtrar. Sin filtro se compite de mas y el corte por pertinencia
+        hace su trabajo; con el filtro equivocado se pierde la ley que tocaba y
+        NO SE NOTA, porque la respuesta sale igual de segura citando otra cosa.
+        """
+        if not impuesto or impuesto not in self.impuestos():
+            return None
+        return {clave for clave in self.cuerpos
+                if self.impuesto_de_cuerpo(clave) in ("", impuesto)}
+
     def papel(self, clave_cuerpo: str) -> str:
         c = self.cuerpos.get(clave_cuerpo)
         return self.papel_de_norma(c.norma_id) if c else self.IMPUESTO
