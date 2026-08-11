@@ -103,9 +103,16 @@ def preguntas() -> list:
     return fuera
 
 
-def recupera(ix: Indice, pregunta: str) -> list:
+def recupera(ix: Indice, pregunta: str, norma: str = "") -> list:
     """Los TOPE preceptos que salen primero. Referencias, en orden."""
-    res, _huerfanos = ix.buscar(pregunta, tope=TOPE)
+    # POR LA MISMA PUERTA QUE EL AGENTE: ver `fase4.recuperar`. Con `ix.buscar`
+    # a secas, esta medida comparaba dos corpus con una recuperacion que el
+    # sistema ya no usa.
+    import fase4
+    cuerpo, _m = ix.normas.resolver(norma) if norma else (None, "")
+    imp = ix.normas.impuesto_de_cuerpo(cuerpo) if cuerpo else ""
+    res, _h, _r = fase4.recuperar(ix, R.GrafoRemisiones(ix.docs), pregunta,
+                                  imp, tope=TOPE)
     return [r.doc.referencia for r in res]
 
 
@@ -150,7 +157,8 @@ def foto(ids: list, etiqueta: str) -> dict:
         "preceptos": len(ix.docs),
         "cuerpos": len(ix.normas.cuerpos),
         "impuestos": sorted(ix.normas.impuestos()),
-        "recuperacion": {p["pregunta"]: recupera(ix, p["pregunta"])
+        "recuperacion": {p["pregunta"]: recupera(ix, p["pregunta"],
+                                                p.get("norma", ""))
                          for p in preguntas()},
         "remisiones": {k: v for k, v in rem.items() if k != "grafo"},
         "_ix": ix,

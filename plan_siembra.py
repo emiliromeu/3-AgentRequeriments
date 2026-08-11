@@ -73,7 +73,8 @@ def preguntas_del_banco() -> list:
     for linea in ruta.read_text(encoding="utf-8").splitlines():
         linea = linea.strip()
         if linea and not linea.startswith("#") and "|" in linea:
-            fuera.append(linea.split("|")[0].strip())
+            partes = [x.strip() for x in linea.split("|")]
+            fuera.append((partes[0], partes[1] if len(partes) > 1 else ""))
     if not fuera:
         raise SystemExit(f"[FALLO] {ruta} no tiene preguntas dentro")
     return fuera
@@ -89,10 +90,19 @@ def plan() -> dict:
 
     # 1. lo que el banco manda al redactor, de verdad, corriendo la busqueda.
     del_banco: collections.Counter = collections.Counter()
+    # POR LA MISMA PUERTA QUE EL AGENTE. Aqui habia un `ix.buscar` suelto y
+    # medía lo que el sistema hacia ANTES del filtro por impuesto: la lista de
+    # siembra salia de una recuperacion que ya no existe.
+    #
+    # El impuesto sale de la NORMA que declara cada caso del banco, que es un
+    # dato del caso; sin norma no se filtra, que es la regla de siempre.
+    import fase4
     from agente_fiscal import estado as EST
-    for p in preguntas_del_banco():
-        res, _h = ix.buscar(p, tope=6)
-        sel = EST.seleccionar_material(ix, p, res, grafo)
+    for p, norma in preguntas_del_banco():
+        cuerpo, _m = N.resolver(norma)
+        imp = N.impuesto_de_cuerpo(cuerpo) if cuerpo else ""
+        res, _h, reserva = fase4.recuperar(ix, grafo, p, imp)
+        sel = EST.seleccionar_material(ix, p, res, grafo, reserva=reserva)
         for reg in sel.elegidos:
             del_banco[reg["clave"]] += 1
 

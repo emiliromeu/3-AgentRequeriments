@@ -52,7 +52,7 @@ AVANCE = RAIZ / "datos" / "dgt" / "siembra.json"
 DIARIO = RAIZ / "datos" / "dgt" / "siembra.log"
 ANCHO = 78
 
-TOPE_POR_DEFECTO = 150
+TOPE_POR_DEFECTO = 800
 POR_ARTICULO = 5          # cuantas consultas, las mas recientes, de cada uno
 
 
@@ -149,8 +149,13 @@ def articulos_sin_criterio() -> list:
 
     faltan: Counter = Counter()
     for caso in banco.leer_casos(banco.CASOS):
-        res, _ = ix.buscar(caso["consulta"], tope=5)
-        sel = EST.seleccionar_material(ix, caso["consulta"], res, grafo)
+        # POR LA MISMA PUERTA QUE EL AGENTE: ver `fase4.recuperar`.
+        cuerpo_caso, _m = ix.normas.resolver(caso["norma"])
+        imp = ix.normas.impuesto_de_cuerpo(cuerpo_caso) if cuerpo_caso else ""
+        res, _h, reserva = fase4.recuperar(ix, grafo, caso["consulta"], imp,
+                                           tope=5)
+        sel = EST.seleccionar_material(ix, caso["consulta"], res, grafo,
+                                       reserva=reserva)
         for r in sel.elegidos:
             cuerpo = r.get("cuerpo_clave", "")
             num = r["referencia"].replace("Articulo ", "").strip().lower()
@@ -165,63 +170,41 @@ def articulos_sin_criterio() -> list:
 
 
 def construir_plan() -> list:
-    """La lista, ordenada por lo que mas aparece en el banco y en las remisiones."""
-    import fase4, banco
+    """La lista de siembra. LA CALCULA `plan_siembra`, no se escribe aqui.
 
-    ix, grafo = fase4.cargar_corpus()
-    N = ix.normas
-    liva = "BOE-A-1992-28740#0"
-    riva = next(c.clave for c in N.cuerpos.values()
-                if c.etiqueta.startswith("Reglamento"))
-    clave_de = {"LIVA": liva, "RIVA": riva}
+    Antes se armaba con un mapa de tres normas -Ley del IVA, Reglamento del IVA
+    y LGT- de cuando el corpus era solo IVA. El corpus paso a cuatro impuestos
+    y la despensa se quedo donde estaba: 241 consultas, TODAS de IVA, y ningun
+    aviso lo decia porque nadie medía eso.
 
-    casos = banco.leer_casos(banco.CASOS)
-    en_banco: Counter = Counter()
-    for c in casos:
-        cuerpo, _ = N.resolver(c["norma"])
-        for a in c["aceptables"]:
-            en_banco[(cuerpo, a)] += 1
+    Se intercalan los impuestos en vez de vaciar uno y pasar al siguiente: la
+    siembra de la DGT son horas y se puede cortar, y si se corta a mitad lo
+    bajado tiene que estar repartido, no todo en IVA otra vez.
+    """
+    import plan_siembra
 
-    entrantes: Counter = Counter()
-    for clave, rems in grafo.atras.items():
-        d = grafo.por_clave.get(clave)
-        if d:
-            r = d.registro
-            entrantes[(r.get("cuerpo_clave"),
-                       r["referencia"].replace("Articulo ", ""))] = len(rems)
-
-    temas = list(TEMAS)
-    # Del Reglamento, los que ya estan en el banco: son los que la gente pregunta.
-    del_banco = sorted({a for c in casos for a in c["aceptables"]
-                        if N.resolver(c["norma"])[0] == riva}, key=orden_articulo)
-    temas.append(("Reglamento (los del banco)", "RIVA", del_banco))
-
-    # SEGUNDA PASADA: los agujeros medidos, no supuestos. Ver
-    # `articulos_sin_criterio`. Van al final para que la primera siembra siga
-    # siendo reproducible: lo de antes no se mueve de sitio.
-    huecos = articulos_sin_criterio()
-    for etiqueta in ("LIVA", "RIVA", "LGT"):
-        arts = [h["articulo"] for h in huecos if h["norma"] == etiqueta]
-        if arts:
-            temas.append((f"agujeros del banco ({etiqueta})", etiqueta, arts))
-
-    clave_de["LGT"] = N.resolver(DESIGNACION["LGT"])[0] or ""
-
+    por_impuesto = plan_siembra.plan()
+    listas = [por_impuesto.get(k) or [] for k in
+              ("IVA", "IRPF", "IS", "IP", "GENERAL")]
+    largo = max((len(x) for x in listas), default=0)
     filas = []
-    for tema, norma, arts in temas:
-        for a in arts:
+    for i in range(largo):
+        for lista in listas:
+            if i >= len(lista):
+                continue
+            f = lista[i]
+            art = _numero_de_articulo(f["referencia"].replace("Articulo ", ""))
+            if not art:
+                continue          # a PETETE se le busca por numero
             filas.append({
-                "tema": tema, "norma": norma, "articulo": a,
-                "cuerpo": clave_de[norma],
-                "banco": en_banco.get((clave_de[norma], a), 0),
-                "remisiones": entrantes.get((clave_de[norma], a), 0),
+                "norma": (f["cuerpo"] or "").split(",")[0],
+                "clave_cuerpo": f["cuerpo_clave"],
+                "articulo": art,
+                "banco": 1 if "banco" in (f["porque"] or "") else 0,
+                "remisiones": f["puntos"],
+                "tema": f["rubrica"],
             })
-    filas.sort(key=lambda f: (-f["banco"], -f["remisiones"],
-                              orden_articulo(f["articulo"])))
     return filas
-
-
-# ------------------------------------------------------------------ avance
 
 
 def leer_avance() -> dict:

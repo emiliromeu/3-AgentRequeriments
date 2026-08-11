@@ -117,6 +117,28 @@ def cargar_corpus():
     return ix, R.GrafoRemisiones(ix.docs)
 
 
+def recuperar(ix, grafo, consulta: str, impuesto: str,
+              tope: int = TOPE_MATERIAL):
+    """LA UNICA FORMA DE BUSCAR. -> (resultados, huerfanos, reserva)
+
+    Existe para que no vuelva a pasar lo que ya ha pasado DOS VECES: un guion
+    de medida llamando a una funcion distinta de la que usa el agente, y
+    midiendo en silencio un sistema que ya no existe.
+
+    La ultima: `banco.py` seguia con `ix.buscar` a secas despues de que la
+    busqueda empezara a filtrar por impuesto. Decia que el articulo 4 de la Ley
+    19/1991 no salia -y sale el tercero- y que el 26 de la Ley 27/2014 salia
+    quinto -y sale segundo-. Cuatro sitios mas del propio banco estaban igual.
+    Los 19 casos de IVA y LGT no lo delataron porque ganan con filtro y sin el;
+    hizo falta un impuesto pequeno para que se viera.
+
+    Parchear sitio a sitio es como se llega a cinco sitios distintos. Aqui hay
+    uno, y el agente pasa por el mismo: si esto cambia, cambia para todos.
+    """
+    return ix.buscar_del_impuesto(consulta, tope,
+                                  ix.normas.cuerpos_para(impuesto), grafo)
+
+
 def _fin(res: dict, tr) -> dict:
     """El ultimo paso de TODA salida de `consultar`: dice si hay expediente.
 
@@ -390,8 +412,8 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     # entonces no se filtra: filtrar con un impuesto equivocado es peor que no
     # filtrar. La reserva mantiene viva la remision entre impuestos.
     cuerpos = ix.normas.cuerpos_para(analisis.impuesto)
-    resultados, huerfanos, reserva = ix.buscar_del_impuesto(
-        consulta, TOPE_MATERIAL, cuerpos, grafo)
+    resultados, huerfanos, reserva = recuperar(
+        ix, grafo, consulta, analisis.impuesto)
     if cuerpos is None:
         print("   busqueda: en TODO el corpus "
               f"(el impuesto quedo en «{analisis.impuesto}»: no se filtra)")

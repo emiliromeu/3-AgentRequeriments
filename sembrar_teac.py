@@ -54,7 +54,7 @@ import teac as T  # noqa: E402
 from agente_fiscal import teac as TC  # noqa: E402
 
 AVANCE = TC.DIR_CACHE / "siembra_teac.json"
-TOPE = 300
+TOPE = 600
 
 # Los codigos de norma de DYCTEA. Se leen del catalogo, no se escriben: el
 # catalogo es suyo y puede cambiar.
@@ -96,54 +96,36 @@ def codigo_de_norma(cat: dict, aguja: str) -> str:
 
 
 def plan() -> list:
-    """[(cuerpo, etiqueta, articulo, cod_norma, cod_precepto)], por prioridad."""
-    import fase4
+    """[(cuerpo, etiqueta, articulo, cod_norma, cod_precepto)], por prioridad.
 
-    ix, g = fase4.cargar_corpus()
+    LA LISTA YA NO SE ESCRIBE AQUI. Antes habia tres cuerpos a mano -Ley del
+    IVA, Reglamento del IVA y LGT- de cuando el corpus era solo IVA; el corpus
+    paso a cuatro impuestos y la despensa se quedo donde estaba, sin que nada
+    lo dijera. Ahora la lista la calcula `plan_siembra` con datos: lo que el
+    banco manda al redactor, las remisiones entrantes y una cuota por impuesto.
+
+    Aqui solo se traduce esa lista a los codigos de DYCTEA. Lo que no este en
+    su catalogo se anota como aviso y se sigue: el catalogo es suyo.
+    """
+    import plan_siembra
+
     cat = _catalogo()
-    banco = "".join(
-        (RAIZ / "casos" / f).read_text("utf-8")
-        for f in ("bateria.txt", "banco_recuperacion.txt")
-        if (RAIZ / "casos" / f).is_file())
-    del_banco = collections.Counter(
-        re.findall(r"art(?:iculo|\.)\s*(\d+)", banco, re.I))
-    entrantes = {d.clave: len(g.le_mencionan(d.clave)) for d in ix.docs}
-
-    def numero(clave):
-        m = re.search(r"articulo (\d+)", clave)
-        return m.group(1) if m else None
-
     salida = []
-    for cuerpo, cuantos in (("BOE-A-1992-28740#0", 14),
-                            ("BOE-A-1992-28925#1", 8),
-                            ("BOE-A-2003-23186#0", 10)):
-        etiqueta = NORMAS_CORPUS[cuerpo]
+    por_impuesto = plan_siembra.plan()
+    # Se intercalan los impuestos en vez de vaciar uno y pasar al siguiente:
+    # si la fuente se cae a mitad, lo bajado esta repartido y no todo en IVA,
+    # que es exactamente el sesgo que esto viene a corregir.
+    listas = [por_impuesto.get(k) or [] for k in
+              ("IVA", "IRPF", "IS", "IP", "GENERAL")]
+    filas = [x for grupo in zip(*[l + [None] * (max(map(len, listas)) - len(l))
+                                  for l in listas]) for x in grupo if x]
+    for fila in filas:
+        etiqueta = (fila["cuerpo"] or "").split(",")[0]
         cod_norma = codigo_de_norma(cat, etiqueta)
-        puntos: dict = collections.Counter()
-        for clave, n in entrantes.items():
-            if not clave.startswith(cuerpo):
-                continue
-            art = numero(clave)
-            if not art:
-                continue
-            if cuerpo.endswith("23186#0"):
-                # La LGT, solo procedimiento: se mira en que titulo vive.
-                ctx = ix.por_clave[clave].registro.get("contexto") or ""
-                if isinstance(ctx, list):
-                    ctx = " > ".join(str(x) for x in ctx)
-                if not any(x in ctx.lower() for x in
-                           ("aplicacion de los tributos", "aplicación de los tributos",
-                            "potestad sancionadora", "revision", "revisión")):
-                    continue
-            puntos[art] += n
-        for art, n in del_banco.items():
-            if f"{cuerpo}#articulo {art}" in ix.por_clave:
-                if cuerpo.endswith("23186#0") and art not in puntos:
-                    continue
-                puntos[art] += n * 3
-        for art, _ in puntos.most_common(cuantos):
-            cod_precepto = (cat["preceptos"].get(cod_norma) or {}).get(art, "")
-            salida.append((cuerpo, etiqueta, art, cod_norma, cod_precepto))
+        art = fila["referencia"].replace("Articulo ", "").strip()
+        cod_precepto = (cat["preceptos"].get(cod_norma) or {}).get(art, "")
+        salida.append((fila["cuerpo_clave"], etiqueta, art, cod_norma,
+                       cod_precepto))
     return salida
 
 

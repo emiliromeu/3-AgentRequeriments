@@ -137,3 +137,36 @@ con que patrimonio hay obligacion de presentar la declaracion | Ley 19/1991 | 37
 una sociedad con perdidas de anos anteriores, cuanto se puede compensar este ano | Ley 27/2014 | 26 | 3
 que gastos no se puede deducir una sociedad en el impuesto sobre sociedades | Ley 27/2014 | 15 | 3
 como se amortiza el inmovilizado de una sociedad y con que tablas | Ley 27/2014 | 12 | 3
+
+# ============================================================================
+# LAS ROJAS NO SON TODAS LA MISMA COSA
+# ============================================================================
+# El bloque 1 puentea el analizador A PROPOSITO: mete la consulta cruda en el
+# buscador. Por eso sus rojas dicen «el buscador SOLO no llega», que NO es lo
+# mismo que «el sistema falla». Hay dos clases, y confundirlas cuesta caro:
+#
+#   [SISTEMA]  el articulo no sale ni con los terminos del articulado. Aqui hay
+#              algo que arreglar en la recuperacion.
+#
+#   [PUENTE]   sale mal con la pregunta cruda y sale EL PRIMERO con los
+#              terminos que propondria el analizador. No hay nada roto: falta
+#              el puente de vocabulario, que es justo para lo que existe la
+#              llamada 1. El bloque 5 los repite con el analizador de verdad.
+#
+# Medido el 11/08/2026, con el filtro por impuesto ya puesto:
+#
+#   art. 80 Ley 37/1992   «un cliente no me paga la factura»        [PUENTE]
+#   art. 89 Ley 37/1992   «he repercutido IVA de mas»               [PUENTE]
+#   art. 91 Ley 37/1992   «que tipo reducido se aplica»             [PUENTE]
+#   art. 10 Ley 19/1991   «por que valor declaro un piso»           [PUENTE]
+#         puesto 23 con la pregunta; PRIMERO con «bienes inmuebles valor
+#         catastral valor comprobado valor de adquisicion».
+#   art. 37 Ley 19/1991   «con que patrimonio hay obligacion»       [PUENTE]
+#         puesto 19 con la pregunta; PRIMERO con «personas obligadas a
+#         presentar declaracion base imponible valor de bienes y derechos».
+#
+# NINGUNA es [SISTEMA] hoy. Y una cosa que si es del sistema y no se arregla
+# cambiando preguntas: las normas GENERALES aplastan a una ley corta en la
+# recuperacion cruda. El articulo 37 esta en el puesto 4 contando solo la Ley
+# 19/1991 y en el 19 con las generales dentro: 836 preceptos generales contra
+# 47. Eso no es de estos casos, es del corpus, y esta anotado en el LEEME.

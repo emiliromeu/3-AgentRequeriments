@@ -207,7 +207,7 @@ def ejecutar_consulta(pregunta, ejercicio, motor, ix, grafo):
 # ------------------------------------------------------------------ bloque 1
 
 
-def bloque_1(reg: Registro, ix, casos) -> None:
+def bloque_1(reg: Registro, ix, grafo, casos) -> None:
     bloque("BLOQUE 1 · RECUPERACION  (no gasta llamadas)")
     print("El buscador de la fase 2 tiene que encontrar el articulo correcto.\n")
 
@@ -222,7 +222,20 @@ def bloque_1(reg: Registro, ix, casos) -> None:
             continue
         etiqueta_norma = ix.normas.por_clave(cuerpo_esperado).etiqueta
 
-        resultados, _ = ix.buscar(caso["consulta"], tope=max(caso["tope"], 10))
+        # SE BUSCA COMO BUSCA EL AGENTE, NO DE OTRA FORMA. Aqui habia un
+        # `ix.buscar` a secas, y desde que la busqueda filtra por impuesto eso
+        # media un sistema que ya no existe: decia que el articulo 4 de la Ley
+        # 19/1991 no salia -y sale el tercero- y que el 26 de la Ley 27/2014
+        # salia quinto -y sale segundo-. Los 19 casos de IVA y LGT no lo
+        # delataron porque ganan igual con filtro o sin el; hizo falta un
+        # impuesto pequeno para que se viera.
+        #
+        # El impuesto sale de la NORMA que declara el caso, que es un dato del
+        # propio caso y no una suposicion de aqui.
+        impuesto = ix.normas.impuesto_de_cuerpo(cuerpo_esperado)
+        resultados, _h, _reserva = fase4.recuperar(
+            ix, grafo, caso["consulta"], impuesto,
+            tope=max(caso["tope"], 10))
         salieron = []
         puesto = None
         for i, r in enumerate(resultados, 1):
@@ -543,7 +556,9 @@ def comparar_analizador(ix, casos, modelos: list[str]) -> int:
 
             # Lo que de verdad importa: con esos terminos, ¿sale el articulo?
             cuerpo, _ = ix.normas.resolver(caso["norma"])
-            resultados, _ = ix.buscar(" ".join(terminos), tope=10)
+            resultados, _h, _r = fase4.recuperar(
+                ix, grafo, " ".join(terminos),
+                ix.normas.impuesto_de_cuerpo(cuerpo), tope=10)
             puesto = None
             for i, r in enumerate(resultados, 1):
                 rg = r.doc.registro
@@ -649,7 +664,9 @@ def casos_en_rojo(ix, casos) -> list[dict]:
         cuerpo, _ = ix.normas.resolver(caso["norma"])
         if cuerpo is None:
             continue
-        resultados, _ = ix.buscar(caso["consulta"], tope=max(caso["tope"], 10))
+        resultados, _h, _r = fase4.recuperar(
+            ix, grafo, caso["consulta"],
+            ix.normas.impuesto_de_cuerpo(cuerpo), tope=max(caso["tope"], 10))
         puesto = None
         for i, r in enumerate(resultados, 1):
             rg = r.doc.registro
@@ -718,7 +735,9 @@ def bloque_5(reg: Registro, ix, motor, casos) -> None:
             continue
 
         consulta = " ".join(analisis.terminos_busqueda)
-        resultados, _ = ix.buscar(consulta, tope=max(caso["tope"], 10))
+        resultados, _h, _r = fase4.recuperar(
+            ix, grafo, consulta, analisis.impuesto,
+            tope=max(caso["tope"], 10))
         puesto, salieron = None, []
         for i, r in enumerate(resultados, 1):
             rg = r.doc.registro
@@ -993,7 +1012,7 @@ def main(argv: list[str]) -> int:
     reg = Registro()
 
     if "1" in pedidos:
-        bloque_1(reg, ix, casos)
+        bloque_1(reg, ix, grafo, casos)
     if "2" in pedidos:
         bloque_2(reg, ix, grafo, casos, motor)
     if "3" in pedidos:
