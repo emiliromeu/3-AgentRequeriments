@@ -3254,3 +3254,96 @@ las dos de Renta .. 3/3 los mismos articulos, las dos
 fase3 · fase4 ..... 39/39 · 5/5
 llamadas a la API ... 0
 ```
+
+---
+
+# Fase 36 · La catalana NO entra. La puerta se cerró sola, tres veces
+
+`agente_fiscal/pendientes.py`: lee de los datos del BOE qué le falta a una norma
+consolidada por incorporar, y **se niega cuando no se puede saber**.
+
+## Lo primero: «posteriores» no es «pendientes»
+
+`referencias.posteriores` es el **histórico** de todo lo que ha tocado la norma,
+incorporado o no. Sobre el Decreto Legislativo 1/2024: **seis de las ocho ya
+estaban dentro del texto**. Leerlo como lista de pendientes marcaría 20 preceptos
+en vez de 14, y eso también es mentir, sólo que por el otro lado.
+
+Lo que sí está incorporado **se sabe del articulado, no de la prosa**: si una
+norma escribió alguna `version`, sus cambios están dentro. Consolidada hasta
+**2026-05-23**. Pendientes: **dos, las dos con id del DOGC** —una ley catalana
+publicada sólo en el DOGC no la ha recogido el BOE todavía—.
+
+## Tres motivos independientes para no ingerir
+
+**1 · La lista de pendientes sólo existe en prosa, y no se puede verificar.**
+
+La única fuente de qué deroga la Ley 11/2026 es una frase escrita por una
+persona. **Para una reforma pendiente no hay texto contra el que contrastarla**:
+si lo hubiera, ya estaría incorporada. Y sobre esta misma norma medí que **3 de 8
+notas históricas dicen «determinados preceptos»** sin enumerar — prueba de que
+esas notas a veces no son exhaustivas por construcción. Un marcado tan completo
+como una prosa que no se puede comprobar es un marcado que puede tener agujeros
+invisibles: el artículo derogado y no marcado se cita con enlace y con seguridad.
+
+Además, la nota dice «y, **en la forma indicada**, el art. 612-15», y la de
+erratas no nombra ni un precepto de esta norma: corrige erratas de otra.
+
+**2 · El troceo no reconoce la numeración del Codi. Diez de ciento sesenta.**
+
+Medido troceando en memoria, sin ingerir: **10 citables y 218 descartados, de los
+cuales 151 «SIN RECONOCER»**. `bloques.py` espera «Artículo 12» y el Codi numera
+«611-1», «621-2», «641-14». Se ingeriría **una norma vacía con aspecto de norma
+ingerida**: entrarían el artículo único, las disposiciones y el anexo, y ni uno
+solo de los 160 artículos. (`fase1.py verificar` lo cazaría después, pero la
+ingesta habría escrito el fichero y el sello.)
+
+**3 · La regla del papel no sabe decir «de varios impuestos».**
+
+Sus materias salen como `Legislativo 1/2024, de 12 de marzo` y `Código tributario
+de Catalunya`; ninguna es materia de impuesto, así que en el corpus real quedaría
+clasificada **general** — y una norma general compite en las búsquedas de TODOS
+los impuestos. Los artículos catalanes de Sucesiones e ITP aparecerían en
+preguntas de IVA. Es justo lo contrario de lo que se quiere.
+
+## Lo que sí se pudo derivar, y es útil para cuando se retome
+
+Aunque la prosa no baste, el **alcance de las erratas sí se deriva del XML**: el
+Decreto-ley 21/2025 versionó 11 bloques, así que la errata sólo puede afectar a
+esos. Y el reparto por título es tranquilizador:
+
+| título | pendientes Ley 11/2026 | riesgo de erratas |
+|---|---:|---:|
+| I · IRPF | 3 (**sólo añadidos**) | 0 |
+| **II · Patrimonio** | **0** | **0** |
+| III · Sucesiones | 3 | 6 |
+| IV · ITP-AJD | 5 | 3 |
+| VIII · Formales | 1 | 0 |
+
+**El artículo 621-2 —la escala del patrimonio catalán— no está afectado por
+nada**, y la DT primera ya está actualizada. De los cinco que la reforma añade,
+**ninguno existe todavía** en nuestro texto: no hay nada que citar mal. Los siete
+que sí existen y se tocan están todos en Sucesiones, ITP y obligaciones formales.
+
+Es decir: el riesgo real se concentra **en los impuestos que no íbamos a abrir**.
+Aun así no se ingiere, porque los motivos 2 y 3 son independientes de eso.
+
+## Lo territorial: mi respuesta
+
+Un aviso al pie de toda respuesta que cite la norma es lo peor de las opciones:
+se lee una vez y se deja de ver. **Mejor que el ejercicio y la residencia se
+traten igual.** El año es obligatorio y bloquea porque una respuesta con la ley
+de otro año sale impecable y está mal; una respuesta con la norma autonómica de
+otra comunidad tiene exactamente la misma forma de fallar. Cuando entre normativa
+autonómica, lo coherente es **un segundo campo obligatorio junto al año** —la
+comunidad del contribuyente— y que la puerta de materia lo use igual que usa el
+impuesto: si no se sabe, no se filtra y no se cita autonómico.
+
+## Comprobaciones
+
+```
+13 suites verdes (la nueva: prueba_pendientes, con tres controles negativos)
+corpus SIN TOCAR: 12 normas · 1.960 preceptos · sello correcto
+banco 16/19 sin cambios · fase3 39/39 · fase4 5/5
+llamadas a la API ... 0
+```
