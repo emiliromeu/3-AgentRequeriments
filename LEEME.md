@@ -2713,3 +2713,153 @@ fase3 · fase4 ..... 37/37 · 5/5
 guía coherente .... sí
 llamadas a la API ... 0
 ```
+
+---
+
+# Fase 30 · Romperlo a propósito: lo que escribe una persona de verdad
+
+Hasta aquí la herramienta solo la habíamos usado nosotros, y siempre con
+preguntas bien escritas. Es una gestoría del Penedès: alguien va a preguntar en
+catalán, alguien va a poner «23» en el año y alguien va a pegar un requerimiento
+entero. **Suite nueva: `pruebas/prueba_entradas.py`**, con control negativo.
+
+## Lo que estaba roto
+
+**1 · El año no se validaba. Nada.** `resolver_ejercicio` aceptaba lo que le
+llegara. Medido de punta a punta antes de tocar nada:
+
+| se escribía | salía |
+|---|---|
+| `abc` | **CRITERIO CLARO**, ejercicio `'abc'` |
+| `23` | **CRITERIO CLARO**, ejercicio `'23'` |
+| `ejercicio 2023` | **CRITERIO CLARO**, ejercicio `'ejercicio 2023'` |
+| `2023-2024` | **CRITERIO CLARO**, ejercicio `'2023-2024'` |
+
+Es el fallo más silencioso que puede tener esto: una consulta contestada con la
+ley de otro ejercicio sale impecable, con sus citas y sus enlaces, y está mal.
+Arreglado con `analizador.leer_ejercicio`, que devuelve `(año, motivo)` y explica
+cada rechazo en cristiano: «*«23» no son cuatro dígitos. Escribe el año entero:
+2023, no 23*», «*«2023-2024» son dos ejercicios y cada uno puede tener su
+redacción de la ley: consulta uno cada vez*».
+
+**Y había dos validaciones del año, no una.** `main()` llevaba su propia
+comprobación de rango, escrita aparte. Dos caminos para una regla es como se
+descuadran: uno se arregla y el otro no. Ahora `main()` llama a `leer_ejercicio`,
+y por eso la terminal da el mismo mensaje que la ventana. De paso se quitó
+`type=int` de `--ejercicio`: con él, `--ejercicio 23` pasaba por la terminal
+como el año 23 y `abc` salía con el mensaje de argparse, en inglés.
+
+**2 · No había tope de longitud.** Un requerimiento pegado —2.640 palabras,
+15.360 caracteres— entraba entero al análisis. `TOPE_PREGUNTA = 1200`, y **la
+comprobación va delante de la primera llamada al modelo**: puesta detrás costaba
+una llamada por cada intento de pegar un documento. Verificado: **0 llamadas**.
+
+**3 · Una pregunta vacía costaba DOS llamadas** y acababa diciendo «no se ha
+podido determinar de qué impuesto es la pregunta», que además es falso: el
+problema no era el impuesto, era que no había pregunta. Ahora para antes de
+nada, con cero llamadas, y lo dice.
+
+**4 · Lo pegado de un PDF llegaba partido.** `deduc-\ncion del IVA de un co-\nche`
+dejaba al buscador con `deduc`, `cion`, `co`, `che` — que no son palabras de
+nada. `texto.unir_cortes_de_linea` recompone **solo** la firma exacta del corte
+de renglón (minúscula, guion, salto, minúscula): `Real Decreto-\nLey` y un guion
+con espacios alrededor se quedan como están.
+
+**5 · La ventana mentía en dos de cada tres paradas.** Para `código 3` daba una
+frase fija: «Falta el año del caso». Con el tope nuevo, a quien pegaba un
+requerimiento de 15.000 caracteres se le decía que faltaba el año. Ahora enseña
+el motivo que escribe `fase4`, que es distinto para cada caso.
+
+## El catalán: lo que se decidió, y lo que costó
+
+Dos consultas con el modelo real. **El analizador entiende el catalán y propone
+los términos en castellano**, que es como está la ley: `modificacion de la base
+imponible`, `credito total o parcialmente incobrable`, `requerimiento notarial de
+cobro`. Sin tocar nada.
+
+**La decisión, escrita:**
+
+- La respuesta va **en el idioma de la pregunta**.
+- El **texto citado** no se traduce jamás: es el de la ley.
+- La **referencia** tampoco. «artículo 80 de la Ley 37/1992» entero en
+  castellano, porque es el nombre oficial del precepto: el que se escribe en un
+  escrito a la Agencia Tributaria y el que se busca en el BOE.
+- **En la prosa, en cambio, se habla normal.** «l'article 80 de la Llei» dentro
+  de una frase en catalán está bien dicho. La regla es de la referencia —lo que
+  va en el paréntesis, con su enlace—, no de cómo se hable.
+
+**Y entonces salió bien y se cayó igual.** El borrador en catalán era correcto:
+ocho citas literales, en castellano, sin una palabra traducida. Se quedó en **NO
+ENCONTRADO** con «7 de 8 citas no verificadas», y el motivo de las siete era
+*«fragmento entrecomillado sin referencia a ningún precepto»*.
+
+El redactor había escrito `(article 80 de la Ley 37/1992, <enlace>)`: dejó el
+texto y el nombre de la norma en castellano —que es la regla— y tradujo la
+palabra de enlace. `citas._RE_REF_ARTICULO` no conocía «article», así que no veía
+referencia ninguna. **Una respuesta impecable tirada por una palabra.**
+
+Se arregló por los dos lados, y el orden importa:
+
+- **El prompt** pide la referencia entera en castellano. Es lo correcto.
+- **Pero de eso no se puede depender**, así que el lector de referencias entiende
+  también «article». Esto **no afloja la verificación**: la cita se sigue
+  comprobando letra a letra contra el precepto. Solo se reconoce una segunda
+  forma de escribir el mismo nombre. En el articulado del BOE la palabra no
+  aparece nunca, así que en el escaneo del corpus es inerte.
+
+De 7 citas caídas a **1**. Y la que queda enseña otra cosa.
+
+## Las comillas angulares no son comillas
+
+La cita superviviente que fallaba era `«més d'un any»`. No es una cita: es que en
+catalán —y en castellano— `« »` son las comillas normales, y el redactor las usó
+para repetir las palabras del cliente. Aquí `« »` significa **una sola cosa**:
+texto copiado de la ley. Todo lo que va ahí se comprueba contra el corpus, y tres
+palabras en catalán no están en la Ley del IVA, claro.
+
+Se arregla en el prompt, no en el verificador. **El verificador tenía razón.**
+
+## Lo que la suite fija, y cómo sabe ponerse roja
+
+El caso del catalán se comprueba **sin gastar nada**, contra el borrador real que
+escribió el modelo el 11/08/2026, guardado en `casos/borradores/`. Es una medida,
+no un ejemplo escrito por nadie: la regla de la fase 25 vale también aquí.
+
+Cuatro controles negativos, cada uno rompiendo el arreglo que protege:
+
+| se rompe | lo que pasa | quién lo caza |
+|---|---|---|
+| se quita «article» del lector | 7 citas «sin referencia» | bloque 0 |
+| se quita la validación del año | `abc` se acepta | bloque 1 |
+| se deja de unir los cortes de renglón | el buscador ve `deduc`, `cion` | bloque 2 |
+| se quita el tope de longitud | el requerimiento pegado paga 1 llamada | bloque 2 |
+
+## Lo que se probó y NO estaba roto
+
+- **Temas fuera del corpus** —IBI, plusvalía municipal, herencias, una laboral,
+  ITP, impuestos especiales—: todos salen por la puerta de materia, con el
+  mensaje que nombra lo que sí cubre la herramienta, sin texto y sin traza.
+- **Sin tildes**: `tokenizar` ya las quitaba.
+- **Caracteres raros, nulos, secuencias de escape, emojis, dos preguntas
+  seguidas**: ninguno revienta ni deja una traza en pantalla.
+- **Una palabra suelta** (`prorrata`) se admite. No es un error: es una pregunta
+  corta.
+
+## Lo que queda abierto
+
+- **Las faltas de ortografía no se han podido juzgar.** `deducion iva coche` sale
+  NO ENCONTRADO, pero con el motor de ensayo, cuyo analizador es un tokenizador
+  y no corrige nada. Con el modelo real lo normal es que lo entienda —como
+  entendió el catalán—, pero **no está medido**, y lo que no está medido no se
+  cuenta como que funciona.
+- **La regla nueva de las comillas angulares en catalán no está verificada con el
+  modelo real.** Está escrita en el prompt; falta la consulta que lo demuestre.
+
+## Comprobaciones
+
+```
+10 suites ......... verdes  (la nueva: prueba_entradas)
+fase3 · fase4 ..... 39/39 · 5/5
+banco de IVA ...... 16/19, sin cambios de veredicto
+llamadas a la API ... 4  (las dos consultas en catalán, autorizadas)
+```

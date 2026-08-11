@@ -39,7 +39,19 @@ NO_ENCONTRADA = "no_encontrada"  # dice ser de esta ley pero no existe el precep
 
 # --------------------------------------------------------------- patrones
 
-_RE_ART = re.compile(r"\bart[ií]culos?\b", re.IGNORECASE)
+# «article» ES LA MISMA PALABRA. Es una gestoria del Penedes y las preguntas
+# llegan en catalan; la respuesta sale en catalan, y ahi el redactor escribe
+# «article 80 de la Ley 37/1992»: el texto citado y el nombre de la norma
+# quedan en castellano -que es la regla- pero la palabra de enlace se traduce.
+# Medido: una respuesta impecable, con las ocho citas literales y correctas, se
+# quedo en NO ENCONTRADO porque el lector de referencias no conocia «article» y
+# el verificador vio ocho fragmentos entrecomillados «sin referencia».
+#
+# Esto NO afloja la verificacion: la cita se sigue comprobando letra a letra
+# contra el precepto. Solo se reconoce una segunda forma de escribir el mismo
+# nombre. En el articulado del BOE la palabra no aparece nunca, asi que en el
+# escaneo del corpus es inerte.
+_RE_ART = re.compile(r"\b(?:art[ií]culos?|articles?)\b", re.IGNORECASE)
 _RE_DISP = re.compile(
     r"\bdisposici[oó]n(?:es)?\s+"
     r"(?P<clase>adicional(?:es)?|transitoria(?:s)?|final(?:es)?|derogatoria(?:s)?)\s+"

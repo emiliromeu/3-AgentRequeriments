@@ -1664,8 +1664,23 @@ class Ventana:
                      if res["fallo"] == "modelo" else FALLO_GENERICO)
             self._terminar_roto(frase)
             return
-        if res["codigo"] == 3:      # falta el ejercicio: no deberia pasar aqui
-            self._terminar_roto("Falta el año del caso.")
+        # 3 = la consulta se para ANTES de mirar nada: no hay pregunta, la
+        # pregunta no cabe, o el año no vale. Aqui ponia «Falta el año del
+        # caso» para los tres, y desde que hay tope de longitud eso es
+        # mentira: a quien pega un requerimiento de 15.000 caracteres se le
+        # decia que faltaba el año. El motivo lo escribe `fase4` en cristiano
+        # y para cada caso; se enseña ese, no una frase fija de aqui.
+        #
+        # El motivo NO pasa por `en_cristiano`: eso es para fallos tecnicos,
+        # donde lo que se filtra son rutas y trozos de clave. Estos tres
+        # motivos ya estan escritos para quien los lee y no llevan nada
+        # tecnico dentro; pasarlos por ahi los convertiria en el mensaje
+        # generico, que es justo lo que se quiere evitar.
+        if res["codigo"] == 3:
+            motivo = (res.get("motivo") or "").strip()
+            self._terminar_roto(
+                (motivo[0].upper() + motivo[1:] + ".") if motivo
+                else "Falta el año del caso.")
             return
 
         estado = res.get("estado") or EST.NO_ENCONTRADO

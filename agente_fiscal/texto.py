@@ -191,6 +191,30 @@ def lematizar(p: str) -> str:
     return p if len(p) >= 3 else original
 
 
+_RE_CORTE_PDF = re.compile(r"([a-záéíóúüñ])-[ \t]*\r?\n[ \t]*([a-záéíóúüñ])")
+
+
+def unir_cortes_de_linea(texto: str) -> str:
+    """Deshace la particion de palabras al final de renglon de un PDF.
+
+    Al copiar de un requerimiento en PDF, una palabra partida llega asi:
+
+        ...la deduc-
+        cion del IVA de un co-
+        che...
+
+    Sin esto, el tokenizador ve `deduc`, `cion`, `co` y `che`, que no son
+    palabras de nada: la busqueda se queda sin los dos terminos que importaban
+    y la consulta acaba en NO ENCONTRADO por un guion.
+
+    SOLO se une lo que tiene la firma exacta de un corte de renglon: minuscula,
+    guion, salto, minuscula. Un guion seguido de mayuscula o de digito -«Real
+    Decreto 1624/1992 -\\n1992»- se deja como esta, y un guion con espacios
+    alrededor tambien: ahi el guion es del texto, no del renglon.
+    """
+    return _RE_CORTE_PDF.sub(r"\1\2", texto or "")
+
+
 def palabras_exactas(texto: str) -> list[str]:
     """Las palabras tal cual, sin lematizar: solo minusculas y sin tildes."""
     salida = []

@@ -76,8 +76,22 @@ _PARES = [("«", "»"), ("“", "”"), ('"', '"')]
 _RE_URL = re.compile(r"https?://[^\s\)\]\},;]+")
 
 # Referencia a un precepto dentro del parentesis o de la frase.
+#
+# «ARTICLE» ES LA MISMA PALABRA. Es una gestoria del Penedes: se pregunta en
+# catalan y la respuesta sale en catalan, con el texto citado y el nombre de la
+# norma en castellano -que es la regla- pero con la palabra de enlace
+# traducida: «(article 80 de la Ley 37/1992, <enlace>)». Medido con el modelo
+# real el 11 de agosto de 2026: una respuesta con ocho citas literales y
+# correctas se quedo en NO ENCONTRADO porque aqui no se reconocia «article» y
+# el verificador vio siete fragmentos entrecomillados «sin referencia».
+#
+# NO AFLOJA NADA. La cita se sigue comprobando letra a letra contra el precepto
+# y el numero de articulo se lee igual; lo unico que cambia es que se admite
+# una segunda forma de escribir el mismo nombre. El prompt pide la referencia
+# entera en castellano, pero de eso no se puede depender: si el modelo traduce
+# la palabra de enlace, la respuesta no puede caerse por ahi.
 _RE_REF_ARTICULO = re.compile(
-    r"\b(?:art[íi]culo|art\.?)\s*(?P<num>\d+)"
+    r"\b(?:art[íi]culo|article|art\.?)\s*(?P<num>\d+)"
     r"(?P<suf>\s+(?:bis|ter|qu[aá]ter|quinquies|sexies|septies|octies|nonies|"
     r"decies|undecies|duodecies|terdecies|quaterdecies|quindecies|"
     r"quinquiesdecies|sexiesdecies|septiesdecies|octiesdecies|noniesdecies|"

@@ -34,6 +34,7 @@ from agente_fiscal import modelo as MOD
 from agente_fiscal import redactor as RED
 from agente_fiscal import referencias as R
 from agente_fiscal import teac as TEAC
+from agente_fiscal import texto as T
 from agente_fiscal import verificador as VF
 from agente_fiscal import vigencia as V
 from agente_fiscal.indice import ErrorCorpus, Indice
@@ -64,6 +65,20 @@ ANCHO = 78
 # prefijo, asi que un candidato en el puesto 6 con cobertura alta entra aunque
 # el 4o y el 5o se hayan descartado. Por eso hay consultas que pasan de 2 a 3.
 TOPE_MATERIAL = 6
+
+# CUANTO PUEDE MEDIR UNA PREGUNTA. No habia tope, y el caso real es evidente:
+# alguien pega un requerimiento entero de Hacienda en la caja. Medido con uno
+# de 2.750 palabras: 17.000 caracteres, unos 7.700 tokens SOLO en el analisis,
+# casi cuatro centimos antes de empezar a buscar nada.
+#
+# Y no es solo el dinero: una pregunta de 2.750 palabras no es una pregunta,
+# son cincuenta, y el analizador tiene que sacar de ahi ocho terminos de
+# busqueda. Sale ruido.
+#
+# 1.200 caracteres son unas 200 palabras: cabe de sobra una duda contada con
+# detalle, con fechas e importes. Lo que no cabe es un documento pegado, y ese
+# es justo el caso que hay que parar CON UN AVISO, no en silencio.
+TOPE_PREGUNTA = 1200
 MAX_INTENTOS = 2    # el original y UN reintento con los motivos exactos
 
 
@@ -120,6 +135,12 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     def paso(texto: str) -> None:
         if progreso is not None:
             progreso(texto)
+
+    # LO QUE SE PEGA DE UN PDF LLEGA CON LAS PALABRAS PARTIDAS. Se recomponen
+    # aqui, en la entrada, para que las vean igual el modelo y la busqueda: si
+    # se arreglara solo para una de las dos, el analisis y el indice estarian
+    # leyendo preguntas distintas. Vease `texto.unir_cortes_de_linea`.
+    pregunta = T.unir_cortes_de_linea(pregunta)
 
     # EL MODO ES DE ESTA CONSULTA, NO DEL SISTEMA. Es lo que hace que no haya
     # estado oculto que se descuadre: la respuesta sabe con que se hizo porque
@@ -199,6 +220,39 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         print(f"modelos  : analisis {getattr(motor, 'modelo_analisis', '?')} | "
               f"redaccion {getattr(motor, 'modelo_redaccion', '?')}")
     print(f"traza    : {tr.dir}")
+
+    # ---------------------------------------------------- PREGUNTA VACIA
+    # Antes de esto, una pregunta vacia gastaba DOS llamadas al modelo para
+    # acabar diciendo «no se ha podido determinar de que impuesto es la
+    # pregunta», que ademas es falso: el problema no es el impuesto, es que no
+    # hay pregunta. Se para aqui, sin gastar nada, y se dice lo que pasa.
+    if not any(c.isalnum() for c in (pregunta or "")):
+        apartado("PARADA: no hay pregunta")
+        print("  No se ha escrito ninguna duda, o lo escrito no tiene ni una")
+        print("  letra ni un numero. Escribe la duda en una o dos lineas.")
+        res["codigo"] = 3
+        res["motivo"] = ("no se ha escrito ninguna pregunta: describe la duda "
+                         "en una o dos lineas")
+        tr.cerrar({"estado": "SIN PREGUNTA", "caracteres": len(pregunta or "")})
+        return res
+
+    # ---------------------------------------------------- LONGITUD
+    if len(pregunta or "") > TOPE_PREGUNTA:
+        apartado("PARADA: la pregunta es demasiado larga")
+        print(f"  Son {len(pregunta):,} caracteres y el tope son "
+              f"{TOPE_PREGUNTA:,}.")
+        print()
+        print("  Esto suele pasar al pegar un requerimiento o un escrito")
+        print("  entero. Resume la duda en unas lineas: que se pregunta y con")
+        print("  que datos. Lo pegado entero no se puede contestar mejor, y")
+        print("  cuesta mas.")
+        res["codigo"] = 3
+        res["motivo"] = (
+            f"la pregunta tiene {len(pregunta):,} caracteres y el tope son "
+            f"{TOPE_PREGUNTA:,}: resume la duda en unas lineas")
+        tr.cerrar({"estado": "PREGUNTA DEMASIADO LARGA",
+                   "caracteres": len(pregunta), "tope": TOPE_PREGUNTA})
+        return res
 
     # ---------------------------------------------------- LLAMADA 1
     paso("Analizando la pregunta...")
@@ -938,7 +992,12 @@ def main(argv: list[str]) -> int:
 
     c = sub.add_parser("consultar", help="resuelve una duda fiscal")
     c.add_argument("pregunta")
-    c.add_argument("--ejercicio", type=int, default=None)
+    # SIN `type=int`: el año lo valida `analizador.leer_ejercicio`, que es
+    # quien tambien lo valida cuando viene de la ventana. Con `type=int` aqui,
+    # «--ejercicio 23» pasaba por la terminal como el ano 23 y «abc» salia con
+    # el mensaje de argparse en ingles; ahora las dos entradas dan la misma
+    # explicacion, que es el objetivo: una sola regla del año, un solo mensaje.
+    c.add_argument("--ejercicio", default=None)
     c.add_argument("--motor", choices=["anthropic", "ensayo"], default="anthropic")
     # EL MODO ES DE LA CONSULTA. Sin bandera se comporta como siempre (lo que
     # digan el entorno o el modo guardado).
@@ -964,14 +1023,17 @@ def main(argv: list[str]) -> int:
 
     args = ap.parse_args(argv)
 
+    # EL AÑO SE VALIDA EN UN SOLO SITIO. Aqui habia una segunda comprobacion,
+    # de rango y nada mas, escrita aparte de la de `leer_ejercicio`. Dos
+    # caminos para una regla es como se descuadran: uno se arregla y el otro
+    # no. Este llama al mismo, y por eso da el mismo mensaje que la ventana.
     ejercicio = getattr(args, "ejercicio", None)
-    if ejercicio is not None and not (
-        AN.EJERCICIO_MINIMO <= ejercicio <= AN.EJERCICIO_MAXIMO
-    ):
-        print(f"[FALLO] ejercicio fuera de rango: {ejercicio}. "
-              f"La Ley del IVA esta en vigor desde {AN.EJERCICIO_MINIMO}.",
-              file=sys.stderr)
-        return 1
+    if ejercicio is not None:
+        año, motivo = AN.leer_ejercicio(ejercicio)
+        if año is None:
+            print(f"[FALLO] {motivo}", file=sys.stderr)
+            return 1
+        args.ejercicio = año
 
     try:
         if args.modo == "consultar":

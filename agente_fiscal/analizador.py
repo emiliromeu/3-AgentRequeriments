@@ -195,6 +195,40 @@ def annos_escritos(pregunta: str) -> set:
     }
 
 
+def leer_ejercicio(crudo) -> tuple:
+    """Un ejercicio de fuera -> (año, motivo). (None, por que) si no vale.
+
+    Acepta lo que una persona escribe de verdad -«2023», « 2023 », 2023- y
+    RECHAZA todo lo demas diciendo por que en cristiano. Nada de adivinar:
+    «23» podria ser 1923 o 2023, y «2023-2024» son dos ejercicios distintos con
+    dos leyes distintas. Ante la duda se pregunta, no se elige.
+    """
+    if crudo is None:
+        return None, "ni --ejercicio ni la pregunta indican el ejercicio del caso"
+    texto = str(crudo).strip()
+    if not texto:
+        return None, ("el año del caso ha llegado vacio. Escribe los cuatro "
+                      "digitos del ejercicio, por ejemplo 2023")
+    if not texto.isdigit():
+        if re.fullmatch(r"\d{4}\s*[-/aA]\s*\d{4}", texto):
+            return None, (
+                f"«{texto}» son dos ejercicios y cada uno puede tener su "
+                f"redaccion de la ley: consulta uno cada vez")
+        return None, (
+            f"«{texto}» no es un año. Escribe solo los cuatro digitos del "
+            f"ejercicio, por ejemplo 2023")
+    if len(texto) != 4:
+        return None, (
+            f"«{texto}» no son cuatro digitos. Escribe el año entero: 2023, "
+            f"no 23")
+    año = int(texto)
+    if not (EJERCICIO_MINIMO <= año <= EJERCICIO_MAXIMO):
+        return None, (
+            f"el año {año} esta fuera de lo que cubre esta herramienta "
+            f"({EJERCICIO_MINIMO}-{EJERCICIO_MAXIMO})")
+    return año, ""
+
+
 def resolver_ejercicio(
     pregunta: str, analisis: Analisis, ejercicio_cli: int | None
 ) -> tuple[int | None, str]:
@@ -205,7 +239,21 @@ def resolver_ejercicio(
     para y pregunta.
     """
     if ejercicio_cli is not None:
-        return ejercicio_cli, f"indicado a mano con --ejercicio {ejercicio_cli}"
+        # SE VALIDA AQUI, QUE ES POR DONDE PASA TODO EL MUNDO.
+        #
+        # No se validaba en absoluto: se devolvia lo que llegara. Medido de
+        # punta a punta, «abc» salia con CRITERIO CLARO y ejercicio 'abc';
+        # «23», «2023-2024» y «ejercicio 2023» tambien. Los que fallaban lo
+        # hacian por casualidad -no encontraban versiones- y no por control.
+        #
+        # UN AÑO MAL INTERPRETADO ES EL FALLO MAS SILENCIOSO DE ESTE SISTEMA:
+        # una consulta de 2023 contestada con la ley de hoy sale impecable, con
+        # sus citas y sus enlaces, y esta mal. La ventana ya validaba; la
+        # terminal y cualquier otro camino, no.
+        valido, motivo = leer_ejercicio(ejercicio_cli)
+        if valido is None:
+            return None, motivo
+        return valido, f"indicado a mano: {valido}"
 
     if analisis.ejercicio is None:
         return None, "ni --ejercicio ni la pregunta indican el ejercicio del caso"
