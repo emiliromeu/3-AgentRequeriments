@@ -181,14 +181,27 @@ def leer_casos(ruta: Path) -> list[dict]:
         if not linea or linea.startswith("#"):
             continue
         partes = [p.strip() for p in linea.split("|")]
-        if len(partes) != 4:
+        if len(partes) not in (4, 5):
             raise SystemExit(
-                f"{ruta}:{n}: se esperaban 4 campos "
-                f"(consulta | norma | articulos | tope), hay {len(partes)}"
+                f"{ruta}:{n}: se esperaban 4 o 5 campos (consulta | norma | "
+                f"articulos | tope [| impuesto]), hay {len(partes)}"
             )
         casos.append({
             "consulta": partes[0],
             "norma": partes[1],
+            # EL QUINTO CAMPO: LO QUE DIRIA EL ANALIZADOR, que no es lo mismo
+            # que donde vive la respuesta.
+            #
+            # Las cuatro preguntas de procedimiento tenian como norma la LGT,
+            # de la que se deducia impuesto GENERAL, y con eso no se filtraba
+            # nada: el banco medía un escenario que no ocurre. En la realidad
+            # «me he retrasado en presentar el 303» la clasifica el analizador
+            # como IVA, y entonces si se filtra.
+            #
+            # Vacio = el de la norma, que es lo normal en una pregunta de
+            # fondo: quien pregunta por el articulo 95 de la Ley del IVA
+            # pregunta de IVA.
+            "impuesto": partes[4] if len(partes) > 4 else "",
             "aceptables": [a.strip() for a in partes[2].split(",") if a.strip()],
             "tope": int(partes[3]),
             "linea": n,
@@ -232,7 +245,10 @@ def bloque_1(reg: Registro, ix, grafo, casos) -> None:
         #
         # El impuesto sale de la NORMA que declara el caso, que es un dato del
         # propio caso y no una suposicion de aqui.
-        impuesto = ix.normas.impuesto_de_cuerpo(cuerpo_esperado)
+        # El caso puede declarar el impuesto que diria el analizador; si no
+        # lo declara, el de su norma. Ver el quinto campo en `leer_casos`.
+        impuesto = (caso.get("impuesto")
+                    or ix.normas.impuesto_de_cuerpo(cuerpo_esperado))
         resultados, _h, _reserva = fase4.recuperar(
             ix, grafo, caso["consulta"], impuesto,
             tope=max(caso["tope"], 10))

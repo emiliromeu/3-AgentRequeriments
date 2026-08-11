@@ -50,6 +50,23 @@ IMPUESTOS_FUERA = ("ITP-AJD", "ISD", "IIEE", "IBI", "IAE")
 
 SIN_CLASIFICAR = ("otro", "desconocido")
 
+# DE QUE CLASE ES LA DUDA. No es «que norma la resuelve»: es que se pregunta.
+#
+# «Cuanto puedo deducir de este coche» y «que plazo tengo para rectificar» son
+# preguntas de naturaleza distinta, y quien las hace lo sabe sin haber oido
+# hablar de la Ley General Tributaria. El analizador tampoco tiene que saber
+# que existe: solo tiene que distinguir el fondo del procedimiento.
+#
+# Esto existe porque el corte por pertinencia lo estaba ADIVINANDO: decidia si
+# una consulta era de procedimiento mirando QUIEN GANABA EL PUESTO 1 de la
+# busqueda. Mientras se dedujera asi, separar la busqueda en dos ligas rompia
+# el procedimiento por construccion, con cualquier reparto: la norma general
+# nunca queda la primera en su propia liga, asi que siempre pasaba por apoyo.
+FONDO = "fondo"
+PROCEDIMIENTO = "procedimiento"
+NATURALEZA_DUDOSA = "no_esta_claro"
+NATURALEZAS = (FONDO, PROCEDIMIENTO, NATURALEZA_DUDOSA)
+
 
 def codigos(normas=None) -> tuple:
     """Los codigos que el analizador puede devolver, para ESTE corpus.
@@ -87,6 +104,7 @@ ESQUEMA = {
         # El enum lo rellena `esquema_de(normas)` con lo que haya en el corpus.
         # Aqui queda la forma, no la lista.
         "impuesto": {"type": "string", "enum": list(codigos())},
+        "naturaleza": {"type": "string", "enum": list(NATURALEZAS)},
         # No se puede escribir ["integer", "null"]: hay que usar anyOf.
         "ejercicio": {"anyOf": [{"type": "integer"}, {"type": "null"}]},
         "ejercicio_fundamento": {"type": "string"},
@@ -96,6 +114,7 @@ ESQUEMA = {
     },
     "required": [
         "impuesto",
+        "naturaleza",
         "ejercicio",
         "ejercicio_fundamento",
         "articulos_sospechados",
@@ -128,6 +147,29 @@ Devuelve estos campos:
 
 - impuesto: de que impuesto trata. Si no encaja en ninguno, "desconocido".
 
+- naturaleza: DE QUE CLASE ES LA DUDA. Tres valores:
+
+    "fondo"          se pregunta CUANTO se paga, QUE tributa, QUE se puede
+                     deducir, si algo esta exento, como se valora. La respuesta
+                     esta en la ley del impuesto.
+                     Ejemplos: «cuanto puedo deducir del coche de empresa»,
+                     «tributan en patrimonio las participaciones de la empresa
+                     familiar», «que gastos no se puede deducir una sociedad».
+
+    "procedimiento"  se pregunta COMO se hace, CUANDO, QUE PLAZO hay, que pasa
+                     si se llega tarde, que recargo o sancion toca, cuanto
+                     puede tardar Hacienda, cuantos años puede revisar.
+                     Ejemplos: «me he retrasado en presentar el 303», «me han
+                     sancionado por no atender un requerimiento», «cuantos años
+                     puede Hacienda revisar la renta de mi cliente».
+
+    "no_esta_claro"  no se puede decidir, o la duda tiene de las dos cosas.
+
+  NO PIENSES EN QUE NORMA LA RESUELVE. No hace falta que sepas que existe una
+  Ley General Tributaria: la pregunta es que quiere saber quien pregunta, no
+  donde esta escrito. Y ante la duda, "no_esta_claro": es un valor legitimo y
+  no se penaliza. Elegir mal es peor que no elegir.
+
 - ejercicio: el ANO del caso, solo si la pregunta lo dice. Si no lo dice, pon
   null. NUNCA supongas el ano en curso ni ninguno otro: un caso de 2023
   contestado con la ley de hoy parece impecable y esta mal, y nadie lo nota.
@@ -153,6 +195,7 @@ Devuelve estos campos:
 @dataclass
 class Analisis:
     impuesto: str = "desconocido"
+    naturaleza: str = NATURALEZA_DUDOSA
     ejercicio: int | None = None
     ejercicio_fundamento: str = ""
     articulos_sospechados: list = field(default_factory=list)
@@ -185,6 +228,10 @@ def validar(datos, normas=None) -> tuple[Analisis | None, list[str]]:
         errores.append(f"campos no permitidos: {', '.join(sobran)}")
     if errores:
         return None, errores
+
+    naturaleza = datos.get("naturaleza")
+    if naturaleza not in NATURALEZAS:
+        errores.append(f"naturaleza {naturaleza!r} no esta en {NATURALEZAS}")
 
     impuesto = datos["impuesto"]
     admitidos = codigos(normas)
@@ -238,6 +285,7 @@ def validar(datos, normas=None) -> tuple[Analisis | None, list[str]]:
     return (
         Analisis(
             impuesto=impuesto,
+            naturaleza=naturaleza,
             ejercicio=ejercicio,
             ejercicio_fundamento=str(datos["ejercicio_fundamento"])[:300],
             articulos_sospechados=[a.strip() for a in arts],

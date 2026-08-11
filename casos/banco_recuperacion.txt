@@ -170,3 +170,18 @@ como se amortiza el inmovilizado de una sociedad y con que tablas | Ley 27/2014 
 # recuperacion cruda. El articulo 37 esta en el puesto 4 contando solo la Ley
 # 19/1991 y en el 19 con las generales dentro: 836 preceptos generales contra
 # 47. Eso no es de estos casos, es del corpus, y esta anotado en el LEEME.
+
+# --- PROCEDIMIENTO CON IMPUESTO ASIGNADO (11/08/2026) -----------------------
+# QUINTO CAMPO: lo que diria el ANALIZADOR, que no es donde vive la respuesta.
+#
+# Las cuatro de procedimiento de arriba declaran la LGT como norma, de la que
+# se deduce impuesto GENERAL, y con eso no se filtra nada. Medían un escenario
+# que no ocurre: en la realidad «me he retrasado en presentar el 303» sale
+# clasificada como IVA, y entonces si se filtra y la LGT compite en desventaja.
+#
+# Estos cuatro son el escenario de verdad: la respuesta esta en la LGT y el
+# analizador dira IVA o IRPF. Articulo primero, consulta despues.
+me he retrasado en presentar el modelo 303 del IVA y nadie me lo ha reclamado, que recargo me toca | Ley 58/2003 | 27 | 3 | IVA
+me han sancionado por no atender un requerimiento sobre las facturas de IVA | Ley 58/2003 | 203 | 3 | IVA
+cuantos años puede Hacienda revisar la declaracion de la renta de mi cliente | Ley 58/2003 | 66 | 3 | IRPF
+mi cliente olvido incluir unos rendimientos en la renta, como se corrige | Ley 58/2003 | 122 | 3 | IRPF

@@ -593,8 +593,18 @@ class MotorEnsayo(Motor):
 
         m = _RE_ANNO.search(pregunta)
         raices = T.tokenizar(pregunta)
+        # LA NATURALEZA, con la misma clase de regla fija que el resto: unas
+        # palabras que solo aparecen en preguntas de procedimiento. NO imita al
+        # modelo, y no pretende: el motor de ensayo existe para probar el
+        # andamiaje, no la calidad de la clasificacion.
+        _proc = ("plazo", "prescri", "sancion", "sanción", "recargo",
+                 "requerimiento", "extempor", "retras", "presentar",
+                 "revisar", "corrige", "corregir", "complementaria")
         datos = {
             "impuesto": "IVA" if "iva" in pregunta.lower() else "desconocido",
+            "naturaleza": ("procedimiento"
+                           if any(x in pregunta.lower() for x in _proc)
+                           else "fondo"),
             "ejercicio": int(m.group(1)) if m else None,
             "ejercicio_fundamento": (
                 f"el ano {m.group(1)} aparece escrito en la pregunta"

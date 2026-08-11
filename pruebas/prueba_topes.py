@@ -28,8 +28,14 @@ fallos = []
 # Un analisis VALIDO, para que la prueba llegue a la redaccion. Si el analisis
 # tambien falla, fase4 se rinde a los dos intentos por su cuenta y NUNCA se
 # llega a probar el techo: la primera version de esta prueba medía eso.
+# OJO: tiene que llevar TODOS los campos obligatorios del esquema. Cuando se
+# añadio `naturaleza`, este doble se quedo sin el y la prueba se puso roja
+# acusando al tope de algo que no pasaba: el analisis se rechazaba antes de
+# llegar a la redaccion, que es justo lo que esta prueba dice que no debe
+# ocurrir. Un doble incompleto mide otra cosa y lo dice como si fuera esta.
 ANALISIS_BUENO = {
     "impuesto": "IVA",
+    "naturaleza": "fondo",
     "ejercicio": 2023,
     "ejercicio_fundamento": "lo dice la pregunta",
     "articulos_sospechados": [],
