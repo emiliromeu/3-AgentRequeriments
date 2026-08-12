@@ -101,6 +101,10 @@ _RE_MARCA_ART = re.compile(r"\bart[íi]culos?\b\.?|\barts?\b\.?", re.IGNORECASE)
 # El salto de linea aparecio en las consultas de 2026 y sin el se perdian los
 # articulos de todas las normas menos la primera: el campo entero se leia como
 # un solo bloque, ganaba el primer "art." y el resto se tiraba EN SILENCIO.
+# «de la Ley 58/2003», «del Real Decreto 1065/2007»: lo que une unos numeros
+# de articulo con la norma que va detras.
+_RE_CONECTOR = re.compile(r"(?:de\s+(?:la|el|los|las)|del|de)\s+", re.IGNORECASE)
+
 _RE_SEPARADOR_NORMA = re.compile(r"\s*[;\r\n]+\s*")
 
 
@@ -161,6 +165,73 @@ def analizar_normativa(texto: str, normas=None) -> Normativa:
         designacion = (trozo[:m.start()] if m else trozo).strip(" ,.;:")
         if m:
             numeros, resto = R.leer_numeros(trozo[m.end():])
+
+            # LA DESIGNACION PUEDE IR DETRAS DE LOS ARTICULOS.
+            #
+            #     «Articulos 29, 227 y 249 de la Ley 58/2003, de 17 de
+            #      diciembre, General Tributaria»
+            #
+            # Aqui la marca abre el trozo y lo de delante esta vacio, asi que
+            # la designacion salia vacia y no se resolvia nada. Es el mismo
+            # error de direccion que ya se arreglo en las remisiones del BOE:
+            # mirar solo hacia un lado.
+            #
+            # SOLO ACTUA CUANDO DELANTE NO HAY NADA. Literal: la designacion
+            # vacia. Ni «casi nada», ni «nada que yo reconozca».
+            #
+            # La primera version pedia «que delante no haya una norma
+            # EXPLICITA», usando `_RE_NORMA_EXPLICITA`. Y eso no es lo mismo:
+            # ese patron no reconoce «RDLeg 1/1993», asi que en
+            #
+            #   «... TRLITPAJD RDLeg 1/1993 arts 19, 21, 45. RDLeg 4/2015 ...»
+            #
+            # creyo que delante no habia norma, miro detras y ATRIBUYO LOS
+            # ARTICULOS 19, 21 Y 45 DEL TEXTO REFUNDIDO DE ITP A LA LEY DEL
+            # IVA. Una mal resuelta, y de las peores: articulos reales de otra
+            # norma pegados a la nuestra.
+            #
+            # Con la guarda estricta la rama no puede tocar NADA de lo que ya
+            # resolvia, porque solo entra donde no habia designacion ninguna.
+            # Y LA NORMA TIENE QUE IR PEGADA A LOS NUMEROS. No «en algun
+            # sitio de lo que viene detras»: pegada, con «de la» o sin nada.
+            #
+            #   «Art. 9.Bis Regl. 282/2011 Ley 37/1992 art. 11 y 69»
+            #
+            # Buscando en todo lo de detras se encuentra «Ley 37/1992» -porque
+            # «Regl. 282/2011» no se reconoce- y el articulo 9 bis del
+            # reglamento europeo acaba atribuido a la Ley del IVA. Otra vez lo
+            # mismo: saltar por encima de una designacion que no entiendo.
+            #
+            # Anclada al principio del resto, ese caso no pasa: detras del 9
+            # viene «.Bis Regl. 282/2011...», que no empieza por norma. Se
+            # queda sin resolver, que es lo correcto.
+            if not designacion.strip():
+                detras = (resto or trozo[m.end():]).lstrip(" ,.;:")
+                conector = _RE_CONECTOR.match(detras)
+                if conector:
+                    detras = detras[conector.end():]
+                primera = _RE_NORMA_EXPLICITA.match(detras)
+                if primera:
+                    # Y SE CORTA DONDE EMPIEZA OTRA COSA. Quedarse con todo lo
+                    # de detras mete dos normas en la designacion:
+                    #
+                    #   «Art. 214 Directiva 2006/112/CE Ley 37/1992 art. 25-Tres»
+                    #
+                    # El 214 es de la Directiva; sin cortar, la designacion
+                    # incluia tambien «Ley 37/1992» y el articulo acababa en la
+                    # Ley del IVA. Cortando en la siguiente norma queda solo la
+                    # Directiva, que no tenemos, y no se resuelve. Correcto.
+                    fin = len(detras)
+                    # DETRAS DE LA PRIMERA, no dentro. Buscando desde el
+                    # indice 1, «Real Decreto 1065/2007» encuentra su propio
+                    # «Decreto 1065/2007» y se corta a si misma en «Real».
+                    otra = _RE_NORMA_EXPLICITA.search(detras, primera.end())
+                    if otra:
+                        fin = min(fin, otra.start())
+                    marca = _RE_MARCA_ART.search(detras)
+                    if marca:
+                        fin = min(fin, marca.start())
+                    designacion = detras[:fin].strip(" ,.;:")
         else:
             numeros, resto = [], ""
             # Un trozo sin marca de articulo es normal ("Ley 38/1992" a secas):
