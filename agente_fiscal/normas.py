@@ -163,6 +163,20 @@ def es_materia_de_impuesto(materia: str) -> bool:
     return B.sin_tildes(materia or "").strip().lower().startswith("impuesto")
 
 
+def _solo_la_materia(texto: str) -> str:
+    """«de la Ley del Impuesto sobre Sociedades» -> «impuesto sobre sociedades».
+
+    Quita articulos y el tipo de norma que va delante, para poder comparar una
+    materia con otra sin que estorbe como se la haya nombrado.
+    """
+    t = B.sin_tildes(texto or "").strip(" .,;:").lower()
+    t = re.sub(r"^(?:de[l]?\s+|en\s+)?(?:la|el|los|las)\s+", "", t).strip()
+    t = re.sub(r"^(?:ley|reglamento|real decreto(?: legislativo|-ley)?|"
+               r"texto refundido|decreto|orden|directiva)\s+"
+               r"(?:de[l]?\s+)?(?:la|el|los|las)?\s*", "", t).strip()
+    return t
+
+
 def _generar_alias(tipo: str, numero: str, materia: str) -> set:
     """Formas con las que el BOE puede nombrar a este cuerpo.
 
@@ -481,6 +495,33 @@ class Registro:
         _clave, motivo = self.resolver(designacion)
         return "encaja con" in (motivo or "")
 
+    def _otra_materia(self, sobra: str, candidato) -> str:
+        """La materia AJENA que sigue al alias, o cadena vacia.
+
+        NO SE MIRA CONTRA LAS NORMAS CARGADAS, y esa fue la primera version
+        equivocada: comparando con los demas cuerpos, «Texto refundido de la
+        Ley del Impuesto sobre Transmisiones...» se rechazaba -su materia es
+        tambien la de su Reglamento- y «...sobre la Renta de no Residentes»
+        pasaba, porque esa norma no esta cargada y no habia con que comparar.
+
+        Lo que decide no es que exista la otra norma: es que la designacion
+        SIGA NOMBRANDO UN IMPUESTO QUE NO ES EL DEL CANDIDATO. Si detras del
+        alias viene «Impuesto sobre ...» y no es el suyo, se habla de otra
+        norma, este cargada o no.
+        """
+        limpio = _solo_la_materia(sobra)
+        if not limpio.startswith("impuesto"):
+            return ""
+        # LAS DOS PARTES SE LIMPIAN IGUAL. La materia guardada del texto
+        # refundido es «Ley del Impuesto sobre Transmisiones...» -con su tipo
+        # delante-, asi que comparada en crudo no casaba ni consigo misma y la
+        # designacion BUENA se rechazaba.
+        for texto in (candidato.materia, candidato.nombre):
+            suyo = _solo_la_materia(texto or "")
+            if suyo and limpio.startswith(suyo):
+                return ""
+        return limpio[:46]
+
     def resolver(self, designacion: str, cuerpo_actual: str = "",
                  cola: str = "") -> tuple:
         """Nombre de norma -> (clave_de_cuerpo, motivo).
@@ -544,6 +585,33 @@ class Registro:
                     return candidatos[0].clave, (
                         f"designa a {candidatos[0].etiqueta} (su nombre "
                         f"repetido detras del numero)")
+
+            # LO QUE SOBRA PUEDE SER LA MATERIA DE OTRO CUERPO CARGADO, y
+            # entonces no es prosa que arrastra: es OTRA NORMA.
+            #
+            # «Texto refundido de la Ley del Impuesto sobre Sociedades»
+            # resolvia al texto refundido del ITP. El tipo -«texto refundido»-
+            # es alias por si solo, y lo que sobraba -«de la Ley del Impuesto
+            # sobre Sociedades»- no empieza por numero ni por parentesis, asi
+            # que `_RE_DISCRIMINANTE` lo tomaba por cola inofensiva del estilo
+            # «Ley del Impuesto se considerara...».
+            #
+            # Funcionaba mientras SOLO HABIA UN TEXTO REFUNDIDO. Con dos, un
+            # alias que no dice de que impuesto es deja de identificar nada, y
+            # la designacion se resolvia por prefijo ignorando justo lo que la
+            # distingue.
+            #
+            # SE MIRA CONTRA LOS DEMAS CUERPOS, NO CONTRA UNA LISTA: si lo que
+            # sobra empieza por la materia o el nombre de otro cuerpo cargado,
+            # se declina. Es la misma cuenta que la excepcion de arriba -que
+            # admite cuando lo que sobra es su PROPIA materia- leida al reves.
+            ajena = (self._otra_materia(sobra, candidatos[0])
+                     if len(candidatos) == 1 else "")
+            if ajena:
+                return None, (
+                    f"«{designacion.strip()[:38]}» encaja por el principio "
+                    f"con {candidatos[0].etiqueta}, pero sigue nombrando "
+                    f"«{ajena}»: es OTRA norma, no se resuelve")
 
             if _RE_DISCRIMINANTE.match(sobra):
                 # Se dice QUE alias caso y QUE sobro: sin las dos mitades el
