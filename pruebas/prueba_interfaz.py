@@ -257,11 +257,19 @@ if reventado is None:
     y_aporte = v.panel_aporte.winfo_rooty()
     comprobar("los avisos se ven ARRIBA, antes del texto",
               y_avisos < y_texto, f"avisos y={y_avisos} texto y={y_texto}")
-    comprobar("y el aporte del criterio, tambien antes del texto",
-              y_aporte < y_texto, f"aporte y={y_aporte} texto y={y_texto}")
-    comprobar("los tres estan en la banda de arriba, no debajo de la respuesta",
-              max(y_avisos, y_aporte,
-                  v.panel_estado.winfo_rooty()) < y_texto)
+    # CON LA COLUMNA AL LADO, «ANTES» YA NO ES «MAS ARRIBA». El aporte esta a
+    # la derecha, a la altura de las primeras lineas del texto, y eso se ve
+    # igual de bien -o mejor- que encima. Lo que hay que garantizar sigue
+    # siendo lo mismo: que se VEA SIN DESPLAZAR, y que los avisos vayan por
+    # delante del aporte, porque son lo que puede invalidar la respuesta.
+    alto_v = raiz.winfo_height() + raiz.winfo_rooty()
+    comprobar("y el aporte del criterio se ve sin desplazar",
+              y_aporte < alto_v, f"aporte y={y_aporte} ventana hasta {alto_v}")
+    comprobar("los avisos van por delante del aporte",
+              y_avisos <= y_aporte, f"avisos {y_avisos} aporte {y_aporte}")
+    comprobar("y ninguno queda debajo del final de la respuesta",
+              max(y_avisos, y_aporte) < v.texto.winfo_rooty()
+              + v.texto.winfo_height())
     comprobar("con respuesta verificada SI hay algo que copiar",
               str(v.boton_copiar["state"]) == "normal")
 
@@ -807,9 +815,24 @@ for an in (1000, 1400, raiz.winfo_screenwidth()):
               abs(raiz.winfo_width() - an) < 40,
               f"pedido {an}, real {raiz.winfo_width()}")
 print(f"    ancho de ventana -> margen de la columna: {margenes}")
-solo = [m for _a, m in margenes]
-comprobar("el margen CRECE con la ventana: el parrafo se queda quieto",
-          solo == sorted(solo) and len(set(solo)) > 1, str(margenes))
+# LO QUE TIENE QUE QUEDARSE QUIETO ES LA MEDIDA DE LECTURA, no el margen.
+# Mientras la banda iba encima, «margen creciente» y «medida constante» eran
+# lo mismo. Con la columna al lado ya no: al pasar de 1.290 a 1.310 px
+# aparecen 400 px de columna y el margen BAJA, y sin embargo el parrafo mide
+# exactamente igual. Se comprueba la medida, que es lo que se decidio.
+medidas = []
+for an in (1000, 1400, raiz.winfo_screenwidth()):
+    raiz.geometry(f"{an}x820")
+    bombear(0.55)
+    izq = int(str(v.texto.tag_cget("columna", "lmargin1") or 0))
+    medidas.append(v.texto.winfo_width() - 2 * izq - 2 * interfaz.RELLENO)
+print(f"    ancho de ventana -> medida de lectura: {medidas}")
+comprobar("la MEDIDA de lectura no cambia con el ancho de la ventana",
+          max(medidas) - min(medidas) <= 40, str(medidas))
+comprobar("y es la que se decidio, no la que sobra",
+          abs(max(medidas)
+              - v.fuente_texto.measure("0" * interfaz.COLUMNA_MAXIMA)) < 60,
+          f"{medidas} vs {v.fuente_texto.measure('0' * interfaz.COLUMNA_MAXIMA)}")
 comprobar("y el ancho de lectura NO entra en lo que el Text PIDE",
           v.texto.winfo_reqwidth() < 300,
           f"pide {v.texto.winfo_reqwidth()} px: volveria a bloquear la ventana")
@@ -881,9 +904,15 @@ print(f"    cuerpo {v.fuente_texto.cget('size')} pt · interlinea "
       f"{interfaz.INTERLINEA} px · alto de linea {alto_linea} px")
 comprobar(f"se ven {visibles} lineas sin desplazar, y hacen falta 20",
           visibles >= 20, f"{visibles} lineas")
-comprobar("y la banda de arriba no se come mas de un cuarto de la ventana",
-          v.banda.winfo_height() < raiz.winfo_height() * 0.28,
-          f"{v.banda.winfo_height()} px de {raiz.winfo_height()}")
+# LO QUE NO PUEDE ES COMERSE EL ALTO DE LA RESPUESTA. Al lado, la banda mide
+# lo que quiera -esta en espacio que antes estaba en blanco- y lo que hay que
+# mirar es donde EMPIEZA el texto. Encima, es lo mismo de siempre.
+arriba_del_texto = v.texto.winfo_rooty() - v.lienzo_lectura.winfo_rooty()
+print(f"    lateral={v._lateral} · encima del texto quedan "
+      f"{arriba_del_texto} px")
+comprobar("lo que va antes de la respuesta no se come mas de un cuarto de "
+          "la ventana", arriba_del_texto < raiz.winfo_height() * 0.28,
+          f"{arriba_del_texto} px de {raiz.winfo_height()}")
 
 print("\n  LOS TAMAÑOS, QUE SON LO QUE SE PIDIO SUBIR:")
 for nombre, fuente, minimo in (("cuerpo de la respuesta", v.fuente_texto, 15),
@@ -909,18 +938,26 @@ comprobar("y el texto no empieza pegado al borde",
 
 # =====================================================================
 print("\n=== 13. LA PRUEBA DE LAS VEINTE LINEAS SABE PONERSE ROJA ===")
-print("  Se le quita a la respuesta el peso que la hace crecer -que es lo que")
-print("  la dejaba en dos lineas- y se comprueba que el bloque 12 lo caza.\n")
-v.resultado.rowconfigure(1, weight=0)
-bombear(0.8)
-roto = max(0, (v.lienzo_lectura.winfo_height()
-               - (v.texto.winfo_rooty() - v.lienzo_lectura.winfo_rooty())
-               - 2 * interfaz.RELLENO)) // alto_linea
-print(f"    sin peso en la fila del texto: {roto} lineas visibles")
-comprobar("sin el peso, la respuesta se queda en una rendija",
-          roto < 5, f"{roto} lineas: la mutacion no ha roto nada")
-comprobar("y el bloque 12 lo habria cazado", not roto >= 20)
-v.resultado.rowconfigure(1, weight=1)
+print("  Se rompe lo que hace crecer al texto y se comprueba que el 12 lo caza.")
+print("  Antes se le quitaba el peso a su fila del `grid`; desde que el texto")
+print("  mide lo que mide su contenido, quitarle el peso ya no le hace nada:")
+print("  lo que lo dejaria en una rendija es que no se le ajuste el alto.\n")
+_ajustar = interfaz.Ventana._ajustar_alto_del_texto
+try:
+    interfaz.Ventana._ajustar_alto_del_texto = lambda self: None
+    v.texto.configure(height=1)
+    bombear(0.8)
+    roto = max(0, (v.lienzo_lectura.winfo_height()
+                   - (v.texto.winfo_rooty() - v.lienzo_lectura.winfo_rooty())
+                   - 2 * interfaz.RELLENO)) // alto_linea
+    roto = min(roto, int(v.texto.cget("height")))
+    print(f"    sin ajustar el alto: {roto} lineas visibles")
+    comprobar("sin el ajuste, la respuesta se queda en una rendija",
+              roto < 5, f"{roto} lineas: la mutacion no ha roto nada")
+    comprobar("y el bloque 12 lo habria cazado", not roto >= 20)
+finally:
+    interfaz.Ventana._ajustar_alto_del_texto = _ajustar
+v._ajustar_alto_del_texto()
 bombear(0.8)
 _vuelta = max(0, (v.lienzo_lectura.winfo_height()
                   - (v.texto.winfo_rooty() - v.lienzo_lectura.winfo_rooty())

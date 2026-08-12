@@ -318,6 +318,17 @@ RELLENO = AIRE * 3      # 24 · dentro de las tarjetas
 # Los tamaños de una interfaz «compacta» son exactamente lo contrario de lo que
 # hace falta.
 COLUMNA_MAXIMA = 74     # caracteres por linea, con el cuerpo grande
+
+# LA COLUMNA LATERAL. Maximizada, la medida de lectura son 876 px de 1.638: el
+# 44% del ancho se queda en blanco a los lados mientras el estado, el aporte y
+# los avisos se comen 102-355 px de ALTO por encima de la respuesta. Lo que
+# sobra a lo ancho paga lo que falta a lo alto.
+#
+# El suelo no es decorativo: por debajo de `ANCHO_LATERAL` no caben los 876 de
+# lectura mas los 400 de la columna, y dos columnas estrechas se leen peor que
+# una ancha. Ahi se vuelve a apilar, que es lo que habia.
+ANCHO_LATERAL = 1300           # por debajo de esto, apilado
+ANCHO_COLUMNA_LATERAL = 400    # lo que se lleva la columna de al lado
 ANCHO_BARRA = 20        # lo que ocupa la barra de desplazamiento
 MARGEN_LECTURA = 16     # alrededor de la vista de respuesta
 
@@ -999,8 +1010,9 @@ class Ventana:
             self._desplazable(self.resultado)
         self.caja_lectura.grid(row=1, column=0, sticky="nsew")
 
+        self.pagina.columnconfigure(0, weight=1)
         self.banda = tk.Frame(self.pagina, bg=PAPEL)
-        self.banda.pack(fill="x")
+        self._lateral = None           # todavia sin decidir
         self.columna_izq = tk.Frame(self.banda, bg=PAPEL)
         self.columna_der = tk.Frame(self.banda, bg=PAPEL)
         self._dos_columnas = None       # todavia sin decidir
@@ -1092,9 +1104,9 @@ class Ventana:
         # esa barra ya existe y le sobra ancho.
         self.pie_respuesta = self.eco_expediente
 
-        caja = tk.Frame(self.pagina, bg=PAPEL2, highlightthickness=1,
-                        highlightbackground=FILETE)
-        caja.pack(fill="x", pady=(AIRE, 0))
+        caja = self.caja_texto = tk.Frame(self.pagina, bg=PAPEL2,
+                                          highlightthickness=1,
+                                          highlightbackground=FILETE)
         caja.columnconfigure(0, weight=1)
         caja.rowconfigure(0, weight=1)
         # EL TEXTO, QUE ES A LO QUE SE VIENE.
@@ -1421,6 +1433,11 @@ class Ventana:
         # cero: el parrafo se iba a 837 px en una ventana de 1180.
         visible = max(320, ancho - MARGEN_LECTURA * 2 - ANCHO_BARRA
                       - RELLENO * 2)
+        # Y SI HAY COLUMNA AL LADO, ESE ANCHO YA NO ES DEL TEXTO. Sin restarlo,
+        # el parrafo se centraria respecto a la ventana entera y quedaria
+        # medio debajo de la columna lateral.
+        if ancho >= ANCHO_LATERAL:
+            visible = max(320, visible - ANCHO_COLUMNA_LATERAL - HUECO)
         deseado = self.fuente_texto.measure("0" * COLUMNA_MAXIMA)
         margen = max(0, (visible - deseado) // 2)
         try:
@@ -1439,7 +1456,7 @@ class Ventana:
         # lineas de pantalla: el alto del texto hay que rehacerlo aqui o la
         # pagina se queda con el de la anchura anterior.
         self._ajustar_alto_del_texto()
-        self._colocar_banda(ancho)
+        self._colocar_lateral(ancho)
         # Al cambiar el ancho de la ventana cambian las dos columnas, asi que
         # los dos anchos guardados dejan de valer.
         self._ancho_estado = self._ancho_avisos = 0
@@ -1456,6 +1473,13 @@ class Ventana:
         # RECORTA. Se perderia el final de la explicacion del estado, que es
         # justo la parte que dice lo que la respuesta NO cubre.
         disponible = max(320, ancho - MARGEN_LECTURA * 2 - ANCHO_BARRA)
+        # CON COLUMNA AL LADO, LO QUE HAY DISPONIBLE ES LA COLUMNA. Todo lo de
+        # la banda vive dentro de ella, y si se le dice que puede ocupar el
+        # ancho de la ventana, lo pide: medido, la columna salia de 730 px
+        # habiendola declarado de 400. `columnconfigure(minsize=...)` es un
+        # minimo, no un tope; el tope lo pone el ajuste de linea.
+        if self._lateral:
+            disponible = ANCHO_COLUMNA_LATERAL
         if self._dos_columnas:
             zona = {"izq": int(disponible * 0.6) - HUECO2,
                     "der": disponible - int(disponible * 0.6)}
@@ -1485,7 +1509,7 @@ class Ventana:
         cambia el alto de la etiqueta, que dispara otro `<Configure>` del
         panel, que volveria a entrar aqui. Sin la guarda es un bucle.
         """
-        ancho = self.panel_detalle.winfo_width()
+        ancho = self._ancho_de_la_banda(self.panel_detalle)
         if ancho <= 1 or ancho == getattr(self, "_ancho_estado", 0):
             return
         self._ancho_estado = ancho
@@ -1496,9 +1520,23 @@ class Ventana:
             except tk.TclError:  # pragma: no cover
                 return
 
+    def _ancho_de_la_banda(self, panel) -> int:
+        """A que ancho se envuelve lo que va en la banda.
+
+        AL LADO, LO MANDA LA COLUMNA; ENCIMA, LO MANDA EL PANEL. Y esto no es
+        un detalle: `columnconfigure(minsize=...)` pone un MINIMO, no un tope.
+        Preguntandole al panel lo que mide, el panel contesta lo que le pide su
+        contenido -730 px medidos, para una columna de 400- y se come la mitad
+        de la respuesta. El ancho de la columna lateral es una decision, no una
+        consecuencia: se impone envolviendo el texto a esa medida.
+        """
+        if self._lateral:
+            return ANCHO_COLUMNA_LATERAL
+        return panel.winfo_width()
+
     def _wrap_avisos(self, _evento=None) -> None:
         """Lo mismo para los avisos: se envuelven al ancho de su panel."""
-        ancho = self.panel_avisos.winfo_width()
+        ancho = self._ancho_de_la_banda(self.panel_avisos)
         if ancho <= 1 or ancho == getattr(self, "_ancho_avisos", 0):
             return
         self._ancho_avisos = ancho
@@ -1508,13 +1546,54 @@ class Ventana:
             except tk.TclError:  # pragma: no cover
                 return
 
+    def _colocar_lateral(self, ancho: int) -> None:
+        """La banda AL LADO de la respuesta, o encima si no cabe.
+
+        AL LADO GANA ALTO SIN TOCAR LA MEDIDA DE LECTURA. Los 876 px de
+        columna se quedan igual; lo que cambia es que el estado, el aporte y
+        los avisos dejan de comerse la franja de arriba y se van al hueco que
+        ya estaba en blanco.
+
+        Y LOS AVISOS VAN ARRIBA DEL TODO. Son lo que puede invalidar la
+        respuesta: apilados iban primero por eso mismo, y al pasar a un lado
+        no pueden quedar por debajo del aporte, que es informacion de segundo
+        orden. En la columna: avisos, luego el detalle del estado, luego lo
+        que ha añadido el criterio.
+        """
+        lateral = ancho >= ANCHO_LATERAL
+        if lateral == self._lateral:
+            return
+        self._lateral = lateral
+        self.banda.grid_forget()
+        self.caja_texto.grid_forget()
+        if lateral:
+            self.pagina.columnconfigure(1, minsize=ANCHO_COLUMNA_LATERAL,
+                                        weight=0)
+            self.caja_texto.grid(row=0, column=0, sticky="new")
+            self.banda.grid(row=0, column=1, sticky="new",
+                            padx=(HUECO, 0))
+        else:
+            self.pagina.columnconfigure(1, minsize=0, weight=0)
+            self.banda.grid(row=0, column=0, sticky="ew")
+            self.caja_texto.grid(row=1, column=0, sticky="ew",
+                                 pady=(AIRE, 0))
+        # La banda cambia de ancho, asi que sus dos columnas se recolocan y
+        # los textos se vuelven a envolver.
+        self._dos_columnas = None
+        self._ancho_estado = self._ancho_avisos = 0
+        self._colocar_banda(self.banda.winfo_width() or ancho)
+        self.raiz.after_idle(self._wrap_estado)
+        self.raiz.after_idle(self._wrap_avisos)
+
     def _colocar_banda(self, ancho: int) -> None:
         """Una columna o dos, segun quepa. Se recoloca solo al cambiar.
 
         Se guarda la decision anterior y solo se toca el `grid` cuando cambia:
         recolocar en cada pixel del arrastre se ve a simple vista.
         """
-        dos = ancho >= ANCHO_DOS_COLUMNAS
+        # En la columna de al lado nunca caben dos: es estrecha por
+        # definicion, y ahi el orden lo manda el riesgo, no el hueco.
+        dos = ancho >= ANCHO_DOS_COLUMNAS and not self._lateral
         if dos == self._dos_columnas:
             return
         self._dos_columnas = dos
@@ -1534,8 +1613,10 @@ class Ventana:
         else:
             self.banda.columnconfigure(0, weight=1, uniform="")
             self.banda.columnconfigure(1, weight=0, uniform="")
-            self.columna_izq.grid(row=0, column=0, sticky="ew")
-            self.columna_der.grid(row=1, column=0, sticky="ew",
+            # LOS AVISOS -`columna_der`- PRIMERO. Son lo que puede invalidar
+            # la respuesta; el detalle del estado y el aporte van detras.
+            self.columna_der.grid(row=0, column=0, sticky="ew")
+            self.columna_izq.grid(row=1, column=0, sticky="ew",
                                   pady=(AIRE + 2, 0))
 
     def _columna(self) -> None:
