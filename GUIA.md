@@ -20,15 +20,17 @@ Tarda hasta un minuto y va diciendo por dónde va.
      arrancar se comprueba que sigue coincidiendo con la ventana. Una frase a
      mano sobre lo que el sistema cubre caduca sin avisar: ya pasó una vez. -->
 <!-- COBERTURA -->
-**De qué hay criterio guardado ahora mismo** (contado de la copia local, no escrito a mano):
+**De qué habla el criterio guardado ahora mismo** (contado de la copia local, no escrito a mano):
 
-| impuesto | documentos de criterio |
+| impuesto | documentos que hablan de él |
 |---|---|
 | IVA | 653 |
-| Renta | 525 |
-| Sociedades | 220 |
+| Renta | 527 |
+| Sociedades | 222 |
 | Patrimonio | 59 |
 | normas generales | 551 |
+
+La columna suma más que el total, y es correcto: hay **1679 documentos** distintos, y **293** de ellos hablan de más de un impuesto, así que cuentan en las dos filas. Para quien pregunta de IVA, una consulta que cita la Ley del IVA y la Ley General Tributaria es criterio de IVA.
 
 Y la ley que mira el primer botón: 2121 artículos de 13 normas.
 <!-- /COBERTURA -->

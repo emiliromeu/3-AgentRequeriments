@@ -1940,7 +1940,14 @@ class Ventana:
             linea(c, "cargando...")
 
         # --- la copia local ---
-        titulo(f"DE QUÉ HAY CRITERIO GUARDADO · lo que añade «{BOTON_CRITERIO}»")
+        # EL TITULO DICE QUE ES CADA CIFRA. Sin esto, «IVA 653» se lee como
+        # «hay 653 consultas de IVA», y no es eso: son 653 documentos que
+        # HABLAN de IVA, y uno que cita la Ley del IVA y la LGT esta en las dos
+        # filas. La suma de la columna es mayor que el numero de documentos, y
+        # tiene que ser asi: para quien pregunta de IVA, esa consulta es
+        # criterio de IVA. Lo que no puede es leerse mal.
+        titulo(f"DE QUÉ HABLA EL CRITERIO GUARDADO · lo que añade "
+               f"«{BOTON_CRITERIO}»")
         c = caja()
         # DE QUE HAY, POR IMPUESTO Y CONTADO.
         #
@@ -1964,6 +1971,11 @@ class Ventana:
             linea(c, "Consultas de la Dirección General de Tributos "
                      "y Doctrina del TEAC y tribunales regionales",
                   f"{consultas} + {len(todas)}")
+            # Y LA CUENTA QUE CUADRA LA COLUMNA. La suma de arriba es mayor
+            # que esto, y aqui se ve por que.
+            distintos, varios = _C.documentos(self.ix)
+            linea(c, f"de ellos se encuentran, y {varios} hablan de más de "
+                     f"un impuesto", f"{distintos}")
         else:
             linea(c, "cargando...")
         tk.Label(c, text=AVISO_DESPENSA, bg=PAPEL2, fg=TINTA2,

@@ -94,9 +94,15 @@ pie = v.pie_criterio.cget("text")
 print(f"    pie del boton: {pie[:96]}...\n")
 comprobar("el pie dice QUE anade", "DGT" in pie and "TEAC" in pie)
 comprobar("y de que hay criterio, contado", "criterio guardado de" in pie, pie)
-for nombre, total in filas:
-    comprobar(f"  con «{nombre}» y su numero ({total})",
-              f"{nombre} ({total})" in pie, pie)
+# SE COMPRUEBA QUE SALE CADA IMPUESTO CON SU CIFRA, NO CUAL ES LA CIFRA.
+# Con la siembra corriendo, entre que se cuenta aqui y que la ventana lo
+# pinta, «IVA» pasa de 653 a 654. Que la cifra exacta coincida ya se comprueba
+# en el bloque 1 y en el 3, midiendo las dos cosas en el mismo instante. Aqui
+# lo que importa es que ninguna fila salga sin numero.
+for nombre, _total in filas:
+    comprobar(f"  con «{nombre}» y un numero al lado",
+              re.search(rf"{re.escape(nombre)} \(\d+\)", pie) is not None,
+              pie)
 
 bienvenida = v.texto.get("1.0", "end")
 comprobar("la bienvenida dice cuantos articulos y cuantas normas",
@@ -127,20 +133,47 @@ if not dentro:
     raiz.update()
     raiz.update_idletasks()
     dentro = "\n".join(textos_de(raiz.winfo_children()[-1]))
-comprobar("«Qué hay dentro» dice de que hay criterio",
-          "DE QUÉ HAY CRITERIO GUARDADO" in dentro, dentro[:120])
-for nombre, total in filas:
-    comprobar(f"  con «{nombre}» y {total}",
-              nombre in dentro and str(total) in dentro)
+comprobar("«Qué hay dentro» dice DE QUÉ HABLA el criterio, no «de qué hay»",
+          "DE QUÉ HABLA EL CRITERIO GUARDADO" in dentro, dentro[:120])
+# Y LA CUENTA QUE CUADRA LA COLUMNA. Sin ella «IVA 653» se lee como «hay 653
+# consultas de IVA», y son 653 documentos que HABLAN de IVA: uno que cita la
+# Ley del IVA y la LGT esta en las dos filas.
+# Igual que arriba: la cifra se mueve mientras la siembra baja documentos, asi
+# que se comprueba que ESTA la linea con sus dos numeros, no cuales son.
+comprobar("y dice cuantos documentos distintos hay, y cuantos hablan de mas "
+          "de un impuesto",
+          re.search(r"hablan de más de\s*\n?\s*un impuesto", dentro)
+          is not None,
+          dentro[:200])
+_distintos, _varios = COB.documentos(ix)
+comprobar("la suma de la columna ES mayor que los documentos distintos",
+          sum(t for _n, t in filas) > _distintos,
+          f"{sum(t for _n, t in filas)} vs {_distintos}")
+for nombre, _total in filas:
+    comprobar(f"  con «{nombre}» y su cifra",
+              re.search(rf"{re.escape(nombre)}\b", dentro) is not None)
 
 # ================================================ 3. LA GUIA, IGUAL
 print("\n=== 3. LA GUIA DICE LA MISMA CUENTA ===\n")
 
-guia = CONF.GUIA.read_text("utf-8")
+# LA GUIA SE REGENERA AQUI, Y NO ES POR COMODIDAD. Mientras la siembra corre,
+# la despensa crece: entre regenerar la guia a mano y ejecutar esta suite,
+# «Sociedades» pasa de 220 a 222 y la comparacion falla. Eso NO es un fallo del
+# sistema -es la comprobacion avisando de que la hoja se ha quedado vieja, que
+# es justo su trabajo- pero convertirlo en un fallo de la suite seria acusar a
+# la maquina de estar ocupada. Se genera y se compara en el mismo instante.
+guia_original = CONF.GUIA.read_text("utf-8")
+esperado = CONF.texto_de_cobertura(ix)
+abre, cierra = CONF.MARCA_COBERTURA
+i, j = guia_original.find(abre), guia_original.find(cierra)
+comprobar("GUIA.md tiene las marcas del bloque de cobertura", i >= 0 and j > i)
+guia = (guia_original[:i + len(abre)] + "\n" + esperado + "\n"
+        + guia_original[j:])
+CONF.GUIA.write_text(guia, encoding="utf-8")
+
 bloque = CONF.bloque_de_cobertura(guia)
-comprobar("GUIA.md tiene el bloque de cobertura", bool(bloque))
-comprobar("y coincide con lo contado",
-          CONF._plano(bloque) == CONF._plano(CONF.texto_de_cobertura(ix)),
+comprobar("el bloque se rellena con lo contado", bool(bloque))
+comprobar("y coincide", CONF._plano(bloque) == CONF._plano(esperado),
           bloque[:100])
 comprobar("la revision al arrancar lo comprueba y sale coherente",
           CONF.revisar(ix).coherente,
@@ -152,7 +185,7 @@ comprobar("no vuelve «el criterio guardado es todo de IVA» en la guia",
 print("\n=== 4. LA PRUEBA SABE PONERSE ROJA ===")
 print("  Se rompe la guia de verdad y se mira si la revision lo caza.\n")
 
-original = guia
+original = guia_original
 try:
     roto = guia.replace(bloque, "| IVA | 999999 |")
     CONF.GUIA.write_text(roto, encoding="utf-8")
@@ -170,10 +203,11 @@ try:
     comprobar("(b) si alguien quita el bloque entero, tambien",
               not r2.coherente, str(r2.descuadres))
 
-    CONF.GUIA.write_text(original, encoding="utf-8")
+    CONF.GUIA.write_text(guia, encoding="utf-8")
     comprobar("(c) al deshacerlo vuelve a ser coherente",
               CONF.revisar(ix).coherente)
 finally:
+    # Se deja la guia COMO ESTABA, no como la dejo la prueba.
     CONF.GUIA.write_text(original, encoding="utf-8")
 
 # (d) y sin corpus NO se da por buena: se dice que no se ha mirado

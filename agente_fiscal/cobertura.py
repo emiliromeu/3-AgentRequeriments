@@ -89,6 +89,43 @@ def resumen(ix) -> dict:
     return cuenta
 
 
+def documentos(ix) -> tuple:
+    """(documentos distintos que se pueden encontrar, cuantos tocan 2+ impuestos).
+
+    HACE FALTA PARA QUE LA TABLA NO ENGAÑE. Las cifras por impuesto SUMAN MAS
+    que documentos hay, porque una consulta que cita la Ley del IVA y la LGT
+    cuenta en las dos filas. Eso es lo correcto -para quien pregunta de IVA,
+    esa consulta es criterio de IVA- pero leido en columna parece que hay 653
+    consultas «de IVA», y no es eso: son 653 documentos que HABLAN de IVA.
+
+    Asi que se dice el numero de documentos distintos al lado, y cuantos son
+    los que tocan mas de uno. Con las dos cifras la columna deja de poder
+    leerse mal, y no cuesta ni una linea de mas de las que ya habia.
+    """
+    normas = ix.normas
+
+    def impuesto_de(cuerpo: str, numero: str):
+        doc = ix.por_clave.get(f"{cuerpo}#articulo {numero}")
+        return normas.impuesto_de_precepto(doc.registro) if doc else None
+
+    distintos = varios = 0
+    for c in _D.CacheDGT().todas():
+        suyos = {impuesto_de(p.cuerpo, p.numero)
+                 for p in c.preceptos(normas) if p.cuerpo}
+        suyos = {i for i in suyos if i is not None}
+        if suyos:
+            distintos += 1
+            varios += len(suyos) > 1
+    for r in _T.CacheTEAC().todas():
+        suyos = {impuesto_de(cuerpo, numero)
+                 for cuerpo, numero in r.preceptos(normas) if cuerpo}
+        suyos = {i for i in suyos if i is not None}
+        if suyos:
+            distintos += 1
+            varios += len(suyos) > 1
+    return distintos, varios
+
+
 def por_impuesto(ix) -> list:
     """[(nombre en cristiano, total)], de mas a menos. Los generales al final."""
     cuenta = resumen(ix)

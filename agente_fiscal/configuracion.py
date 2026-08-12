@@ -141,12 +141,19 @@ def texto_de_cobertura(ix) -> str:
     uno y se copia.
     """
     from agente_fiscal import cobertura as C
-    lineas = ["**De qué hay criterio guardado ahora mismo** (contado de la "
-              "copia local, no escrito a mano):", "",
-              "| impuesto | documentos de criterio |", "|---|---|"]
+    distintos, varios = C.documentos(ix)
+    lineas = ["**De qué habla el criterio guardado ahora mismo** (contado de "
+              "la copia local, no escrito a mano):", "",
+              "| impuesto | documentos que hablan de él |", "|---|---|"]
     for nombre, total in C.por_impuesto(ix):
         lineas.append(f"| {nombre} | {total} |")
     lineas += ["",
+               f"La columna suma más que el total, y es correcto: hay "
+               f"**{distintos} documentos** distintos, y **{varios}** de ellos "
+               f"hablan de más de un impuesto, así que cuentan en las dos "
+               f"filas. Para quien pregunta de IVA, una consulta que cita la "
+               f"Ley del IVA y la Ley General Tributaria es criterio de IVA.",
+               "",
                f"Y la ley que mira el primer botón: {len(ix.docs)} artículos "
                f"de {len(ix.rutas)} normas."]
     return "\n".join(lineas)
