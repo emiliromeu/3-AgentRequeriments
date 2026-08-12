@@ -1735,17 +1735,14 @@ class Ventana:
         self.pie_criterio.configure(
             text=f"{PIE_CRITERIO}. {_C.frase(self.ix)}")
 
-        # Y AHORA QUE HAY CORPUS, SE COMPRUEBA QUE LA HOJA DICE LA MISMA
-        # CUENTA. Al arrancar no se puede: sin corpus no hay despensa que
-        # contar, y `revisar` lo declara «sin comprobar» en vez de darlo por
-        # bueno. Aqui ya se puede, y es donde importa: la guia impresa que
-        # esta en la mesa no puede decir que hay criterio de otra cosa.
-        revision = CONF.revisar(self.ix)
-        if not revision.coherente:
-            self.mostrar_cinta(
-                "La guía impresa y la ventana no dicen lo mismo sobre lo que "
-                "hay guardado. Avisa a Emili: se arregla con "
-                "«python configurar.py --regenerar-guia».")
+        # Y SI LA HOJA IMPRESA SE HA QUEDADO VIEJA, SE DICE. Sin alarma y sin
+        # impedir nada: que la copia de criterio haya crecido no es un fallo,
+        # y dejar a la gestoria sin herramienta por eso seria absurdo. Lo que
+        # bloquea -`exigir_coherencia`, antes de abrir- son las PROMESAS: las
+        # frases de los estados y lo que el sistema dice que hace.
+        desfase = CONF.desfase_de_la_guia(self.ix)
+        if desfase:
+            self.mostrar_cinta(desfase)
         self._reajustar()
         self._revisar_boton()
 

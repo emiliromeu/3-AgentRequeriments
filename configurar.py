@@ -92,6 +92,7 @@ def aplicar(modo: str = C.UNICO) -> int:
         print(f"\n  {origen} no tiene las marcas {abre} / {cierra}.")
         print("  Sin ellas la guia no puede decir de que hay criterio.")
         return 1
+    # SIN CIFRAS: solo DE QUE hay. Ver `texto_de_cobertura`.
     texto = (texto[:i + len(abre)] + "\n" + C.texto_de_cobertura(ix) + "\n"
              + texto[j:])
     C.GUIA.write_text(texto, encoding="utf-8")

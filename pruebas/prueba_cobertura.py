@@ -181,40 +181,107 @@ comprobar("la revision al arrancar lo comprueba y sale coherente",
 comprobar("no vuelve «el criterio guardado es todo de IVA» en la guia",
           "todo de IVA" not in guia)
 
-# ================================================ 4. CONTROL NEGATIVO
-print("\n=== 4. LA PRUEBA SABE PONERSE ROJA ===")
-print("  Se rompe la guia de verdad y se mira si la revision lo caza.\n")
+# ============================ 3 bis. LO QUE BLOQUEA Y LO QUE NO
+print("\n=== 3 bis. UNA CIFRA QUE CRECE NO PUEDE IMPEDIR ABRIR ===")
+print("  La guia es una hoja IMPRESA. Un numero que crece solo -la siembra")
+print("  baja documentos cada pocos minutos- la condena a mentir, y la")
+print("  comprobacion se convierte en una alarma cada pocas horas por algo")
+print("  que no es un fallo. Las PROMESAS son otra cosa: si la hoja describe")
+print("  una herramienta que no existe, no se abre.\n")
 
-original = guia_original
+
+def abre() -> tuple:
+    try:
+        CONF.exigir_coherencia()
+        return True, ""
+    except CONF.Descoordinado as e:
+        return False, "; ".join(e.revision.descuadres)
+
+
+guia_buena = CONF.GUIA.read_text("utf-8")
+comprobar("la guia NO lleva cifras: son datos que crecen solos",
+          not re.search(r"\|\s*\d{2,}\s*\|",
+                        CONF.bloque_de_cobertura(guia_buena)),
+          CONF.bloque_de_cobertura(guia_buena)[:90])
+comprobar("pero si dice DE QUE impuestos hay criterio",
+          all(n in CONF.bloque_de_cobertura(guia_buena)
+              for n, _t in COB.por_impuesto(ix)))
+comprobar("y manda a «Qué hay dentro» para las cifras",
+          "Qué hay dentro" in CONF.bloque_de_cobertura(guia_buena))
+
 try:
-    roto = guia.replace(bloque, "| IVA | 999999 |")
-    CONF.GUIA.write_text(roto, encoding="utf-8")
-    r = CONF.revisar(ix)
-    comprobar("(a) si alguien edita la cobertura a mano, se caza",
-              not r.coherente, str(r.descuadres))
-    comprobar("  y se dice como arreglarlo",
-              any("regenerar-guia" in d for d in r.descuadres),
-              str(r.descuadres))
+    # (i) la despensa ha crecido y la hoja se ha quedado corta
+    CONF.GUIA.write_text(
+        re.sub(r"Hay criterio guardado de: .*",
+               "Hay criterio guardado de: **IVA**.", guia_buena),
+        encoding="utf-8")
+    ok, motivo = abre()
+    comprobar("(i) con la hoja desfasada, LA VENTANA ABRE IGUAL", ok, motivo)
+    aviso = CONF.desfase_de_la_guia(ix)
+    comprobar("  y avisa de que esta vieja", bool(aviso), aviso)
+    comprobar("  diciendo el comando para rehacerla",
+              "regenerar-guia" in aviso, aviso)
 
-    abre, cierra = CONF.MARCA_COBERTURA
-    sin_marcas = guia.replace(abre, "").replace(cierra, "")
-    CONF.GUIA.write_text(sin_marcas, encoding="utf-8")
-    r2 = CONF.revisar(ix)
-    comprobar("(b) si alguien quita el bloque entero, tambien",
-              not r2.coherente, str(r2.descuadres))
+    # (ii) alguien borra el bloque entero
+    CONF.GUIA.write_text(guia_buena.replace(abre_m := "<!-- COBERTURA -->", "")
+                         .replace("<!-- /COBERTURA -->", ""), encoding="utf-8")
+    ok, motivo = abre()
+    comprobar("(ii) sin el bloque, tambien abre", ok, motivo)
+    comprobar("  y tambien avisa", bool(CONF.desfase_de_la_guia(ix)))
 
-    CONF.GUIA.write_text(guia, encoding="utf-8")
-    comprobar("(c) al deshacerlo vuelve a ser coherente",
-              CONF.revisar(ix).coherente)
+    # (iii) Y LA PROMESA, QUE SI TIENE QUE PARAR EL ARRANQUE.
+    frase = interfaz.TEXTOS_DE_ESTADO[0]
+    roto = None
+    llana = CONF._plano(frase)[:30]
+    for k in range(len(guia_buena) - 60):
+        if CONF._plano(guia_buena[k:k + 60]).startswith(llana):
+            roto = guia_buena[:k] + "ESTO YA NO DICE LO MISMO" \
+                + guia_buena[k + 60:]
+            break
+    comprobar("(iii) la frase de estado esta en la guia", roto is not None)
+    if roto:
+        CONF.GUIA.write_text(roto, encoding="utf-8")
+        ok, motivo = abre()
+        comprobar("  si una PROMESA no cuadra, NO se abre", not ok, motivo)
+        comprobar("  y se dice cual", "NO esta en GUIA.md" in motivo, motivo)
 finally:
-    # Se deja la guia COMO ESTABA, no como la dejo la prueba.
-    CONF.GUIA.write_text(original, encoding="utf-8")
+    CONF.GUIA.write_text(guia_buena, encoding="utf-8")
+comprobar("(iv) restaurada, vuelve a abrir", abre()[0])
 
-# (d) y sin corpus NO se da por buena: se dice que no se ha mirado
+# ================================================ 4. CONTROL NEGATIVO
+print("\n=== 4. LA COBERTURA YA NO ESTA EN EL CAMINO QUE BLOQUEA ===")
+print("  Aqui habia un control negativo que rompia la guia y comprobaba que")
+print("  `revisar` lo cazaba. Ese comportamiento se ha quitado a proposito: lo")
+print("  que cazaba era una CIFRA que crece sola, y bloqueaba el arranque por")
+print("  ello. Su sustituto es el bloque 3 bis, que prueba mas casos. Lo que")
+print("  queda por comprobar es que de verdad SALIO de ahi.\n")
+
 sin_ix = CONF.revisar(None)
-comprobar("(d) sin corpus, la cobertura se declara SIN COMPROBAR, no correcta",
-          "sin comprobar" in sin_ix.piezas.get("cobertura de la guia", ""),
+con_ix = CONF.revisar(ix)
+comprobar("`revisar` ya no habla de cobertura, ni con corpus ni sin el",
+          not any("cobertura" in k for k in
+                  list(sin_ix.piezas) + list(con_ix.piezas)),
+          str(list(sin_ix.piezas) + list(con_ix.piezas)))
+comprobar("y da lo mismo pasarle el corpus o no: compara promesas, no datos",
+          sin_ix.coherente == con_ix.coherente
+          and sin_ix.descuadres == con_ix.descuadres)
+comprobar("las promesas que compara son las frases de los estados",
+          any("frases de estado" in k for k in sin_ix.piezas),
           str(sin_ix.piezas))
+
+FUENTE_CONF = (RAIZ / "agente_fiscal" / "configuracion.py").read_text("utf-8")
+cuerpo_revisar = FUENTE_CONF[FUENTE_CONF.find("def revisar("):
+                             FUENTE_CONF.find("def desfase_de_la_guia(")]
+comprobar("y `revisar` no llama a la cuenta de la despensa",
+          "texto_de_cobertura" not in cuerpo_revisar
+          and "cobertura" not in cuerpo_revisar.replace("de cobertura", ""),
+          cuerpo_revisar[-160:])
+
+comprobar("el aviso de guia vieja NO es una excepcion: es una frase",
+          isinstance(CONF.desfase_de_la_guia(ix), str))
+comprobar("y con la guia al dia esta vacia, o sea no molesta",
+          CONF.desfase_de_la_guia(ix) == "",
+          CONF.desfase_de_la_guia(ix))
 
 raiz.destroy()
 

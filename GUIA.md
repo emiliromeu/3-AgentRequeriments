@@ -16,23 +16,15 @@ Tarda hasta un minuto y va diciendo por dónde va.
 | **Consultar también el criterio** | lo anterior **más** consultas de la DGT y resoluciones del TEAC y de los tribunales regionales |
 
 <!-- COBERTURA: lo de aquí abajo NO se escribe a mano. Lo rellena
-     `python configurar.py --regenerar-guia` contando la copia local, y al
-     arrancar se comprueba que sigue coincidiendo con la ventana. Una frase a
-     mano sobre lo que el sistema cubre caduca sin avisar: ya pasó una vez. -->
+     `python configurar.py --regenerar-guia` mirando la copia local.
+     VA SIN CIFRAS A PROPÓSITO: dice DE QUÉ impuestos hay criterio, que cambia
+     por una decisión, y no CUÁNTOS documentos, que crece solo cada pocos
+     minutos mientras se siembra. Una hoja impresa con un número vivo está
+     condenada a mentir. Las cifras exactas, en «Qué hay dentro». -->
 <!-- COBERTURA -->
-**De qué habla el criterio guardado ahora mismo** (contado de la copia local, no escrito a mano):
+Hay criterio guardado de: **IVA**, **Renta**, **Sociedades**, **Patrimonio**, **normas generales**.
 
-| impuesto | documentos que hablan de él |
-|---|---|
-| IVA | 653 |
-| Renta | 527 |
-| Sociedades | 222 |
-| Patrimonio | 59 |
-| normas generales | 551 |
-
-La columna suma más que el total, y es correcto: hay **1679 documentos** distintos, y **293** de ellos hablan de más de un impuesto, así que cuentan en las dos filas. Para quien pregunta de IVA, una consulta que cita la Ley del IVA y la Ley General Tributaria es criterio de IVA.
-
-Y la ley que mira el primer botón: 2121 artículos de 13 normas.
+*Cuántos documentos hay de cada uno lo dice la propia herramienta, en «Qué hay dentro»: ahí se cuenta al abrir y siempre está al día. Aquí no, porque esta hoja se imprime y la copia crece sola.*
 <!-- /COBERTURA -->
 
 No hay que elegir de antemano ni configurar nada: se decide duda a duda. El

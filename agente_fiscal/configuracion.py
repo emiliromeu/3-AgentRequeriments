@@ -134,29 +134,31 @@ def bloque_de_cobertura(texto: str) -> str:
 
 
 def texto_de_cobertura(ix) -> str:
-    """Lo que TIENE que poner ahi, contado de la despensa.
+    """DE QUE impuestos hay criterio. SIN CIFRAS, y eso es la correccion.
 
-    Es la misma cuenta que enseña la ventana: si alguien edita la guia a mano,
-    `revisar` lo caza. La cobertura no se escribe en dos sitios, se calcula en
-    uno y se copia.
+    La primera version ponia aqui la tabla con los numeros: 653 de IVA, 525 de
+    Renta... Y la guia es una HOJA IMPRESA que esta en la mesa. Un numero que
+    crece solo -la siembra baja documentos cada pocos minutos- convierte esa
+    hoja en algo condenado a mentir, y a la comprobacion en una alarma que
+    salta cada pocas horas por algo que no es un fallo.
+
+    LO QUE SE IMPRIME TIENE QUE SER LO QUE NO CAMBIA SOLO. De que impuestos
+    hay criterio cambia cuando se siembra un impuesto nuevo, o sea casi nunca
+    y por una decision. Cuantos documentos hay cambia mientras se lee la hoja.
+
+    Las cifras exactas viven en «Qué hay dentro», que se cuenta al abrir y por
+    definicion esta al dia.
     """
     from agente_fiscal import cobertura as C
-    distintos, varios = C.documentos(ix)
-    lineas = ["**De qué habla el criterio guardado ahora mismo** (contado de "
-              "la copia local, no escrito a mano):", "",
-              "| impuesto | documentos que hablan de él |", "|---|---|"]
-    for nombre, total in C.por_impuesto(ix):
-        lineas.append(f"| {nombre} | {total} |")
-    lineas += ["",
-               f"La columna suma más que el total, y es correcto: hay "
-               f"**{distintos} documentos** distintos, y **{varios}** de ellos "
-               f"hablan de más de un impuesto, así que cuentan en las dos "
-               f"filas. Para quien pregunta de IVA, una consulta que cita la "
-               f"Ley del IVA y la Ley General Tributaria es criterio de IVA.",
-               "",
-               f"Y la ley que mira el primer botón: {len(ix.docs)} artículos "
-               f"de {len(ix.rutas)} normas."]
-    return "\n".join(lineas)
+    nombres = [nombre for nombre, _total in C.por_impuesto(ix)]
+    if not nombres:
+        return ("Ahora mismo **no hay criterio guardado** de ningún impuesto. "
+                "El segundo botón responderá con la ley igual que el primero.")
+    return ("Hay criterio guardado de: **" + "**, **".join(nombres) + "**.\n\n"
+            "*Cuántos documentos hay de cada uno lo dice la propia "
+            "herramienta, en «Qué hay dentro»: ahí se cuenta al abrir y "
+            "siempre está al día. Aquí no, porque esta hoja se imprime y la "
+            "copia crece sola.*")
 
 
 def revisar(ix=None) -> Revision:
@@ -192,26 +194,37 @@ def revisar(ix=None) -> Revision:
                 f"«{frase[:56]}...». Quien lea la hoja leera otra cosa que "
                 f"quien mire la ventana")
 
-    # LA COBERTURA, QUE ES LO QUE MAS CARO NOS HA SALIDO. Solo se puede
-    # comprobar con el corpus delante; sin el se dice que no se ha mirado, en
-    # vez de darlo por bueno.
-    if ix is None:
-        r.piezas["cobertura de la guia"] = "sin comprobar (corpus no cargado)"
-        return r
-    crudo = GUIA.read_text(encoding="utf-8", errors="replace")
-    hay = _plano(bloque_de_cobertura(crudo))
-    debe = _plano(texto_de_cobertura(ix))
-    r.piezas["cobertura de la guia"] = "comprobada"
-    if not hay:
-        r.descuadres.append(
-            "GUIA.md no tiene el bloque de cobertura. La hoja no dice de que "
-            "hay criterio, y esa frase es la que ya caduco una vez")
-    elif hay != debe:
-        r.descuadres.append(
-            "la cobertura de GUIA.md no es la de la despensa: la hoja dice "
-            "una cosa y la ventana cuenta otra. Se arregla con "
-            "«python configurar.py --regenerar-guia»")
     return r
+
+
+def desfase_de_la_guia(ix) -> str:
+    """¿Se ha quedado vieja la hoja? Devuelve el aviso, o cadena vacia.
+
+    NO ESTA EN `revisar` Y NO BLOQUEA, y esa es la diferencia que importa.
+
+    `revisar` compara PROMESAS: las frases de los tres estados, lo que el
+    sistema dice que hace y lo que dice que no hace. Si eso diverge, quien lea
+    la hoja decidira con una herramienta que no existe, y por eso no se abre.
+
+    Esto otro compara un DATO QUE CRECE SOLO. Que la hoja se quede vieja no es
+    un fallo del sistema ni engaña a nadie sobre lo que hace: solo hay que
+    reimprimirla. Impedir abrir por eso seria dejar a la gestoria sin
+    herramienta porque la copia de criterio ha mejorado, que es absurdo.
+
+    Aun asi se avisa, porque una hoja vieja en la mesa acaba usandose.
+    """
+    if ix is None:
+        return ""
+    hay = _plano(bloque_de_cobertura(
+        GUIA.read_text(encoding="utf-8", errors="replace")))
+    if not hay:
+        return ("La guía impresa no dice de qué impuestos hay criterio. "
+                "Se arregla con «python configurar.py --regenerar-guia».")
+    if hay != _plano(texto_de_cobertura(ix)):
+        return ("La guía impresa se ha quedado vieja: ya hay criterio de más "
+                "impuestos de los que dice. La herramienta funciona igual; "
+                "para reimprimirla, «python configurar.py --regenerar-guia».")
+    return ""
 
 
 def _plano(texto: str) -> str:

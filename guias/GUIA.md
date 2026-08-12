@@ -16,9 +16,11 @@ Tarda hasta un minuto y va diciendo por dónde va.
 | **Consultar también el criterio** | lo anterior **más** consultas de la DGT y resoluciones del TEAC y de los tribunales regionales |
 
 <!-- COBERTURA: lo de aquí abajo NO se escribe a mano. Lo rellena
-     `python configurar.py --regenerar-guia` contando la copia local, y al
-     arrancar se comprueba que sigue coincidiendo con la ventana. Una frase a
-     mano sobre lo que el sistema cubre caduca sin avisar: ya pasó una vez. -->
+     `python configurar.py --regenerar-guia` mirando la copia local.
+     VA SIN CIFRAS A PROPÓSITO: dice DE QUÉ impuestos hay criterio, que cambia
+     por una decisión, y no CUÁNTOS documentos, que crece solo cada pocos
+     minutos mientras se siembra. Una hoja impresa con un número vivo está
+     condenada a mentir. Las cifras exactas, en «Qué hay dentro». -->
 <!-- COBERTURA -->
 (sin calcular: ejecuta `python configurar.py --regenerar-guia`)
 <!-- /COBERTURA -->
