@@ -965,6 +965,56 @@ _vuelta = max(0, (v.lienzo_lectura.winfo_height()
 comprobar("al deshacerlo vuelve a las veinte", _vuelta >= 20, str(_vuelta))
 
 # =====================================================================
+print("\n=== 13 bis. LA DISPOSICION LA DECIDE EL LARGO, Y NO BAILA ===")
+print("  Al lado gana con respuestas largas y PIERDE con las cortas: medido,")
+print("  una de 10 lineas deja 293 px en blanco apilada y 489 al lado, que es")
+print("  la queja original. Asi que decide el largo, no solo el ancho.\n")
+
+raiz.geometry(f"{raiz.winfo_screenwidth()}x{raiz.winfo_screenheight() - 80}+0+40")
+bombear(0.6)
+
+v._terminar(dict(LARGO))
+bombear(1.0)
+print(f"    respuesta larga: {v._lineas_de_respuesta} lineas · "
+      f"larga={v._respuesta_larga} · lateral={v._lateral}")
+comprobar("una respuesta larga se declara larga", v._respuesta_larga)
+comprobar("y la banda se va al lado", v._lateral)
+comprobar("  de verdad: la banda esta a la derecha del texto",
+          v.banda.winfo_rootx() > v.texto.winfo_rootx() + 100,
+          f"banda x={v.banda.winfo_rootx()} texto x={v.texto.winfo_rootx()}")
+
+CORTA = dict(LARGO)
+CORTA["respuesta"] = "Sí, con los requisitos del artículo 80."
+v._terminar(CORTA)
+bombear(1.0)
+print(f"    respuesta corta: {v._lineas_de_respuesta} lineas · "
+      f"larga={v._respuesta_larga} · lateral={v._lateral}")
+comprobar("una respuesta corta NO se declara larga",
+          not v._respuesta_larga, str(v._lineas_de_respuesta))
+comprobar("y la banda vuelve encima, que es lo que llena el alto",
+          not v._lateral)
+
+# Y LO QUE NO PUEDE PASAR: que cambie de disposicion al arrastrar el borde.
+v._terminar(dict(LARGO))
+bombear(1.0)
+decisiones = []
+for an in (1638, 1400, 1330, 1301, 1300, 1299, 1290, 1400, 1638):
+    raiz.geometry(f"{an}x900+0+0")
+    bombear(0.25)
+    decisiones.append((raiz.winfo_width(), v._lateral, v._respuesta_larga))
+largos = {g for _a, _l, g in decisiones}
+print(f"    al redimensionar: {[(a, l) for a, l, _g in decisiones]}")
+comprobar("el LARGO se decide una vez y no cambia al redimensionar",
+          largos == {True}, str(decisiones))
+cambios = sum(1 for i in range(1, len(decisiones))
+              if decisiones[i][1] != decisiones[i - 1][1])
+comprobar("y la disposicion solo cambia al cruzar el umbral de ancho, "
+          "una vez por cruce", cambios == 2, f"{cambios} cambios: {decisiones}")
+comprobar("  por debajo del umbral, apilado aunque la respuesta sea larga",
+          not [l for a, l, _g in decisiones if a < interfaz.ANCHO_LATERAL and l],
+          str(decisiones))
+
+# =====================================================================
 print("\n=== 14. LAS DOS VISTAS ===")
 print("  La pregunta y la respuesta ya no comparten pantalla: se estorbaban.\n")
 comprobar("al responder se ve la vista de respuesta",

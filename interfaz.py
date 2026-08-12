@@ -1296,6 +1296,7 @@ class Ventana:
         lineas = max(1, (cuenta or [1])[0])
         if lineas != int(self.texto.cget("height")):
             self.texto.configure(height=lineas)
+        self._lineas_de_respuesta = lineas
 
     def _atar_desplazamiento(self) -> None:
         """LA RESPUESTA SE TIENE QUE PODER RECORRER ENTERA. Raton y teclado.
@@ -1393,6 +1394,11 @@ class Ventana:
         try:
             self.texto.update_idletasks()
             self._ajustar_alto_del_texto()
+            # LA DISPOSICION SE DECIDE AQUI, con la respuesta ya escrita y una
+            # sola vez. En `_reajustar` -que corre con cada pixel del
+            # arrastre- solo se aplica lo decidido.
+            self._decidir_disposicion()
+            self._colocar_lateral(self.raiz.winfo_width())
             self.lienzo_lectura.yview_moveto(0.0)
         except tk.TclError:  # pragma: no cover - ventana cerrandose
             pass
@@ -1431,12 +1437,22 @@ class Ventana:
         # Con `MARGEN` (32) en vez de `MARGEN_LECTURA` (16) y `HUECO2` en vez
         # del relleno real del Text, la cuenta daba de menos y el margen salia
         # cero: el parrafo se iba a 837 px en una ventana de 1180.
+        # Primero se coloca -o no- la columna, porque el margen del parrafo
+        # depende de si esta; si se calcula antes, se usa la disposicion del
+        # redibujado anterior.
+        self._colocar_lateral(ancho)
         visible = max(320, ancho - MARGEN_LECTURA * 2 - ANCHO_BARRA
                       - RELLENO * 2)
         # Y SI HAY COLUMNA AL LADO, ESE ANCHO YA NO ES DEL TEXTO. Sin restarlo,
         # el parrafo se centraria respecto a la ventana entera y quedaria
         # medio debajo de la columna lateral.
-        if ancho >= ANCHO_LATERAL:
+        #
+        # SE PREGUNTA POR LA DISPOSICION, NO POR EL ANCHO. Restarlo por ancho
+        # descuenta 400 px tambien cuando la banda va encima -una respuesta
+        # corta en una ventana grande-, y entonces el parrafo se estrecha y se
+        # va a la izquierda sin que haya ninguna columna al lado. Medido: las
+        # respuestas cortas pasaban de 293 a 326 px de blanco por esto.
+        if self._lateral:
             visible = max(320, visible - ANCHO_COLUMNA_LATERAL - HUECO)
         deseado = self.fuente_texto.measure("0" * COLUMNA_MAXIMA)
         margen = max(0, (visible - deseado) // 2)
@@ -1456,7 +1472,6 @@ class Ventana:
         # lineas de pantalla: el alto del texto hay que rehacerlo aqui o la
         # pagina se queda con el de la anchura anterior.
         self._ajustar_alto_del_texto()
-        self._colocar_lateral(ancho)
         # Al cambiar el ancho de la ventana cambian las dos columnas, asi que
         # los dos anchos guardados dejan de valer.
         self._ancho_estado = self._ancho_avisos = 0
@@ -1546,6 +1561,49 @@ class Ventana:
             except tk.TclError:  # pragma: no cover
                 return
 
+    def _decidir_disposicion(self) -> None:
+        """¿La banda al lado o encima? Lo dice el LARGO DE LA RESPUESTA.
+
+        LAS DOS DISPOSICIONES GANAN EN CASOS DISTINTOS, y esta medido sobre
+        seis respuestas reales:
+
+            respuesta      apilado          al lado
+            10 lineas      293 px en blanco  489
+            17 lineas        7 px en blanco  224
+            101 lineas     15 lineas visibles  22
+            154 lineas     12 lineas visibles  21
+
+        Con una respuesta larga, la banda encima se come el primer tercio de
+        la pantalla y de la respuesta se ven 12 lineas de 154. Con una corta
+        pasa lo contrario: al lado, la pagina se queda en 10 lineas de alto y
+        debajo hay media pantalla vacia, que es la queja original.
+
+        EL UMBRAL NO SE ELIGE, SE MIDE. Es «las lineas que caben en la
+        pagina»: si la respuesta llena la columna de lectura entera, la
+        lateral se usa toda y el alto que libera es alto ganado; si no llega,
+        la lateral solo añade blanco. Aqui son 28 lineas, y cae dentro del
+        hueco de 17 a 101 que los datos dejan libre, asi que ninguno de los
+        seis lo decide a codazos.
+
+        Y SE DECIDE UNA VEZ, AL PINTAR. Recalcularlo en cada `<Configure>`
+        haria que una respuesta justo en la frontera cambiara de disposicion
+        al arrastrar un pixel el borde de la ventana, que es peor que
+        cualquiera de las dos.
+        """
+        alto_linea = self.fuente_texto.metrics("linespace") + INTERLINEA
+        alto = self.lienzo_lectura.winfo_height()
+        # SI EL LIENZO NO SE HA DIBUJADO AUN, NO SE DECIDE. Recien pintado
+        # devuelve un alto de mentira -300 px, o 1- y entonces «caben» sale 9
+        # en vez de 28 y una respuesta de 17 lineas se declara larga. Medido:
+        # el margen del parrafo se calculaba con la disposicion contraria y el
+        # texto salia a 145 px de margen en una pantalla sin columna lateral.
+        # Vale mas quedarse con la decision anterior que decidir a ciegas.
+        if alto < 200:
+            return
+        caben = max(1, alto // alto_linea)
+        self._respuesta_larga = (
+            getattr(self, "_lineas_de_respuesta", 0) >= caben)
+
     def _colocar_lateral(self, ancho: int) -> None:
         """La banda AL LADO de la respuesta, o encima si no cabe.
 
@@ -1560,7 +1618,10 @@ class Ventana:
         orden. En la columna: avisos, luego el detalle del estado, luego lo
         que ha añadido el criterio.
         """
-        lateral = ancho >= ANCHO_LATERAL
+        # DOS CONDICIONES, Y LAS DOS TIENEN QUE CUMPLIRSE. El ancho dice si
+        # CABE la columna; el largo de la respuesta dice si COMPENSA.
+        lateral = ancho >= ANCHO_LATERAL and getattr(
+            self, "_respuesta_larga", False)
         if lateral == self._lateral:
             return
         self._lateral = lateral
@@ -1584,6 +1645,11 @@ class Ventana:
         self._colocar_banda(self.banda.winfo_width() or ancho)
         self.raiz.after_idle(self._wrap_estado)
         self.raiz.after_idle(self._wrap_avisos)
+        # Y EL MARGEN DEL PARRAFO DEPENDE DE ESTO, asi que hay que rehacerlo.
+        # Sin esto, al cambiar la disposicion el texto se queda con el margen
+        # de la anterior: centrado para una columna que ya no esta, o al reves.
+        self._ancho_previo = 0     # para que `_reajustar` no se salte el turno
+        self.raiz.after_idle(self._reajustar)
 
     def _colocar_banda(self, ancho: int) -> None:
         """Una columna o dos, segun quepa. Se recoloca solo al cambiar.
