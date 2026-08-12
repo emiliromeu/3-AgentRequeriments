@@ -1011,6 +1011,12 @@ def _exigir_coherencia_o_parar() -> int:
     """El mismo corte que en la ventana. Ver `interfaz.main`."""
     from agente_fiscal import configuracion as CONF
     try:
+        hecho = CONF.asegurar()
+        if hecho:
+            print(f"  {hecho}")
+    except Exception as e:  # noqa: BLE001
+        print(f"  No se ha podido rehacer la hoja de instrucciones: {e}")
+    try:
         CONF.exigir_coherencia()
     except CONF.Descoordinado as e:
         titulo("LA HERRAMIENTA ESTA A MEDIO CONFIGURAR")

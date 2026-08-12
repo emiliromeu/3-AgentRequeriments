@@ -72,31 +72,19 @@ def aplicar(modo: str = C.UNICO) -> int:
         return 1
 
     titulo("REGENERANDO LA GUIA")
-    # LA COBERTURA SE RELLENA AL COPIAR, contando la copia local. Es el unico
-    # sitio donde se escribe, y sale de los datos: la guia no puede decir de
-    # que hay criterio por su cuenta, porque eso es lo que ya caduco una vez
-    # -«todas de IVA por ahora»- sin que nadie se enterara.
-    texto = origen.read_text(encoding="utf-8")
+    # LA GENERA `configuracion.generar_guia`, que es la misma que usa el
+    # arranque. Dos generadores acabarian escribiendo dos guias distintas.
     ix = None
     try:
         import fase4
         ix, _g = fase4.cargar_corpus()
+        C.generar_guia(ix)
     except Exception as e:  # noqa: BLE001
-        print(f"\n  No se ha podido cargar el corpus ({e}).")
-        print("  Sin el no se puede contar la despensa, y la guia se quedaria")
-        print("  con una cobertura inventada. No se toca nada.")
+        print(f"\n  No se ha podido rehacer la guia ({e}).")
+        print("  Sin el corpus no se puede contar la despensa, y la guia se")
+        print("  quedaria con una cobertura inventada. No se toca nada.")
         return 1
-    abre, cierra = C.MARCA_COBERTURA
-    i, j = texto.find(abre), texto.find(cierra)
-    if i < 0 or j < 0:
-        print(f"\n  {origen} no tiene las marcas {abre} / {cierra}.")
-        print("  Sin ellas la guia no puede decir de que hay criterio.")
-        return 1
-    # SIN CIFRAS: solo DE QUE hay. Ver `texto_de_cobertura`.
-    texto = (texto[:i + len(abre)] + "\n" + C.texto_de_cobertura(ix) + "\n"
-             + texto[j:])
-    C.GUIA.write_text(texto, encoding="utf-8")
-    print(f"\n  GUIA.md generada de {origen}, con la cobertura contada")
+    print(f"\n  GUIA.md generada de {origen}, con la cobertura de este equipo")
 
     r = C.revisar(ix)
     print()

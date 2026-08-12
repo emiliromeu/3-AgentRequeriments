@@ -197,6 +197,57 @@ def revisar(ix=None) -> Revision:
     return r
 
 
+def generar_guia(ix=None) -> None:
+    """Escribe GUIA.md desde `guias/GUIA.md` con la cobertura de ESTE equipo.
+
+    Vive aqui y no en `configurar.py` porque el arranque tiene que poder
+    rehacerla sin pasar por la herramienta de mantenimiento. Ver `asegurar`.
+    """
+    origen = DIR_GUIAS / "GUIA.md"
+    texto = origen.read_text(encoding="utf-8")
+    if ix is None:
+        import fase4
+        ix, _g = fase4.cargar_corpus()
+    abre, cierra = MARCA_COBERTURA
+    i, j = texto.find(abre), texto.find(cierra)
+    if i < 0 or j < 0:
+        raise FileNotFoundError(
+            f"{origen} no tiene las marcas {abre} / {cierra}")
+    GUIA.write_text(
+        texto[:i + len(abre)] + "\n" + texto_de_cobertura(ix) + "\n"
+        + texto[j:], encoding="utf-8")
+
+
+def asegurar(ix=None) -> str:
+    """Deja la guia utilizable, rehaciendola si hace falta. Devuelve que hizo.
+
+    LA REGLA: BLOQUEAR ESTA BIEN CUANDO FALLA UNA PROMESA; NO CUANDO FALTA UN
+    DERIVADO QUE EL PROGRAMA SABE REHACER.
+
+    `GUIA.md` es un fichero GENERADO: sale de `guias/GUIA.md` -que si viaja-
+    mas la despensa de esta maquina. Que no exista despues de un `git pull`, o
+    que se haya quedado vieja porque la copia de criterio ha crecido, no es un
+    fallo de nadie: es el estado normal de un derivado. Pararse ahi y decir
+    «lo arregla Emili» es pedirle a quien consulta que resuelva un problema
+    que no tiene, y que el programa puede arreglar solo en dos segundos.
+
+    Paso dos veces en el mismo dia, y la segunda con las compañeras esperando.
+
+    LO QUE SIGUE BLOQUEANDO es lo de despues: si CON la guia recien hecha las
+    frases siguen sin cuadrar, eso ya no es un derivado que falta, es que la
+    hoja describe una herramienta distinta de la que hay. Eso es una promesa
+    rota y ahi si se para.
+    """
+    if not GUIA.is_file():
+        generar_guia(ix)
+        return "No estaba la hoja de instrucciones y se ha hecho de nuevo."
+    if ix is not None and desfase_de_la_guia(ix):
+        generar_guia(ix)
+        return ("La hoja de instrucciones se ha puesto al dia con la copia de "
+                "criterio de este equipo.")
+    return ""
+
+
 def desfase_de_la_guia(ix) -> str:
     """¿Se ha quedado vieja la hoja? Devuelve el aviso, o cadena vacia.
 

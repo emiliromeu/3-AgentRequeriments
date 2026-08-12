@@ -248,6 +248,68 @@ finally:
     CONF.GUIA.write_text(guia_buena, encoding="utf-8")
 comprobar("(iv) restaurada, vuelve a abrir", abre()[0])
 
+# ============ 3 ter. UN DERIVADO QUE FALTA SE REHACE, NO BLOQUEA
+print("\n=== 3 ter. LA GUIA QUE FALTA SE REHACE SOLA ===")
+print("  `GUIA.md` es un fichero GENERADO: sale de guias/GUIA.md mas la")
+print("  despensa de esta maquina, y tras un `git pull` NO EXISTE. Bloquear")
+print("  por eso es pedirle a quien consulta que resuelva un problema que no")
+print("  tiene y que el programa arregla en dos segundos. Paso dos veces en")
+print("  el mismo dia, la segunda con la oficina esperando.\n")
+
+guia_original = CONF.GUIA.read_text("utf-8")
+try:
+    # (a) EL CASO DE LA OFICINA: recien pulleado, no hay guia
+    CONF.GUIA.unlink()
+    comprobar("(a) sin GUIA.md, `asegurar` la rehace",
+              bool(CONF.asegurar()) and CONF.GUIA.is_file())
+    ok_abre, motivo = abre()
+    comprobar("  y despues el arranque pasa: ABRE", ok_abre, motivo)
+
+    # (b) y sin rehacerla, HABRIA bloqueado: el fallo que se arregla
+    CONF.GUIA.unlink()
+    ok_sin, _m = abre()
+    comprobar("(b) y si NO se rehiciera, no abriria (es el fallo de hoy)",
+              not ok_sin)
+    CONF.asegurar()
+
+    # (c) desfasada: se pone al dia sola, tampoco bloquea
+    CONF.GUIA.write_text(
+        re.sub(r"Hay criterio guardado de: .*",
+               "Hay criterio guardado de: **IVA**.",
+               CONF.GUIA.read_text("utf-8")), encoding="utf-8")
+    comprobar("(c) desfasada, el arranque abre igual", abre()[0])
+    comprobar("  y `asegurar` con corpus la pone al dia",
+              bool(CONF.asegurar(ix)) and not CONF.desfase_de_la_guia(ix))
+
+    # (d) LO QUE SIGUE BLOQUEANDO: si tras rehacerla una PROMESA no cuadra.
+    #     Se rompe el ORIGEN, que es lo unico que `asegurar` no puede inventar.
+    origen = CONF.DIR_GUIAS / "GUIA.md"
+    fuente = origen.read_text("utf-8")
+    try:
+        frase = interfaz.TEXTOS_DE_ESTADO[0]
+        llana = CONF._plano(frase)[:30]
+        roto = None
+        for k in range(len(fuente) - 60):
+            if CONF._plano(fuente[k:k + 60]).startswith(llana):
+                roto = fuente[:k] + "ESTO YA NO DICE LO MISMO" + fuente[k + 60:]
+                break
+        comprobar("(d) la frase de estado esta en la fuente de la guia",
+                  roto is not None)
+        if roto:
+            origen.write_text(roto, encoding="utf-8")
+            CONF.GUIA.unlink()
+            CONF.asegurar()
+            ok_roto, motivo = abre()
+            comprobar("  rehecha y AUN ASI incoherente: NO abre",
+                      not ok_roto, motivo)
+            comprobar("  y dice que frase falta",
+                      "NO esta en GUIA.md" in motivo, motivo)
+    finally:
+        origen.write_text(fuente, encoding="utf-8")
+finally:
+    CONF.GUIA.write_text(guia_original, encoding="utf-8")
+comprobar("(e) restaurada, vuelve a abrir", abre()[0])
+
 # ================================================ 4. CONTROL NEGATIVO
 print("\n=== 4. LA COBERTURA YA NO ESTA EN EL CAMINO QUE BLOQUEA ===")
 print("  Aqui habia un control negativo que rompia la guia y comprobaba que")
@@ -270,8 +332,12 @@ comprobar("las promesas que compara son las frases de los estados",
           str(sin_ix.piezas))
 
 FUENTE_CONF = (RAIZ / "agente_fiscal" / "configuracion.py").read_text("utf-8")
-cuerpo_revisar = FUENTE_CONF[FUENTE_CONF.find("def revisar("):
-                             FUENTE_CONF.find("def desfase_de_la_guia(")]
+# El cuerpo de `revisar` y NADA MAS: hasta el siguiente `def` a la izquierda
+# del todo. Cortar «hasta la funcion que venga despues» se rompio en cuanto se
+# metio otra en medio, y la prueba acuso a `revisar` de algo que no hacia.
+_i = FUENTE_CONF.find("def revisar(")
+_j = FUENTE_CONF.find("\ndef ", _i + 1)
+cuerpo_revisar = FUENTE_CONF[_i:_j if _j > 0 else len(FUENTE_CONF)]
 comprobar("y `revisar` no llama a la cuenta de la despensa",
           "texto_de_cobertura" not in cuerpo_revisar
           and "cobertura" not in cuerpo_revisar.replace("de cobertura", ""),

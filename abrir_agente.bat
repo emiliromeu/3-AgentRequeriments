@@ -24,9 +24,12 @@ if not exist ".env" goto instalar
 REM La libreria tambien: sin ella el agente abre y falla en la primera
 REM consulta, que es justo el descubrimiento tardio que esto viene a evitar.
 if not exist ".venv\Lib\site-packages\anthropic" goto instalar
-if not exist "datos\corpus\BOE-A-1992-28740.jsonl" goto instalar
-if not exist "datos\corpus\BOE-A-1992-28925.jsonl" goto instalar
-if not exist "datos\corpus\BOE-A-2003-23186.jsonl" goto instalar
+REM EL CORPUS LO DECIDE QUIEN SABE CUANTAS NORMAS HAY, NO ESTE FICHERO. Aqui
+REM habia tres normas escritas a mano; cuando el corpus paso a trece, esta
+REM lista se quedo igual y el camino rapido daba «todo listo» con diez normas
+REM ausentes. `instalar.py --revisar` solo mira ficheros: ni corpus ni red.
+"%PY%" instalar.py --revisar >nul 2>&1
+if errorlevel 1 goto instalar
 findstr /b /c:"ANTHROPIC_API_KEY=sk-" ".env" >nul 2>&1
 if errorlevel 1 goto instalar
 goto abrir

@@ -48,9 +48,19 @@ grep -q '^ANTHROPIC_API_KEY=sk-' .env 2>/dev/null || listo=0
 # que es justo el descubrimiento tardio que esto viene a evitar. Es una
 # comprobacion de carpeta, no cuesta nada.
 ls -d .venv/lib/python*/site-packages/anthropic >/dev/null 2>&1 || listo=0
-for n in BOE-A-1992-28740 BOE-A-1992-28925 BOE-A-2003-23186; do
-  [ -f "datos/corpus/$n.jsonl" ] || listo=0
-done
+# EL CORPUS LO DECIDE QUIEN SABE CUANTAS NORMAS HAY, NO ESTE FICHERO.
+#
+# Aqui habia una lista de TRES normas escrita a mano. Cuando el corpus paso a
+# trece, esta lista se quedo igual: con las diez nuevas ausentes el camino
+# rapido daba «todo listo», no se ejecutaba el instalador, y la ventana
+# bloqueaba con «falta el texto de las normas» sin que nada lo arreglara. Es
+# la misma lista a mano que ya nos ha costado cuatro frases en pantalla.
+#
+# `instalar.py --revisar` son comprobaciones de fichero: no carga el corpus ni
+# habla con la red.
+if [ "$listo" = "1" ]; then
+  "$PY" instalar.py --revisar >/dev/null 2>&1 || listo=0
+fi
 
 if [ "$listo" = "0" ]; then
   # --- 1. HAY PYTHON? --------------------------------------------------

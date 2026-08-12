@@ -1698,8 +1698,16 @@ class Ventana:
         try:
             self.ix, self.grafo = fase4.cargar_corpus()
         except Exception as e:  # noqa: BLE001
+            # EL CORPUS SI BLOQUEA, Y TIENE QUE HACERLO: sin la ley no hay
+            # nada que responder, y rehacerlo son minutos bajando del BOE, no
+            # dos segundos. Pero DECIR «avisa a Emili» cuando el propio
+            # programa lo baja solo es mandar a alguien a esperar por gusto:
+            # se dice que se cierre y se vuelva a abrir, que es lo que lo
+            # arregla.
             self._bloquear(
-                "No se encuentra la copia de la ley. Avisa a Emili.",
+                "Falta el texto de las normas. Cierra esta ventana y vuelve "
+                "a abrir el agente: se baja solo y tarda unos minutos. Si "
+                "después de eso sigue igual, avisa a Emili.",
                 str(e),
             )
             return
@@ -1735,14 +1743,18 @@ class Ventana:
         self.pie_criterio.configure(
             text=f"{PIE_CRITERIO}. {_C.frase(self.ix)}")
 
-        # Y SI LA HOJA IMPRESA SE HA QUEDADO VIEJA, SE DICE. Sin alarma y sin
-        # impedir nada: que la copia de criterio haya crecido no es un fallo,
-        # y dejar a la gestoria sin herramienta por eso seria absurdo. Lo que
-        # bloquea -`exigir_coherencia`, antes de abrir- son las PROMESAS: las
-        # frases de los estados y lo que el sistema dice que hace.
-        desfase = CONF.desfase_de_la_guia(self.ix)
-        if desfase:
-            self.mostrar_cinta(desfase)
+        # Y SI LA HOJA SE HA QUEDADO VIEJA, SE REHACE. Ya hay corpus, asi que
+        # aqui si se puede contar la despensa y ponerla al dia. Antes esto
+        # enseñaba un aviso diciendo que la rehiciera una persona: mandar a
+        # alguien a ejecutar un comando que el programa puede ejecutar solo es
+        # la misma pereza que bloquear por un derivado.
+        try:
+            hecho = CONF.asegurar(self.ix)
+            if hecho:
+                self.mostrar_cinta(hecho + " Imprímela otra vez si la tienes "
+                                          "en la mesa.")
+        except Exception:  # noqa: BLE001 - la guia nunca impide consultar
+            pass
         self._reajustar()
         self._revisar_boton()
 
@@ -2693,11 +2705,26 @@ def main(argv: list[str]) -> int:
 
     raiz = tk.Tk()
 
+    # PRIMERO SE REHACE LO QUE SE PUEDE REHACER, Y DESPUES SE EXIGE.
+    #
+    # `GUIA.md` es un fichero generado, y tras un `git pull` no existe. Pararse
+    # ahi y decir «lo arregla Emili» es pedirle a quien consulta que resuelva
+    # un problema que no tiene y que el programa arregla solo. Ver
+    # `configuracion.asegurar`.
+    from agente_fiscal import configuracion as CONF
+    aviso_guia = ""
+    try:
+        aviso_guia = CONF.asegurar()
+    except Exception as e:  # noqa: BLE001
+        # Si NO se puede rehacer -falta `guias/GUIA.md`, que si viaja- eso ya
+        # no es un derivado que falta: es el original. Se sigue y lo dira
+        # `exigir_coherencia`, que para eso esta.
+        aviso_guia = f"No se ha podido rehacer la hoja de instrucciones: {e}"
+
     # MEJOR NO ABRIR QUE ABRIR MINTIENDO. Si las fuentes, los textos y la guia
     # no dicen lo mismo, la ventana podria estar afirmando que hay criterio de
     # la DGT mientras la hoja de la mesa dice que no. Quien lea la hoja
     # decidira con ella, y nadie se enterara.
-    from agente_fiscal import configuracion as CONF
     try:
         CONF.exigir_coherencia()
     except CONF.Descoordinado as e:
@@ -2705,7 +2732,10 @@ def main(argv: list[str]) -> int:
         raiz.mainloop()
         return 1
 
-    Ventana(raiz, args.motor)
+    ventana = Ventana(raiz, args.motor)
+    if aviso_guia:
+        # En una linea y sin alarma: se ha arreglado solo, no ha pasado nada.
+        ventana.mostrar_cinta(aviso_guia)
     raiz.mainloop()
     return 0
 
