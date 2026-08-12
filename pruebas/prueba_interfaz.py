@@ -73,7 +73,7 @@ def tecla(k):
     # esta donde tiene que estar, se repite. Un solo reintento; si tampoco
     # llega, la comprobacion sale roja, que es lo correcto.
     for intento in (1, 2):
-        antes_de = v.texto.yview()
+        antes_de = v.lienzo_lectura.yview()
         raiz.focus_force()
         v.texto.focus_set()
         bombear(0.2)
@@ -81,7 +81,7 @@ def tecla(k):
             continue
         v.texto.event_generate(k, when="now")
         bombear(0.3)
-        if v.texto.yview() != antes_de or k in ("<Home>",):
+        if v.lienzo_lectura.yview() != antes_de or k in ("<Home>",):
             return
 
 
@@ -585,28 +585,39 @@ bombear(0.4)
 v._terminar(dict(LARGO))
 bombear(0.9)
 
+# QUIEN DESPLAZA ES LA PAGINA, NO EL TEXTO. El `Text` mide lo que mide su
+# contenido y va dentro del lienzo; lo que hay que comprobar sigue siendo lo
+# mismo -que se puede llegar al final de la respuesta- pero preguntandoselo a
+# quien desplaza.
 alto = v.resultado.winfo_reqheight()
-primero, ultimo = v.texto.yview()
-print(f"    la columna entera mide {alto} px · se ve del "
+primero, ultimo = v.lienzo_lectura.yview()
+print(f"    la columna entera mide {alto} px · la pagina se ve del "
       f"{primero:.0%} al {ultimo:.0%}")
 comprobar("la respuesta cabe entera en el widget, aunque no se vea de una vez",
           int(v.texto.index("end-1c").split(".")[0]) > 25,
           v.texto.index("end-1c"))
-comprobar("y NO cabe de una vez: hace falta desplazarse", ultimo < 0.99,
-          f"se ve hasta {ultimo:.0%}")
+comprobar("el texto NO tiene su propio recorte: crece con el contenido",
+          v.texto.yview() == (0.0, 1.0), str(v.texto.yview()))
+comprobar("y la PAGINA no cabe de una vez: hace falta desplazarse",
+          ultimo < 0.99, f"se ve hasta {ultimo:.0%}")
 comprobar("la ventana NO pide mas de lo que hay en pantalla",
           raiz.winfo_reqheight() < raiz.winfo_screenheight(),
           f"pide {raiz.winfo_reqheight()} de {raiz.winfo_screenheight()}")
 
-# --- la barra ---
-comprobar("hay barra de desplazamiento", v.barra_respuesta is not None)
+# --- la barra, que ahora es la de la pagina ---
+barra = [h for h in v.caja_lectura.winfo_children()
+         if h.winfo_class() == "TScrollbar"]
+comprobar("hay barra de desplazamiento", len(barra) == 1, str(barra))
 comprobar("y esta estilada con la paleta, no la del sistema",
-          "Vertical.TScrollbar" in str(v.barra_respuesta.cget("style")),
-          str(v.barra_respuesta.cget("style")))
-comprobar("la barra dice cuanto se ve", v.barra_respuesta.get()[1] < 0.99,
-          str(v.barra_respuesta.get()))
-comprobar("y esta a la vista mientras haya algo debajo",
-          bool(v.barra_respuesta.grid_info()))
+          "Vertical.TScrollbar" in str(barra[0].cget("style")),
+          str(barra[0].cget("style")))
+comprobar("la barra dice cuanto se ve", barra[0].get()[1] < 0.99,
+          str(barra[0].get()))
+comprobar("y NO hay dos barras anidadas, que era lo que hacia que la "
+          "respuesta pareciera una ventanita",
+          not any(h.winfo_class() == "TScrollbar"
+                  for h in v.texto.master.winfo_children()),
+          [h.winfo_class() for h in v.texto.master.winfo_children()])
 
 # --- la rueda, en los tres sistemas ---
 print("\n  LA RUEDA. Son eventos DISTINTOS por sistema y se prueban los tres:")
@@ -632,33 +643,34 @@ def desde(fraccion=0.4):
     bajar). Una prueba que falla una de cada cinco no protege nada: se mira.
     """
     bombear(0.3)
-    v.texto.yview_moveto(fraccion)
+    v.lienzo_lectura.yview_moveto(fraccion)
     bombear(0.15)
-    return v.texto.yview()[0]
+    return v.lienzo_lectura.yview()[0]
 
 
 antes = desde(0.0)
 v.texto.event_generate("<MouseWheel>", delta=-3, when="now")
 bombear(0.25)
-comprobar("Mac/Windows: la rueda baja la vista", v.texto.yview()[0] > antes,
-          f"{antes:.3f} -> {v.texto.yview()[0]:.3f}")
+comprobar("Mac/Windows: la rueda baja la vista",
+          v.lienzo_lectura.yview()[0] > antes,
+          f"{antes:.3f} -> {v.lienzo_lectura.yview()[0]:.3f}")
 antes = desde(0.4)
 v.texto.event_generate("<MouseWheel>", delta=3, when="now")
 bombear(0.25)
-comprobar("y hacia arriba la sube", v.texto.yview()[0] < antes,
-          f"{antes:.3f} -> {v.texto.yview()[0]:.3f}")
+comprobar("y hacia arriba la sube", v.lienzo_lectura.yview()[0] < antes,
+          f"{antes:.3f} -> {v.lienzo_lectura.yview()[0]:.3f}")
 
 # Linux manda Button-4/5 en vez de delta. Se llama al manejador directamente:
 # `event_generate` de un boton arrastraria ademas la seleccion, y lo que se
 # prueba aqui es el manejador, no el Tk.
 antes = desde(0.0)
 v._rueda(Rueda(num=5))
-comprobar("Linux: <Button-5> baja", v.texto.yview()[0] > antes,
-          f"{antes:.3f} -> {v.texto.yview()[0]:.3f}")
+comprobar("Linux: <Button-5> baja", v.lienzo_lectura.yview()[0] > antes,
+          f"{antes:.3f} -> {v.lienzo_lectura.yview()[0]:.3f}")
 antes = desde(0.4)
 v._rueda(Rueda(num=4))
-comprobar("Linux: <Button-4> sube", v.texto.yview()[0] < antes,
-          f"{antes:.3f} -> {v.texto.yview()[0]:.3f}")
+comprobar("Linux: <Button-4> sube", v.lienzo_lectura.yview()[0] < antes,
+          f"{antes:.3f} -> {v.lienzo_lectura.yview()[0]:.3f}")
 
 FUENTE = (RAIZ / "interfaz.py").read_text("utf-8")
 comprobar("el manejador mira `num` antes que `delta` (Linux no trae delta)",
@@ -669,14 +681,16 @@ comprobar("y divide el delta de Windows entre 120", "// 120" in FUENTE)
 # del raton, y debajo del raton casi siempre hay una etiqueta, no el lienzo.
 print("\n  Y sobre CADA panel, no solo en los huecos entre ellos:")
 for nombre, panel in (("el estado", v.panel_estado),
+                      ("el detalle del estado", v.panel_detalle),
                       ("los avisos", v.panel_avisos),
                       ("la respuesta", v.texto)):
     antes = desde(0.0)
     hijo = panel.winfo_children()[0] if panel.winfo_children() else panel
     hijo.event_generate("<MouseWheel>", delta=-3, when="now")
     bombear(0.25)
-    comprobar(f"la rueda funciona sobre {nombre}", v.texto.yview()[0] > antes,
-              f"{antes:.3f} -> {v.texto.yview()[0]:.3f}")
+    comprobar(f"la rueda funciona sobre {nombre}",
+              v.lienzo_lectura.yview()[0] > antes,
+              f"{antes:.3f} -> {v.lienzo_lectura.yview()[0]:.3f}")
 
 # --- el teclado ---
 print("\n  EL TECLADO:")
@@ -690,8 +704,8 @@ comprobar("el lienzo puede recibir el teclado",
           raiz.focus_get() is not None, "nadie tiene el foco")
 for pulsacion, sube in (("<Next>", False), ("<Prior>", True), ("<End>", False),
                     ("<Home>", True)):
-    v.texto.yview_moveto(0.5)
-    antes = v.texto.yview()[0]
+    v.lienzo_lectura.yview_moveto(0.5)
+    antes = v.lienzo_lectura.yview()[0]
     # El `focus_force` va DENTRO del bucle. Corriendo sin nadie delante, la
     # ventana no es la activa y el sistema le quita el foco entre tecla y
     # tecla: medido, `focus_get()` vuelve a None despues de la primera. No es
@@ -699,46 +713,48 @@ for pulsacion, sube in (("<Next>", False), ("<Prior>", True), ("<End>", False),
     # esto la prueba solo comprobaria la primera tecla y daria las otras por
     # buenas.
     tecla(pulsacion)
-    ahora = v.texto.yview()[0]
+    ahora = v.lienzo_lectura.yview()[0]
     comprobar(f"{pulsacion} {'sube' if sube else 'baja'} la vista",
               (ahora < antes) if sube else (ahora > antes),
               f"{antes:.3f} -> {ahora:.3f}")
-v.texto.yview_moveto(0.5)
+v.lienzo_lectura.yview_moveto(0.5)
 tecla("<Down>")
-comprobar("<Down> baja un poco", v.texto.yview()[0] > 0.5,
-          str(v.texto.yview()[0]))
+comprobar("<Down> baja un poco", v.lienzo_lectura.yview()[0] > 0.5,
+          str(v.lienzo_lectura.yview()[0]))
 tecla("<Up>"); tecla("<Up>")
-comprobar("<Up> sube", v.texto.yview()[0] < 0.5, str(v.texto.yview()[0]))
+comprobar("<Up> sube", v.lienzo_lectura.yview()[0] < 0.5,
+          str(v.lienzo_lectura.yview()[0]))
 # El `focus_force` va pegado a CADA tecla, no una vez arriba: corriendo sin
 # nadie delante el sistema le quita el foco a la ventana entre tecla y tecla, y
 # `event_generate` se pierde en silencio. Es el mismo fallo de foco de siempre.
 tecla("<End>")
-comprobar("<End> llega hasta el FINAL DEL TODO", v.texto.yview()[1] > 0.999,
-          str(v.texto.yview()))
+comprobar("<End> llega hasta el FINAL DEL TODO",
+          v.lienzo_lectura.yview()[1] > 0.999, str(v.lienzo_lectura.yview()))
 
 # --- la respuesta nueva vuelve arriba ---
 print("\n  Y LO QUE MAS SE NOTA SI FALLA:")
-v.texto.yview_moveto(1.0)
+v.lienzo_lectura.yview_moveto(1.0)
 v._terminar({"codigo": 0, "estado": EST.CLARO, "fallo": None, "senales": [],
              "cobertura": [], "estructural": "", "preceptos": ["Articulo 91"],
              "traza": None, "recuperado": [], "con_criterio": False,
              "respuesta": "Una respuesta corta detras de una larga."})
 bombear(0.5)
 comprobar("una respuesta NUEVA empieza por arriba, no donde quedo la anterior",
-          v.texto.yview()[0] == 0.0, str(v.texto.yview()))
+          v.lienzo_lectura.yview()[0] == 0.0, str(v.lienzo_lectura.yview()))
 # La barra se esconde cuando NO hay nada que desplazar. Se prueba la regla
 # directamente: montar una pantalla donde la columna quepa entera exige una
 # ventana mas alta que esta pantalla, y entonces no se probaria nada.
 # Se comprueba SIN bombear entremedias: el lienzo vuelve a llamar a este mismo
 # manejador con sus cifras de verdad en cuanto se procesa la cola, y entonces
 # se estaria midiendo el estado real y no la regla.
-v._barra_movida(0.0, 1.0)
+_barra = v._barra_de[str(v.lienzo_lectura)]
+v.lienzo_lectura.cget("yscrollcommand")  # existe
+v.lienzo_lectura.tk.call(v.lienzo_lectura.cget("yscrollcommand"), 0.0, 1.0)
 comprobar("si cabe entera, la barra se quita de en medio",
-          not v.barra_respuesta.grid_info(),
+          not _barra.grid_info(),
           "la barra sigue ahi sin nada que hacer")
-v._barra_movida(0.0, 0.4)
-comprobar("y en cuanto hay algo debajo, vuelve",
-          bool(v.barra_respuesta.grid_info()))
+v.lienzo_lectura.tk.call(v.lienzo_lectura.cget("yscrollcommand"), 0.0, 0.4)
+comprobar("y en cuanto hay algo debajo, vuelve", bool(_barra.grid_info()))
 
 # --- se puede seleccionar ---
 v._terminar(dict(LARGO))
@@ -797,9 +813,40 @@ comprobar("el margen CRECE con la ventana: el parrafo se queda quieto",
 comprobar("y el ancho de lectura NO entra en lo que el Text PIDE",
           v.texto.winfo_reqwidth() < 300,
           f"pide {v.texto.winfo_reqwidth()} px: volveria a bloquear la ventana")
-comprobar("la ventana se puede encoger hasta su minimo sin romperse",
-          raiz.minsize()[0] <= 900 and raiz.minsize()[1] <= 700,
-          str(raiz.minsize()))
+# EL MINIMO YA NO ES UNA CIFRA ESCRITA A MANO, asi que no se comprueba contra
+# otra cifra a mano: se comprueba LA PROPIEDAD. Encogida a su minimo, no puede
+# quedar ni un control fuera de la ventana. Estaba fijo en 620 de alto y a esa
+# altura el boton «Qué hay dentro» caia en y=691, fuera; y un control fuera de
+# la ventana es un control que no existe.
+raiz.geometry(f"{raiz.minsize()[0]}x{raiz.minsize()[1]}+0+0")
+bombear(0.6)
+
+
+def _pulsables_fuera(w, acc=None):
+    acc = [] if acc is None else acc
+    for h in w.winfo_children():
+        if h.winfo_ismapped() and h.winfo_class() in ("TButton", "TCombobox",
+                                                      "TEntry"):
+            x = h.winfo_rootx() - raiz.winfo_rootx()
+            y = h.winfo_rooty() - raiz.winfo_rooty()
+            if (x < -1 or y < -1
+                    or x + h.winfo_width() > raiz.winfo_width() + 1
+                    or y + h.winfo_height() > raiz.winfo_height() + 1):
+                try:
+                    acc.append(f"{h.cget('text')}@({x},{y})")
+                except Exception:
+                    acc.append(f"{h.winfo_class()}@({x},{y})")
+        _pulsables_fuera(h, acc)
+    return acc
+
+
+fuera_min = _pulsables_fuera(raiz)
+print(f"    minimo {raiz.minsize()} · real "
+      f"{raiz.winfo_width()}x{raiz.winfo_height()}")
+comprobar("encogida a su minimo, NADA pulsable queda fuera de la ventana",
+          not fuera_min, str(fuera_min))
+comprobar("y el minimo no es mayor que la pantalla",
+          raiz.minsize()[1] <= raiz.winfo_screenheight(), str(raiz.minsize()))
 
 # =====================================================================
 print("\n=== 12. VEINTE LINEAS SIN DESPLAZAR, MAXIMIZADA ===")
@@ -818,10 +865,18 @@ v._revisar_boton()
 v._terminar(dict(LARGO))
 bombear(1.0)
 alto_linea = v.fuente_texto.metrics("linespace") + interfaz.INTERLINEA
-util = v.texto.winfo_height() - 2 * interfaz.RELLENO
-visibles = util // alto_linea
+# LO QUE SE VE ES LO QUE CABE EN LA VENTANA, no lo que mide el widget. Desde
+# que el texto crece con su contenido, `v.texto.winfo_height()` es el alto de
+# la RESPUESTA ENTERA -miles de pixeles- y dividirlo por el alto de linea daria
+# «se ven 108 lineas» con la ventana enseñando diecisiete. Quien recorta es el
+# lienzo de la pagina.
+util = (v.lienzo_lectura.winfo_height()
+        - (v.texto.winfo_rooty() - v.lienzo_lectura.winfo_rooty())
+        - 2 * interfaz.RELLENO)
+visibles = max(0, util) // alto_linea
 print(f"    ventana {raiz.winfo_width()}x{raiz.winfo_height()} · "
-      f"banda {v.banda.winfo_height()} px · visor {v.texto.winfo_height()} px")
+      f"banda {v.banda.winfo_height()} px · pagina "
+      f"{v.lienzo_lectura.winfo_height()} px")
 print(f"    cuerpo {v.fuente_texto.cget('size')} pt · interlinea "
       f"{interfaz.INTERLINEA} px · alto de linea {alto_linea} px")
 comprobar(f"se ven {visibles} lineas sin desplazar, y hacen falta 20",
@@ -856,18 +911,21 @@ comprobar("y el texto no empieza pegado al borde",
 print("\n=== 13. LA PRUEBA DE LAS VEINTE LINEAS SABE PONERSE ROJA ===")
 print("  Se le quita a la respuesta el peso que la hace crecer -que es lo que")
 print("  la dejaba en dos lineas- y se comprueba que el bloque 12 lo caza.\n")
-v.resultado.rowconfigure(4, weight=0)
+v.resultado.rowconfigure(1, weight=0)
 bombear(0.8)
-roto = (v.texto.winfo_height() - 2 * interfaz.RELLENO) // alto_linea
+roto = max(0, (v.lienzo_lectura.winfo_height()
+               - (v.texto.winfo_rooty() - v.lienzo_lectura.winfo_rooty())
+               - 2 * interfaz.RELLENO)) // alto_linea
 print(f"    sin peso en la fila del texto: {roto} lineas visibles")
 comprobar("sin el peso, la respuesta se queda en una rendija",
           roto < 5, f"{roto} lineas: la mutacion no ha roto nada")
 comprobar("y el bloque 12 lo habria cazado", not roto >= 20)
-v.resultado.rowconfigure(4, weight=1)
+v.resultado.rowconfigure(1, weight=1)
 bombear(0.8)
-comprobar("al deshacerlo vuelve a las veinte",
-          (v.texto.winfo_height() - 2 * interfaz.RELLENO) // alto_linea >= 20,
-          str((v.texto.winfo_height() - 2 * interfaz.RELLENO) // alto_linea))
+_vuelta = max(0, (v.lienzo_lectura.winfo_height()
+                  - (v.texto.winfo_rooty() - v.lienzo_lectura.winfo_rooty())
+                  - 2 * interfaz.RELLENO)) // alto_linea
+comprobar("al deshacerlo vuelve a las veinte", _vuelta >= 20, str(_vuelta))
 
 # =====================================================================
 print("\n=== 14. LAS DOS VISTAS ===")

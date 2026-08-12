@@ -469,9 +469,9 @@ class Ventana:
         izq = max(0, (raiz.winfo_screenwidth() - ancho) // 2)
         arr = max(0, (raiz.winfo_screenheight() - alto) // 3)
         raiz.geometry(f"{ancho}x{alto}+{izq}+{arr}")
-        # El suelo por debajo del cual la maqueta se rompe. Mas bajo que antes
-        # -700- porque con la respuesta pidiendo lo minimo ya no hace falta
-        # tanto: lo que no se puede es dejar encoger hasta que no quepa nada.
+        # El suelo por debajo del cual la maqueta se rompe. Es un valor de
+        # arranque: el definitivo lo pone `_suelo_de_la_ventana` cuando la
+        # maqueta ya existe y puede decir lo que mide.
         raiz.minsize(860, 620)
         raiz.configure(bg=PAPEL)
 
@@ -619,7 +619,22 @@ class Ventana:
         barra = ttk.Scrollbar(caja, orient="vertical", command=lienzo.yview,
                               style="Vertical.TScrollbar")
         barra.grid(row=0, column=1, sticky="ns", padx=(AIRE, 0))
-        lienzo.configure(yscrollcommand=barra.set)
+        def _movida(primero, ultimo, _b=barra):
+            """La barra se esconde cuando no hay nada que desplazar.
+
+            Una barra que ocupa sitio y no hace nada es ruido; y una que
+            aparece justo cuando hace falta dice, ella sola, que abajo queda
+            mas. Estaba en la barra del texto, que ya no existe; su sitio es
+            esta, que es la que desplaza.
+            """
+            _b.set(primero, ultimo)
+            if float(primero) <= 0.0 and float(ultimo) >= 1.0:
+                _b.grid_remove()
+            else:
+                _b.grid()
+        lienzo.configure(yscrollcommand=_movida)
+        self._barra_de = getattr(self, "_barra_de", {})
+        self._barra_de[str(lienzo)] = barra
         dentro = tk.Frame(lienzo, bg=fondo)
         item = lienzo.create_window((0, 0), window=dentro, anchor="nw")
         dentro.bind("<Configure>",
@@ -702,7 +717,12 @@ class Ventana:
         raiz_vista.rowconfigure(0, weight=2)
         raiz_vista.rowconfigure(5, weight=3)
 
-        centro = tk.Frame(raiz_vista, bg=PAPEL)
+        centro = self.centro = tk.Frame(raiz_vista, bg=PAPEL)
+        # EL SUELO SE FIJA CUANDO LA MAQUETA SABE LO QUE MIDE, y eso no es en
+        # `after_idle` del constructor: ahi los hijos aun no tienen tamaño y
+        # `winfo_reqheight` devuelve una cifra de mentira. Se pregunta cada vez
+        # que el formulario cambia de tamaño, que es cuando puede contestar.
+        centro.bind("<Configure>", lambda _e: self._suelo_de_la_ventana())
         centro.grid(row=1, column=1, rowspan=4, sticky="n")
 
         tk.Label(centro, text="D E P A R T A M E N T O   F I S C A L",
@@ -764,8 +784,22 @@ class Ventana:
         self.aviso_largo.pack(fill="x", pady=(AIRE, 0))
         self.aviso_largo.pack_forget()
 
-        fila = tk.Frame(tarjeta, bg=PAPEL2)
-        fila.grid(row=2, column=0, sticky="ew")
+        # DOS GRUPOS, Y SE PLIEGAN CUANDO NO CABEN.
+        #
+        # Antes era una sola fila con todo empaquetado `side="left"`. Pedia
+        # 1.132 px, la tarjeta declaraba 720 y no los hacia cumplir
+        # -`pack_propagate` en True-, asi que crecia en silencio hasta que el
+        # desplegable de comunidad quedaba FUERA de la ventana. En este Mac
+        # desaparecia por debajo de 960 px de ancho, o sea por debajo del
+        # propio `minsize`. En un Windows con Segoe UI y escalado al 150 %, esa
+        # fila pide hasta 1.700 px: fuera siempre.
+        #
+        # Un control fuera de la ventana es un control que no existe. Y no se
+        # arregla con un ancho mayor, que solo mueve el umbral: se arregla
+        # haciendo que la fila se PLIEGUE.
+        self.fila_campos = tk.Frame(tarjeta, bg=PAPEL2)
+        self.fila_campos.grid(row=2, column=0, sticky="ew")
+        fila = self.grupo_ejercicio = tk.Frame(self.fila_campos, bg=PAPEL2)
         tk.Label(fila, text="Ejercicio (el año del caso):", bg=PAPEL2,
                  fg=TINTA, font=self.fuente).pack(side="left")
         self.ejercicio = tk.StringVar()
@@ -795,8 +829,9 @@ class Ventana:
         #
         # Vacia por defecto y nunca se rellena sola, ni siquiera con Cataluña:
         # rellenarla seria suponer donde vive el cliente.
+        fila = self.grupo_comunidad = tk.Frame(self.fila_campos, bg=PAPEL2)
         tk.Label(fila, text="Comunidad:", bg=PAPEL2, fg=TINTA,
-                 font=self.fuente).pack(side="left", padx=(HUECO, 0))
+                 font=self.fuente).pack(side="left")
         self.comunidad = tk.StringVar()
         self.caja_comunidad = ttk.Combobox(
             fila, textvariable=self.comunidad, width=14, font=self.fuente,
@@ -805,6 +840,8 @@ class Ventana:
         tk.Label(fila, text="solo si el caso tiene tramo autonomico",
                  bg=PAPEL2, fg=TINTA2, font=self.fuente_menuda
                  ).pack(side="left")
+        self._plegada = None
+        self.fila_campos.bind("<Configure>", self._plegar_campos)
 
         tk.Frame(tarjeta, height=1, bg=FILETE).grid(
             row=3, column=0, sticky="ew", pady=(HUECO, HUECO))
@@ -920,7 +957,8 @@ class Ventana:
         self.resultado = tk.Frame(raiz_vista, bg=PAPEL)
         self.resultado.grid(row=1, column=0, sticky="nsew")
         self.resultado.columnconfigure(0, weight=1)
-        self.resultado.rowconfigure(4, weight=1)
+        # Fila 1: LA PAGINA. El estado va en la 0 y no se mueve.
+        self.resultado.rowconfigure(1, weight=1)
 
         # LA BANDA DE ARRIBA USA EL ANCHO, NO EL ALTO.
         #
@@ -933,14 +971,34 @@ class Ventana:
         # se lee igual de bien. Por debajo de `ANCHO_DOS_COLUMNAS` se vuelven a
         # apilar: en una ventana estrecha dos columnas serian dos columnas
         # ilegibles. Lo decide `_reajustar`.
-        self.banda = tk.Frame(self.resultado, bg=PAPEL)
-        self.banda.grid(row=0, column=0, sticky="ew")
+        # LA PAGINA SE DESPLAZA ENTERA, Y EL TEXTO NO TIENE BARRA PROPIA.
+        #
+        # Antes habia dos zonas independientes: una banda fija arriba y un
+        # `Text` con su propia barra debajo. Eso daba los dos sintomas que se
+        # midieron: con una respuesta corta sobraban 325 px de caja vacia, y
+        # con una larga se veian 17 lineas de 108 porque la banda se quedaba
+        # con el primer tercio de la ventana para siempre.
+        #
+        # AQUI ESTUVO ANTES, Y SE CAMBIO POR ESTO MISMO. El comentario que
+        # habia decia «se pasa de 12 lineas a 24» al clavar la banda. Medido
+        # hoy no son 24 sino 17, y la banda de entonces se apilaba en 470 px;
+        # ahora son dos columnas y ocupa 148-334 segun los avisos. La cuenta
+        # que justificaba clavarla ya no da lo mismo.
+        self.caja_lectura, self.pagina, self.lienzo_lectura = \
+            self._desplazable(self.resultado)
+        self.caja_lectura.grid(row=1, column=0, sticky="nsew")
+
+        self.banda = tk.Frame(self.pagina, bg=PAPEL)
+        self.banda.pack(fill="x")
         self.columna_izq = tk.Frame(self.banda, bg=PAPEL)
         self.columna_der = tk.Frame(self.banda, bg=PAPEL)
         self._dos_columnas = None       # todavia sin decidir
 
-        self.panel_estado = tk.Frame(self.columna_izq, bg=PAPEL2)
-        self.panel_estado.pack(fill="x")
+        # EL ESTADO ES LO UNICO QUE NO SE MUEVE. Es lo que no puedes perder
+        # de vista mientras lees: si has bajado media respuesta y ya no ves si
+        # el criterio era CLARO o DISCUTIDO, la respuesta se lee mal.
+        self.panel_estado = tk.Frame(self.resultado, bg=PAPEL2)
+        self.panel_estado.grid(row=0, column=0, sticky="ew")
         # EL ROTULO ENCIMA, NO AL LADO. Probadas las dos: al lado, el rotulo
         # se come 320 px de ancho y la explicacion se parte en CUATRO lineas
         # (88 px); encima, la explicacion tiene la columna entera y se queda
@@ -956,11 +1014,24 @@ class Ventana:
             # cabe de sobra en la columna.
             justify="left", padx=RELLENO, pady=(HUECO2 - 4),
         )
+        # CLAVADO ARRIBA VA SOLO EL ROTULO. La explicacion y el «hecha con»
+        # se leen una vez; el rotulo es lo que no puedes perder de vista
+        # mientras lees, porque una respuesta de CRITERIO DISCUTIDO se lee de
+        # otra manera que una de CRITERIO CLARO.
+        #
+        # Y no es solo doctrina: clavando el panel entero se comian 148 px y
+        # de la respuesta se veian DIECINUEVE lineas al abrir, por debajo del
+        # liston de veinte. Clavando solo el rotulo son 58, y los otros 90
+        # vuelven a la pagina.
+        self.panel_detalle = tk.Frame(self.columna_izq, bg=PAPEL2)
+        self.panel_detalle.pack(fill="x")
+        self.panel_detalle.columnconfigure(1, weight=1)
+        self.filete_detalle = tk.Frame(self.panel_detalle, width=5, bg=FILETE)
         self.etiqueta_explicacion = tk.Label(
             # El hueco asimetrico va en el `grid`, NO aqui: `padx` de un
             # widget es UNA distancia y con (0, 24) tkinter revienta. Es la
             # tercera vez que caigo en la misma piedra.
-            self.panel_estado, text="", font=self.fuente, anchor="w",
+            self.panel_detalle, text="", font=self.fuente, anchor="w",
             justify="left", pady=0,
         )
         # Zona «estado»: lo que queda a la derecha del rotulo, y el rotulo
@@ -969,7 +1040,7 @@ class Ventana:
         # linea de mas, y esa linea vale dos de respuesta.
 
         self.etiqueta_hecha_con = tk.Label(
-            self.panel_estado, text="", font=self.fuente_menuda, anchor="w",
+            self.panel_detalle, text="", font=self.fuente_menuda, anchor="w",
             justify="left", pady=0, fg=TINTA3,
         )
         # EL ANCHO SE PREGUNTA, NO SE CALCULA.
@@ -980,7 +1051,7 @@ class Ventana:
         # cuesta dos de respuesta.
         #
         # El panel ya sabe lo que mide. Se le pregunta cuando cambia.
-        self.panel_estado.bind("<Configure>", self._wrap_estado)
+        self.panel_detalle.bind("<Configure>", self._wrap_estado)
 
         # EL APORTE, DEBAJO DEL ESTADO. Probado tambien en la columna derecha
         # y sale peor: alli el ancho es menor, el texto se parte en mas lineas
@@ -1010,9 +1081,9 @@ class Ventana:
         # esa barra ya existe y le sobra ancho.
         self.pie_respuesta = self.eco_expediente
 
-        caja = tk.Frame(self.resultado, bg=PAPEL2, highlightthickness=1,
+        caja = tk.Frame(self.pagina, bg=PAPEL2, highlightthickness=1,
                         highlightbackground=FILETE)
-        caja.grid(row=4, column=0, sticky="nsew", pady=(AIRE, 0))
+        caja.pack(fill="x", pady=(AIRE, 0))
         caja.columnconfigure(0, weight=1)
         caja.rowconfigure(0, weight=1)
         # EL TEXTO, QUE ES A LO QUE SE VIENE.
@@ -1033,12 +1104,9 @@ class Ventana:
                              takefocus=True,
                              selectbackground=SELECCION, selectforeground=TINTA)
         self.texto.grid(row=0, column=0, sticky="nsew")
-        self.barra_respuesta = ttk.Scrollbar(
-            caja, orient="vertical", command=self.texto.yview,
-            style="Vertical.TScrollbar")
-        self.barra_respuesta.grid(row=0, column=1, sticky="ns",
-                                  padx=(0, AIRE), pady=AIRE)
-        self.texto.configure(yscrollcommand=self._barra_movida)
+        # SIN BARRA PROPIA: la que desplaza es la de la pagina. Dos barras
+        # anidadas hacian que la respuesta pareciera una ventanita dentro de
+        # la ventana, y ademas dejaban media pantalla sin usar.
         self._atar_desplazamiento()
 
         self.texto.tag_configure("enlace", foreground=ENLACE, underline=True,
@@ -1131,17 +1199,80 @@ class Ventana:
 
     # --------------------------------------------- desplazamiento
 
-    def _barra_movida(self, primero, ultimo) -> None:
-        """La barra se esconde cuando no hay nada que desplazar.
+    def _suelo_de_la_ventana(self) -> None:
+        """El minimo lo dice la maqueta, no una cifra escrita a mano.
 
-        Una barra que ocupa sitio y no hace nada es ruido; y una que aparece
-        justo cuando hace falta dice, ella sola, que abajo queda mas.
+        Estaba fijo en 620 de alto, y a esa altura el boton «Qué hay dentro»
+        caia en y=691: FUERA de la ventana. Un control fuera de la ventana es
+        un control que no existe, y no hay forma de descubrirlo mirando el
+        codigo, porque nada falla: simplemente no esta.
+
+        Y no se puede dejar clavado en otro numero mayor, porque lo que mide
+        el formulario depende de la fuente del sistema y de su escalado: lo
+        que en un Mac son 725 px en un Windows al 150 % son bastantes mas.
+        Se pregunta.
         """
-        self.barra_respuesta.set(primero, ultimo)
-        if float(primero) <= 0.0 and float(ultimo) >= 1.0:
-            self.barra_respuesta.grid_remove()
+        try:
+            alto = self.centro.winfo_reqheight() + HUECO * 2
+            ancho = self.centro.winfo_reqwidth() + HUECO * 2
+        except tk.TclError:  # pragma: no cover - ventana cerrandose
+            return
+        # Con un techo: si la maqueta pidiera mas que la pantalla, un minimo
+        # mayor que el monitor deja la ventana imposible de colocar.
+        alto = min(alto, int(self.raiz.winfo_screenheight() * 0.95))
+        ancho = min(ancho, int(self.raiz.winfo_screenwidth() * 0.95))
+        self.raiz.minsize(max(860, ancho), max(620, alto))
+
+    def _plegar_campos(self, _evento=None) -> None:
+        """El año y la comunidad, al lado si caben; apilados si no.
+
+        SE PREGUNTA LO QUE MIDEN, no se supone. Un umbral en pixeles escrito a
+        ojo acierta en el equipo donde se escribio y falla en el otro, que es
+        exactamente lo que paso: en Mac la fila cabia y en Windows -Segoe UI,
+        escalado del sistema- no, y el campo se pintaba fuera de la ventana sin
+        que nada avisara.
+        """
+        try:
+            hay = self.fila_campos.winfo_width()
+            piden = (self.grupo_ejercicio.winfo_reqwidth()
+                     + HUECO + self.grupo_comunidad.winfo_reqwidth())
+        except tk.TclError:  # pragma: no cover - ventana cerrandose
+            return
+        if hay <= 1:
+            return
+        plegada = piden > hay
+        if plegada == self._plegada:
+            return
+        self._plegada = plegada
+        self.grupo_ejercicio.pack_forget()
+        self.grupo_comunidad.pack_forget()
+        if plegada:
+            self.grupo_ejercicio.pack(side="top", anchor="w")
+            self.grupo_comunidad.pack(side="top", anchor="w",
+                                      pady=(HUECO2, 0))
         else:
-            self.barra_respuesta.grid()
+            self.grupo_ejercicio.pack(side="left")
+            self.grupo_comunidad.pack(side="left", padx=(HUECO, 0))
+
+    def _ajustar_alto_del_texto(self) -> None:
+        """EL TEXTO MIDE LO QUE MIDE SU CONTENIDO. Ni mas ni menos.
+
+        Con alto fijo pasaban las dos cosas a la vez: una respuesta corta
+        dejaba 325 px de caja en blanco -medido- y una larga se quedaba
+        encerrada en un visor mientras media ventana la miraba. Quien desplaza
+        es la pagina.
+
+        `count displaylines` es lo que hay que preguntar, no las lineas del
+        texto: lo que ocupa alto son las lineas de PANTALLA, y una sola frase
+        larga en una columna de 74 son seis.
+        """
+        try:
+            cuenta = self.texto.count("1.0", "end", "displaylines")
+        except tk.TclError:  # pragma: no cover - ventana cerrandose
+            return
+        lineas = max(1, (cuenta or [1])[0])
+        if lineas != int(self.texto.cget("height")):
+            self.texto.configure(height=lineas)
 
     def _atar_desplazamiento(self) -> None:
         """LA RESPUESTA SE TIENE QUE PODER RECORRER ENTERA. Raton y teclado.
@@ -1165,17 +1296,18 @@ class Ventana:
         # desplazar -es fija- pero quien mueve la rueda mirando el estado
         # espera que baje la respuesta, no que no pase nada.
         for evento in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
-            for w in (self.texto, self.panel_estado, self.panel_aporte,
-                      self.panel_avisos, self.resultado, self.banda):
+            for w in (self.texto, self.panel_estado, self.panel_detalle,
+                      self.panel_aporte, self.panel_avisos, self.resultado,
+                      self.banda, self.pagina, self.caja_lectura):
                 w.bind(evento, self._rueda)
 
         teclas = {
-            "<Up>": lambda: self.texto.yview_scroll(-2, "units"),
-            "<Down>": lambda: self.texto.yview_scroll(2, "units"),
-            "<Prior>": lambda: self.texto.yview_scroll(-1, "pages"),
-            "<Next>": lambda: self.texto.yview_scroll(1, "pages"),
-            "<Home>": lambda: self.texto.yview_moveto(0.0),
-            "<End>": lambda: self.texto.yview_moveto(1.0),
+            "<Up>": lambda: self.lienzo_lectura.yview_scroll(-2, "units"),
+            "<Down>": lambda: self.lienzo_lectura.yview_scroll(2, "units"),
+            "<Prior>": lambda: self.lienzo_lectura.yview_scroll(-1, "pages"),
+            "<Next>": lambda: self.lienzo_lectura.yview_scroll(1, "pages"),
+            "<Home>": lambda: self.lienzo_lectura.yview_moveto(0.0),
+            "<End>": lambda: self.lienzo_lectura.yview_moveto(1.0),
         }
         for tecla, accion in teclas.items():
             self.texto.bind(tecla, lambda _e, a=accion: (a(), "break")[1])
@@ -1193,7 +1325,9 @@ class Ventana:
             pasos = -evento.delta
         else:                             # Windows: multiplos de 120
             pasos = -evento.delta // 120 * 3
-        self.texto.yview_scroll(int(pasos), "units")
+        # LA QUE SE MUEVE ES LA PAGINA. El texto ya no desplaza por su cuenta:
+        # mide lo que mide su contenido y va dentro del lienzo.
+        self.lienzo_lectura.yview_scroll(int(pasos), "units")
         return "break"
 
     def _atar_rueda_a_los_hijos_de(self, w, lienzo) -> None:
@@ -1235,8 +1369,8 @@ class Ventana:
         """
         try:
             self.texto.update_idletasks()
-            self.texto.yview_moveto(0.0)
-            self._barra_movida(*self.texto.yview())
+            self._ajustar_alto_del_texto()
+            self.lienzo_lectura.yview_moveto(0.0)
         except tk.TclError:  # pragma: no cover - ventana cerrandose
             pass
 
@@ -1290,6 +1424,10 @@ class Ventana:
         except tk.TclError:  # pragma: no cover - ventana cerrandose
             return
 
+        # Al cambiar el margen cambia el envoltorio, y con el el numero de
+        # lineas de pantalla: el alto del texto hay que rehacerlo aqui o la
+        # pagina se queda con el de la anchura anterior.
+        self._ajustar_alto_del_texto()
         self._colocar_banda(ancho)
         # Al cambiar el ancho de la ventana cambian las dos columnas, asi que
         # los dos anchos guardados dejan de valer.
@@ -1336,7 +1474,7 @@ class Ventana:
         cambia el alto de la etiqueta, que dispara otro `<Configure>` del
         panel, que volveria a entrar aqui. Sin la guarda es un bucle.
         """
-        ancho = self.panel_estado.winfo_width()
+        ancho = self.panel_detalle.winfo_width()
         if ancho <= 1 or ancho == getattr(self, "_ancho_estado", 0):
             return
         self._ancho_estado = ancho
@@ -1528,6 +1666,7 @@ class Ventana:
             w.destroy()
         self.etiqueta_estado.grid_forget()
         self.etiqueta_explicacion.grid_forget()
+        self.etiqueta_hecha_con.grid_forget()
         self._escribir_texto([])
         self.paso.pack(side="left")
         self.barra.pack(side="right", fill="x", expand=True, padx=(12, 0))
@@ -1930,12 +2069,19 @@ class Ventana:
                                     highlightthickness=1,
                                     highlightbackground=FILETE)
         self.filete_estado.configure(bg=FILETE_ESTADO.get(clave, FILETE))
-        self.filete_estado.grid(row=0, column=0, rowspan=3, sticky="ns")
+        self.filete_estado.grid(row=0, column=0, sticky="ns")
         self.etiqueta_estado.grid(row=0, column=1, sticky="ew")
-        self.etiqueta_explicacion.grid(row=1, column=1, sticky="ew",
-                                       padx=(RELLENO, RELLENO))
+        # El detalle, en la pagina y con el mismo filete de color para que se
+        # lea como lo que es: la continuacion del rotulo de arriba.
+        self.panel_detalle.configure(bg=fondo, highlightthickness=1,
+                                     highlightbackground=FILETE)
+        self.filete_detalle.configure(bg=FILETE_ESTADO.get(clave, FILETE))
+        self.filete_detalle.grid(row=0, column=0, rowspan=2, sticky="ns")
+        self.etiqueta_explicacion.grid(row=0, column=1, sticky="ew",
+                                       padx=(RELLENO, RELLENO),
+                                       pady=(HUECO2 - 4, 0))
         self.etiqueta_hecha_con.configure(bg=fondo)
-        self.etiqueta_hecha_con.grid(row=2, column=1, sticky="ew",
+        self.etiqueta_hecha_con.grid(row=1, column=1, sticky="ew",
                                      padx=(RELLENO, RELLENO),
                                      pady=(AIRE - 2, HUECO2 - 2))
         # El ancho se recalcula A LA FUERZA: el `<Configure>` del panel puede
@@ -1945,7 +2091,12 @@ class Ventana:
         # envolviendo a 209 px dentro de una columna de 1.002.
         self._ancho_estado = 0
         self._wrap_estado()
-        self.panel_estado.after_idle(self._wrap_estado)
+        self.panel_detalle.after_idle(self._wrap_estado)
+        # LA RUEDA, SOBRE TODO LO QUE ACABA DE NACER. Los avisos y el detalle
+        # del estado se crean en cada respuesta, asi que atarlos una vez en el
+        # constructor no vale: la rueda la recibe el widget que esta debajo
+        # del raton, y debajo del raton casi siempre hay una etiqueta.
+        self._atar_rueda_a_los_hijos_de(self.resultado, self.lienzo_lectura)
         self._atar_rueda_a_los_hijos(self.panel_estado)
 
 
