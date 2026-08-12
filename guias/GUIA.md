@@ -12,8 +12,16 @@ Tarda hasta un minuto y va diciendo por dónde va.
 
 | botón | qué mira |
 |---|---|
-| **Consultar la ley** | la Ley del IVA, el Reglamento y la Ley General Tributaria |
+| **Consultar la ley** | las normas cargadas: la ley y sus reglamentos |
 | **Consultar también el criterio** | lo anterior **más** consultas de la DGT y resoluciones del TEAC y de los tribunales regionales |
+
+<!-- COBERTURA: lo de aquí abajo NO se escribe a mano. Lo rellena
+     `python configurar.py --regenerar-guia` contando la copia local, y al
+     arrancar se comprueba que sigue coincidiendo con la ventana. Una frase a
+     mano sobre lo que el sistema cubre caduca sin avisar: ya pasó una vez. -->
+<!-- COBERTURA -->
+(sin calcular: ejecuta `python configurar.py --regenerar-guia`)
+<!-- /COBERTURA -->
 
 No hay que elegir de antemano ni configurar nada: se decide duda a duda. El
 segundo lee bastante más, y **no siempre hace falta**: si lo que preguntas lo
@@ -134,19 +142,20 @@ Si el asunto es importante, en la fuente puede haber criterio que aquí no está
 | consultas de la **DGT** | PETETE — `petete.tributos.hacienda.gob.es` |
 | doctrina del **TEAC** y resoluciones de los TEAR | DYCTEA |
 
-### El criterio guardado es todo de IVA
+### La copia de criterio es parcial, y cuánto lo dice la propia herramienta
 
-La herramienta cubre **dos impuestos con la ley**: IVA y Renta. Pero la copia
-local de criterio —las consultas de la DGT y las resoluciones— **es toda de
-IVA**.
+Aquí ponía, a mano, que el criterio guardado era de un solo impuesto. Lo fue,
+dejó de serlo, y la frase se quedó escrita diciéndolo igual: mandaba a buscar
+fuera a quien preguntaba de Renta teniendo cientos de documentos de Renta en
+el disco.
 
-Para una pregunta de **Renta**, el botón «Consultar también el criterio» no va a
-encontrar nada. No una vez: **ninguna**. La respuesta saldrá igual, hecha con la
-Ley del IRPF y su Reglamento, y el recuadro de arriba dirá que no había criterio
-guardado sobre eso.
+**De qué hay y cuánto está arriba, en el cuadro que se rellena solo**, y en la
+ventana en «Qué hay dentro». Los dos salen de la misma cuenta, y al arrancar se
+comprueba que dicen lo mismo.
 
-**No es un fallo y no hay que insistir**: es que esa copia aún no se ha llenado.
-Para preguntas de Renta, el primer botón hace exactamente lo mismo.
+Si para tu duda no hay criterio guardado, el recuadro de arriba lo dirá.
+**No es un fallo y no hay que insistir**: es que esa parte de la copia aún no se
+ha llenado. La respuesta sale igual, hecha con la ley y su reglamento.
 
 ### Y debajo, dos bloques que no son lo mismo
 

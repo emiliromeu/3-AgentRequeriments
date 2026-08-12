@@ -72,10 +72,32 @@ def aplicar(modo: str = C.UNICO) -> int:
         return 1
 
     titulo("REGENERANDO LA GUIA")
-    shutil.copyfile(origen, C.GUIA)
-    print(f"\n  GUIA.md copiada de {origen}")
+    # LA COBERTURA SE RELLENA AL COPIAR, contando la copia local. Es el unico
+    # sitio donde se escribe, y sale de los datos: la guia no puede decir de
+    # que hay criterio por su cuenta, porque eso es lo que ya caduco una vez
+    # -«todas de IVA por ahora»- sin que nadie se enterara.
+    texto = origen.read_text(encoding="utf-8")
+    ix = None
+    try:
+        import fase4
+        ix, _g = fase4.cargar_corpus()
+    except Exception as e:  # noqa: BLE001
+        print(f"\n  No se ha podido cargar el corpus ({e}).")
+        print("  Sin el no se puede contar la despensa, y la guia se quedaria")
+        print("  con una cobertura inventada. No se toca nada.")
+        return 1
+    abre, cierra = C.MARCA_COBERTURA
+    i, j = texto.find(abre), texto.find(cierra)
+    if i < 0 or j < 0:
+        print(f"\n  {origen} no tiene las marcas {abre} / {cierra}.")
+        print("  Sin ellas la guia no puede decir de que hay criterio.")
+        return 1
+    texto = (texto[:i + len(abre)] + "\n" + C.texto_de_cobertura(ix) + "\n"
+             + texto[j:])
+    C.GUIA.write_text(texto, encoding="utf-8")
+    print(f"\n  GUIA.md generada de {origen}, con la cobertura contada")
 
-    r = C.revisar()
+    r = C.revisar(ix)
     print()
     if r.coherente:
         print("  La guia dice lo mismo que la ventana. El agente puede abrir.")

@@ -121,7 +121,38 @@ class Revision:
                 "coherente": self.coherente, "descuadres": self.descuadres}
 
 
-def revisar() -> Revision:
+MARCA_COBERTURA = ("<!-- COBERTURA -->", "<!-- /COBERTURA -->")
+
+
+def bloque_de_cobertura(texto: str) -> str:
+    """Lo que hay hoy entre las dos marcas de la guia. Vacio si no estan."""
+    abre, cierra = MARCA_COBERTURA
+    i, j = texto.find(abre), texto.find(cierra)
+    if i < 0 or j < 0 or j < i:
+        return ""
+    return texto[i + len(abre):j].strip()
+
+
+def texto_de_cobertura(ix) -> str:
+    """Lo que TIENE que poner ahi, contado de la despensa.
+
+    Es la misma cuenta que enseña la ventana: si alguien edita la guia a mano,
+    `revisar` lo caza. La cobertura no se escribe en dos sitios, se calcula en
+    uno y se copia.
+    """
+    from agente_fiscal import cobertura as C
+    lineas = ["**De qué hay criterio guardado ahora mismo** (contado de la "
+              "copia local, no escrito a mano):", "",
+              "| impuesto | documentos de criterio |", "|---|---|"]
+    for nombre, total in C.por_impuesto(ix):
+        lineas.append(f"| {nombre} | {total} |")
+    lineas += ["",
+               f"Y la ley que mira el primer botón: {len(ix.docs)} artículos "
+               f"de {len(ix.rutas)} normas."]
+    return "\n".join(lineas)
+
+
+def revisar(ix=None) -> Revision:
     """¿Dice la hoja de la mesa lo mismo que la ventana?
 
     Se comprueba lo unico que queda que pueda mentir: que TODAS las frases que
@@ -153,6 +184,26 @@ def revisar() -> Revision:
                 f"una frase que sale en pantalla NO esta en GUIA.md: "
                 f"«{frase[:56]}...». Quien lea la hoja leera otra cosa que "
                 f"quien mire la ventana")
+
+    # LA COBERTURA, QUE ES LO QUE MAS CARO NOS HA SALIDO. Solo se puede
+    # comprobar con el corpus delante; sin el se dice que no se ha mirado, en
+    # vez de darlo por bueno.
+    if ix is None:
+        r.piezas["cobertura de la guia"] = "sin comprobar (corpus no cargado)"
+        return r
+    crudo = GUIA.read_text(encoding="utf-8", errors="replace")
+    hay = _plano(bloque_de_cobertura(crudo))
+    debe = _plano(texto_de_cobertura(ix))
+    r.piezas["cobertura de la guia"] = "comprobada"
+    if not hay:
+        r.descuadres.append(
+            "GUIA.md no tiene el bloque de cobertura. La hoja no dice de que "
+            "hay criterio, y esa frase es la que ya caduco una vez")
+    elif hay != debe:
+        r.descuadres.append(
+            "la cobertura de GUIA.md no es la de la despensa: la hoja dice "
+            "una cosa y la ventana cuenta otra. Se arregla con "
+            "«python configurar.py --regenerar-guia»")
     return r
 
 

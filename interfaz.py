@@ -54,6 +54,7 @@ except ImportError:  # pragma: no cover - depende de la instalacion de Python
 
 import fase4
 from agente_fiscal import analizador as AN
+from agente_fiscal import configuracion as CONF
 from agente_fiscal import dgt as DGT
 from agente_fiscal import estado as EST
 
@@ -93,8 +94,16 @@ from agente_fiscal import estado as EST
 # que queda mas a mano, no el que se queria.
 BOTON_LEY = "Consultar la ley"
 BOTON_CRITERIO = "Consultar tambien el criterio"
+
+# LO QUE HACE EL BOTON ES FIJO; DE QUE HAY, SE CUENTA.
+#
+# Aqui ponia «...TODAS DE IVA por ahora». Era verdad el dia que se escribio y
+# dejo de serlo en cuanto la siembra metio criterio de Renta, de Sociedades,
+# de Patrimonio y de las normas generales. Una frase a mano sobre lo que el
+# sistema cubre es una fecha de caducidad sin etiqueta, y es el quinto caso
+# del mismo patron. La cobertura la cuenta `cobertura.frase`, de la despensa.
 PIE_CRITERIO = ("anade consultas de la DGT y resoluciones del TEAC y de los "
-                "tribunales regionales, TODAS DE IVA por ahora")
+                "tribunales regionales")
 
 # Lo que se dice arriba, junto al estado, y lo que viaja en el texto copiado.
 # Si alguien pega la respuesta en sus notas, tiene que saberse con que se hizo.
@@ -122,17 +131,15 @@ AVISO_DESPENSA = ("Esta copia es NUESTRA y es parcial: se va llenando poco a "
                   "no es un fallo, y tampoco significa que no haya criterio: "
                   "significa que aquí todavía no está. " + DONDE_BUSCAR)
 
-# Y EL CASO QUE VA A PASAR SIEMPRE, NO DE VEZ EN CUANDO.
+# AQUI HABIA UN AVISO QUE DECIA QUE EL CRITERIO ERA «TODO DE IVA».
 #
-# La ley cubre IVA y Renta; la copia de criterio es TODA de IVA. Asi que para
-# cualquier pregunta de IRPF el segundo boton no va a encontrar nada, y no una
-# vez: ninguna. Sin decirlo, se lee como que el criterio esta roto justo el dia
-# que alguien prueba Renta por primera vez.
-AVISO_CRITERIO_SOLO_IVA = (
-    "El criterio que tenemos guardado es todo de IVA. Para preguntas de Renta "
-    "el segundo botón no encontrará nada todavía —no porque no exista "
-    "doctrina de Renta, que la hay, sino porque esa parte de la copia aún no "
-    "se ha llenado. " + DONDE_BUSCAR)
+# Se escribio cuando lo era, y aviso bien durante semanas. Dejo de ser cierto
+# con la siembra y se quedo en pantalla diciendolo igual, que es peor que no
+# decir nada: manda a quien pregunta de Renta a buscar fuera cuando aqui hay
+# 525 documentos de Renta.
+#
+# Lo sustituye `cobertura.frase`, que lo cuenta. Un aviso que se calcula no
+# caduca; uno que se escribe, si.
 
 HECHA_CON = {
     False: "Hecha solo con la ley y sus reglamentos. Sin criterio administrativo.",
@@ -869,10 +876,14 @@ class Ventana:
             command=lambda: self._lanzar(True), state="disabled")
         self.boton_criterio.grid(row=0, column=0, sticky="w")
         self._pinchable(self.boton_criterio)
-        tk.Label(fila_criterio, text=PIE_CRITERIO, bg=PAPEL2,
-                 fg=TINTA2, font=self.fuente_menuda, anchor="w",
-                 justify="left", wraplength=ANCHO_TARJETA - 40
-                 ).grid(row=1, column=0, sticky="ew", pady=(AIRE, 0))
+        # LO QUE HACE, FIJO; DE QUE HAY, CONTADO. La segunda mitad se rellena
+        # en `_arrancar_motor`, que es cuando el corpus ya esta cargado y se
+        # puede contar la despensa. Hasta entonces se dice solo lo que hace.
+        self.pie_criterio = tk.Label(
+            fila_criterio, text=PIE_CRITERIO, bg=PAPEL2,
+            fg=TINTA2, font=self.fuente_menuda, anchor="w",
+            justify="left", wraplength=ANCHO_TARJETA - 40)
+        self.pie_criterio.grid(row=1, column=0, sticky="ew", pady=(AIRE, 0))
 
         # --- progreso ---
         self.marco_progreso = tk.Frame(centro, bg=PAPEL)
@@ -1559,13 +1570,35 @@ class Ventana:
         self._escribir_texto([
             ("Escribe tu duda, pon el año del caso y pulsa Consultar.\n\n",
              "apagado"),
-            ("Esta herramienta responde solo con la Ley y el Reglamento del "
-             "IVA. No incluye consultas de la DGT ni sentencias.\n", "apagado"),
+            # NI UNA PALABRA A MANO SOBRE LO QUE CUBRE. Aqui ponia «responde
+            # solo con la Ley y el Reglamento del IVA» con trece normas y
+            # cuatro impuestos cargados. El detalle por impuesto esta en «Qué
+            # hay dentro»; aqui va el titular, con sus cifras.
+            (f"El primer botón responde con la ley: {len(self.ix.docs)} "
+             f"artículos de {len(self.ix.rutas)} normas. El segundo añade "
+             f"además el criterio guardado; en «Qué hay dentro» está de qué "
+             f"impuestos y cuánto.\n", "apagado"),
         ])
         self.pie.configure(
             text=f"{len(self.ix.docs)} preceptos cargados  ·  "
                  f"cada consulta queda guardada en el expediente"
         )
+        # DE QUE HAY CRITERIO, CONTADO DE LA DESPENSA. Nunca escrito.
+        from agente_fiscal import cobertura as _C
+        self.pie_criterio.configure(
+            text=f"{PIE_CRITERIO}. {_C.frase(self.ix)}")
+
+        # Y AHORA QUE HAY CORPUS, SE COMPRUEBA QUE LA HOJA DICE LA MISMA
+        # CUENTA. Al arrancar no se puede: sin corpus no hay despensa que
+        # contar, y `revisar` lo declara «sin comprobar» en vez de darlo por
+        # bueno. Aqui ya se puede, y es donde importa: la guia impresa que
+        # esta en la mesa no puede decir que hay criterio de otra cosa.
+        revision = CONF.revisar(self.ix)
+        if not revision.coherente:
+            self.mostrar_cinta(
+                "La guía impresa y la ventana no dicen lo mismo sobre lo que "
+                "hay guardado. Avisa a Emili: se arregla con "
+                "«python configurar.py --regenerar-guia».")
         self._reajustar()
         self._revisar_boton()
 
@@ -1830,7 +1863,7 @@ class Ventana:
         # Asi crece UNA linea por impuesto en vez de tres, y el detalle sigue
         # estando entero para quien lo quiera. El desplazamiento se queda donde
         # debe estar: de red por si acaso, no como forma de leer.
-        titulo("NORMAS CARGADAS · es lo único que fundamenta")
+        titulo(f"NORMAS CARGADAS · lo que mira «{BOTON_LEY}»")
         c = caja()
         total = 0
         if self.ix is not None:
@@ -1907,36 +1940,47 @@ class Ventana:
             linea(c, "cargando...")
 
         # --- la copia local ---
-        titulo("COPIA LOCAL DE CRITERIO · lo que añade el segundo botón")
+        titulo(f"DE QUÉ HAY CRITERIO GUARDADO · lo que añade «{BOTON_CRITERIO}»")
         c = caja()
+        # DE QUE HAY, POR IMPUESTO Y CONTADO.
+        #
+        # Antes habia tres cifras -consultas de la DGT, doctrina del TEAC,
+        # resoluciones de los TEAR- y debajo una frase fija diciendo que todo
+        # era de IVA. Las tres cifras seguian siendo ciertas y la frase no, y
+        # es la frase lo que la gente lee para decidir si pulsa el segundo
+        # boton. Ahora es una sola tabla, por impuesto, contada de la copia
+        # local: dice lo mismo que las tres cifras -la suma- y ademas lo que
+        # aquellas no decian.
         consultas = len(list(_D.DIR_CONSULTAS.glob("*.json"))) \
             if _D.DIR_CONSULTAS.is_dir() else 0
         todas = _T.CacheTEAC().todas()
-        centrales = sum(1 for x in todas if x.es_central)
-        linea(c, "Consultas de la Dirección General de Tributos",
-              f"{consultas}")
-        linea(c, "Doctrina del TEAC", f"{centrales}")
-        linea(c, "Resoluciones de tribunales regionales",
-              f"{len(todas) - centrales}")
+        if self.ix is not None:
+            from agente_fiscal import cobertura as _C
+            filas = _C.por_impuesto(self.ix)
+            for nombre, total in filas:
+                linea(c, nombre, f"{total}")
+            if not filas:
+                linea(c, "todavía no hay nada guardado")
+            linea(c, "Consultas de la Dirección General de Tributos "
+                     "y Doctrina del TEAC y tribunales regionales",
+                  f"{consultas} + {len(todas)}")
+        else:
+            linea(c, "cargando...")
         tk.Label(c, text=AVISO_DESPENSA, bg=PAPEL2, fg=TINTA2,
                  font=self.fuente_menuda, anchor="w", justify="left",
                  wraplength=560, padx=RELLENO, pady=HUECO2 - 4).pack(fill="x")
-        tk.Label(c, text=AVISO_CRITERIO_SOLO_IVA, bg=PAPEL2, fg=TINTA,
-                 font=self.fuente_menuda, anchor="w", justify="left",
-                 wraplength=560, padx=RELLENO,
-                 pady=(HUECO2 - 4)).pack(fill="x")
 
-        # --- que mira cada boton ---
+        # AQUI HUBO DOS BLOQUES QUE YA NO HACEN FALTA.
         #
-        # Aqui habia «LO QUE CUESTA CADA CONSULTA», con los dos precios. Se
-        # quito: el gasto esta asumido y verlo en pantalla solo conseguia que
-        # alguien pulsara el barato cuando necesitaba el otro. Los dos botones
-        # se distinguen por LO QUE MIRAN, que es lo que hay que saber para
-        # elegir. El coste se sigue midiendo en la traza y en los informes.
-        titulo("QUÉ MIRA CADA BOTÓN")
-        c = caja()
-        linea(c, BOTON_LEY, "la ley y sus reglamentos")
-        linea(c, BOTON_CRITERIO, "lo anterior, más DGT y TEAC")
+        # Primero «LO QUE CUESTA CADA CONSULTA», con los dos precios: se quito
+        # porque el gasto esta asumido y verlo solo conseguia que alguien
+        # pulsara el barato cuando necesitaba el otro.
+        #
+        # Y despues «QUÉ MIRA CADA BOTÓN», que lo sustituyo. Tambien sobra: la
+        # tabla de arriba dice de que hay criterio Y CUANTO, que es lo mismo
+        # pero con la cifra, y el pie del segundo boton lo repite en la
+        # pantalla de consultar. Tres sitios diciendo lo mismo son tres sitios
+        # donde uno se puede quedar viejo.
 
         # --- el canario ---
         titulo("LAS FUENTES, AHORA MISMO")
