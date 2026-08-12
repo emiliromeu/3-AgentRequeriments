@@ -151,12 +151,70 @@ class Normativa:
 _RE_QUEDA_NUMERO = re.compile(r"\d")
 
 
+def _partir_por_designaciones(trozo: str):
+    """Parte «Ley 56/2007 art. 2 bis RD 1619/2012 arts. 8 y 9» en dos.
+
+    LA DGT NO SIEMPRE PONE SEPARADOR. El campo se trocea por «;» y saltos de
+    linea, y hay consultas que encadenan dos o tres normas seguidas sin
+    ninguno de los dos. El trozo queda con dos designaciones dentro y
+    `_resolver_designacion` lo declina por falta de unanimidad, que es lo
+    correcto ante una entrada mal troceada: el problema es el troceo.
+
+    SE PARTE DELANTE DE UNA DESIGNACION SOLO SI YA HA HABIDO UNA MARCA DE
+    ARTICULO ANTES. Sin esa condicion se estaria partiendo la designacion de
+    sus propios articulos y dejandolos huerfanos, o peor, pegandoselos a la
+    norma vecina.
+
+    HUBO UNA TERCERA CONDICION Y SE QUITO: no partir si la norma venia
+    enganchada por «de la», «del», «aprobado por». Parecia obligatoria -es la
+    forma de «Articulos 29, 227 y 249 de la Ley 58/2003»- y resulto que no
+    sostiene nada: medida sobre las 845, quitarla no cambia ni un par, porque
+    esa forma ya la protege la condicion de la designacion propia. Y en la
+    unica sonda donde cambiaba algo, el corte acertaba. No se guarda una
+    guarda que no se puede ver fallar.
+    """
+    cortes, pos = [], 0
+    while True:
+        m = _RE_NORMA_EXPLICITA.search(trozo, pos)
+        if not m:
+            break
+        pos = m.end()          # detras de esta, no dentro: «Real Decreto ...»
+        if not m.start():
+            continue           # la primera del trozo no abre nada nuevo
+        desde = cortes[-1] if cortes else 0
+        marca = _RE_MARCA_ART.search(trozo, desde, m.start())
+        if not marca:
+            continue           # aun estamos en la designacion, no detras
+
+        # Y EL TROZO DE DELANTE TIENE QUE TRAER SU PROPIA DESIGNACION, DELANTE
+        # DE SU MARCA. Si no la trae, la norma que estoy mirando ES SU
+        # DESIGNACION, que va detras:
+        #
+        #   «Articulo 93 Ley 58/2003»
+        #
+        # Partir ahi deja el 93 huerfano y la Ley 58/2003 sin articulos, y las
+        # dos mitades se declinan. No es hipotetico: la primera version de
+        # este corte hizo exactamente eso y se llevo por delante ocho
+        # consultas que resolvian bien, las mismas que arreglaba mirar detras.
+        propia = _RE_NORMA_EXPLICITA.search(trozo, desde, marca.start())
+        if not propia:
+            continue
+        cortes.append(m.start())
+    if not cortes:
+        return [trozo]
+    limites = [0, *cortes, len(trozo)]
+    return [trozo[a:b] for a, b in zip(limites, limites[1:])]
+
+
 def analizar_normativa(texto: str, normas=None) -> Normativa:
     """Como `pares_de_normativa`, pero contando ademas lo que no se reconocio."""
     from . import referencias as R
 
     salida = Normativa()
-    for trozo in _RE_SEPARADOR_NORMA.split(texto or ""):
+    troceado = [sub
+                for bruto in _RE_SEPARADOR_NORMA.split(texto or "")
+                for sub in _partir_por_designaciones(bruto)]
+    for trozo in troceado:
         trozo = trozo.strip()
         if not trozo:
             continue

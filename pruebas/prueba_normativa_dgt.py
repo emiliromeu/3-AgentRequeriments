@@ -43,6 +43,9 @@ LGT = "BOE-A-2003-23186#0"
 LIVA = "BOE-A-1992-28740#0"
 RGAT = "BOE-A-2007-15984#0"
 LIRPF = "BOE-A-2006-20764#0"
+LIS = "BOE-A-2014-12328#0"
+IP = "BOE-A-1991-14392#0"
+RIVA1 = "BOE-A-1992-28925#1"
 
 fallos = []
 
@@ -118,7 +121,45 @@ CASOS = [
      " Arts. 31, 66 y 194 de la Ley 58/2003",
      [("105", ""), ("31", LGT), ("66", LGT), ("194", LGT)]),
 
-    # ---- 4. la forma de toda la vida, que no puede haberse movido
+    # ---- 4. D: varias normas en el mismo trozo, sin separador
+    #
+    # La DGT no siempre pone «;» ni salto de linea, y el trozo queda con dos
+    # designaciones dentro. `_resolver_designacion` lo declina por falta de
+    # unanimidad, y hace bien: el problema no es el resolvedor, es el troceo.
+    ("POSITIVO D  dos normas seguidas sin separador",
+     "Ley 37/1992 arts. 90, 91 Ley 58/2003, arts. 105, 106",
+     [("90", LIVA), ("91", LIVA), ("105", LGT), ("106", LGT)]),
+    ("POSITIVO D  tres normas, la de en medio no la tenemos",
+     "Ley 19/1991 arts. 1, 3 y 7. Ley 29/1987 art. 3 y 28. "
+     "Ley 35/2006 arts 1, 6, 8, 11 y 33",
+     [("1", IP), ("3", IP), ("7", IP), ("3", ""), ("28", ""),
+      ("1", LIRPF), ("6", LIRPF), ("8", LIRPF), ("11", LIRPF),
+      ("33", LIRPF)]),
+
+    # EL ADVERSARIO DE D, que es el que se cumplio de verdad: la primera
+    # version del corte partia «Articulo 93 Ley 58/2003» en dos, dejaba el 93
+    # huerfano y la Ley 58/2003 sin articulos, y se llevo por delante OCHO
+    # consultas que resolvian bien. Las mismas que arreglaba mirar detras.
+    ("ADVERSARIO D  no se parte una designacion de sus propios articulos",
+     "Artículo 93 Ley 58/2003",
+     [("93", LGT)]),
+    # Copiado tal cual de la V0856-25, saltos de linea incluidos.
+    ("ADVERSARIO D  ni cuando detras viene otra norma con los suyos",
+     "Artículo 3,9 y 23 Real Decreto 1065/2007.\n\n"
+     " artículos 5, 7 y 118 Ley 27/2014 del Impuesto sobre Sociedades",
+     [("3", RGAT), ("9", RGAT), ("23", RGAT),
+      ("5", LIS), ("7", LIS), ("118", LIS)]),
+    ("ADVERSARIO D  una norma nombrada sin articulos no abre trozo",
+     "Ley 37/1992 arts. 4, 5 Ley 38/1992",
+     [("4", LIVA), ("5", LIVA)]),
+    # De la V2484-24, tal cual. Sin exigir marca de articulo delante, el corte
+    # entra antes de «RD 1624/1992», deja la primera mitad sin articulos y la
+    # segunda con una abreviatura que no resuelve: el 62 se pierde.
+    ("ADVERSARIO D  sin marca delante no hay nada que separar",
+     "Real Decreto 1007/2023, de 5 de diciembre, RIVA RD 1624/1992 art. 62-6",
+     [("62", RIVA1)]),
+
+    # ---- 5. la forma de toda la vida, que no puede haberse movido
     ("CONTROL  la norma DELANTE sigue igual",
      "Ley 37/1992 arts. 75, 78, 80-cuatro, 89",
      [("75", LIVA), ("78", LIVA), ("80", LIVA), ("89", LIVA)]),
@@ -169,7 +210,9 @@ MUTACIONES = [
       "POSITIVO  «del Real Decreto», que se cortaba a si mismo",
       "POSITIVO  articulo con sufijo",
       "POSITIVO  el mismo texto, pero sin nada delante: ahi si se mira",
-      "PAREJA  una norma que no tenemos y otra que si, en el mismo campo"]),
+      "PAREJA  una norma que no tenemos y otra que si, en el mismo campo",
+      "ADVERSARIO D  no se parte una designacion de sus propios articulos",
+      "ADVERSARIO D  ni cuando detras viene otra norma con los suyos"]),
 
     ("(b) la guarda se afloja a «ninguna norma que yo reconozca»",
      "            if not designacion.strip():",
@@ -187,11 +230,39 @@ MUTACIONES = [
      "                    otra = None",
      ["ADVERSARIO  detras hay dos normas: se corta en la primera"]),
 
+    ("(f) el troceo por designaciones no parte nada",
+     "        cortes.append(m.start())",
+     "        pass",
+     ["POSITIVO D  dos normas seguidas sin separador",
+      "POSITIVO D  tres normas, la de en medio no la tenemos"]),
+
+    ("(g) se parte sin exigir que el trozo traiga su designacion propia",
+     "        propia = _RE_NORMA_EXPLICITA.search(trozo, desde, marca.start())\n"
+     "        if not propia:\n            continue",
+     "        pass",
+     ["ADVERSARIO D  no se parte una designacion de sus propios articulos",
+      "ADVERSARIO D  ni cuando detras viene otra norma con los suyos",
+      "POSITIVO  la norma detras, con «de la»",
+      "POSITIVO  la norma detras, sin conector",
+      "POSITIVO  «del Real Decreto», que se cortaba a si mismo",
+      "POSITIVO  articulo con sufijo",
+      "POSITIVO  el mismo texto, pero sin nada delante: ahi si se mira",
+      "ADVERSARIO  la norma de detras no esta pegada a los numeros",
+      "ADVERSARIO  detras hay dos normas: se corta en la primera",
+      "PAREJA  una norma que no tenemos y otra que si, en el mismo campo"]),
+
+    ("(h) se parte sin exigir marca de articulo delante",
+     "        marca = _RE_MARCA_ART.search(trozo, desde, m.start())\n"
+     "        if not marca:\n            continue",
+     "        marca = _RE_MARCA_ART.search(trozo, desde, m.start()) or m",
+     ["ADVERSARIO D  sin marca delante no hay nada que separar"]),
+
     ("(e) el corte busca la otra norma desde el indice 1, dentro de si misma",
      "                    otra = _RE_NORMA_EXPLICITA.search(detras, primera.end())",
      "                    otra = _RE_NORMA_EXPLICITA.search(detras, 1)",
      ["POSITIVO  «del Real Decreto», que se cortaba a si mismo",
-      "POSITIVO  articulo con sufijo"]),
+      "POSITIVO  articulo con sufijo",
+      "ADVERSARIO D  ni cuando detras viene otra norma con los suyos"]),
 ]
 
 for rotulo, viejo, nuevo, deben_caer in MUTACIONES:
