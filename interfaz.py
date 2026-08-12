@@ -80,19 +80,21 @@ from agente_fiscal import estado as EST
 
 # ------------------------------------------------------------- los botones
 #
-# DOS BOTONES, UNO POR MODO, y el texto tiene que decir en cristiano que anade
-# el segundo. Lo que NO puede parecer es una advertencia: el criterio de la DGT
-# y las resoluciones son utiles, y quien lo necesite tiene que pulsarlo sin
-# sensacion de estar haciendo algo indebido. Por eso el precio va en gris, al
-# lado, y no dentro del boton en rojo.
+# DOS BOTONES, UNO POR MODO, y SE DISTINGUEN POR LO QUE HACEN. Antes el pie
+# decia tambien lo que costaba cada uno, y eso hacia justo lo contrario de lo
+# que se pretendia: quien dudaba pulsaba el barato aunque necesitara el otro.
+# El gasto esta asumido y decidido; ponerlo en pantalla solo sirve para que
+# alguien se autolimite en una consulta que si necesitaba el criterio.
 #
-# El caro va DEBAJO y no al lado: con los dos en la misma fila se pulsa el que
-# queda mas a mano, no el que se queria.
+# EL COSTE SIGUE MEDIDOSE Y REGISTRANDOSE, en la traza y en los informes. Eso
+# es para quien lleva la cuenta, no para quien consulta.
+#
+# El segundo va DEBAJO y no al lado: con los dos en la misma fila se pulsa el
+# que queda mas a mano, no el que se queria.
 BOTON_LEY = "Consultar la ley"
 BOTON_CRITERIO = "Consultar tambien el criterio"
 PIE_CRITERIO = ("anade consultas de la DGT y resoluciones del TEAC y de los "
-                "tribunales regionales, TODAS DE IVA por ahora · unos 0,22 € "
-                "frente a 0,13 €")
+                "tribunales regionales, TODAS DE IVA por ahora")
 
 # Lo que se dice arriba, junto al estado, y lo que viaja en el texto copiado.
 # Si alguien pega la respuesta en sus notas, tiene que saberse con que se hizo.
@@ -819,9 +821,9 @@ class Ventana:
         self.boton.pack(side="left")
         self._pinchable(self.boton)
 
-        # El caro va DEBAJO y en su propia fila: con los dos al lado se pulsa
-        # el que queda mas a mano, no el que se queria. Y el precio FUERA del
-        # boton, en gris, debajo: dentro parecia una advertencia.
+        # El segundo va DEBAJO y en su propia fila: con los dos al lado se
+        # pulsa el que queda mas a mano, no el que se queria. Debajo, en gris,
+        # QUE ANADE: fuentes, no precio.
         fila_criterio = tk.Frame(tarjeta, bg=PAPEL2)
         fila_criterio.grid(row=5, column=0, sticky="ew", pady=(HUECO2, 0))
         fila_criterio.columnconfigure(0, weight=1)
@@ -1785,11 +1787,17 @@ class Ventana:
                  wraplength=560, padx=RELLENO,
                  pady=(HUECO2 - 4)).pack(fill="x")
 
-        # --- el coste ---
-        titulo("LO QUE CUESTA CADA CONSULTA · medido, no estimado")
+        # --- que mira cada boton ---
+        #
+        # Aqui habia «LO QUE CUESTA CADA CONSULTA», con los dos precios. Se
+        # quito: el gasto esta asumido y verlo en pantalla solo conseguia que
+        # alguien pulsara el barato cuando necesitaba el otro. Los dos botones
+        # se distinguen por LO QUE MIRAN, que es lo que hay que saber para
+        # elegir. El coste se sigue midiendo en la traza y en los informes.
+        titulo("QUÉ MIRA CADA BOTÓN")
         c = caja()
-        linea(c, BOTON_LEY, "~0,13 €")
-        linea(c, BOTON_CRITERIO, "~0,22 €")
+        linea(c, BOTON_LEY, "la ley y sus reglamentos")
+        linea(c, BOTON_CRITERIO, "lo anterior, más DGT y TEAC")
 
         # --- el canario ---
         titulo("LAS FUENTES, AHORA MISMO")

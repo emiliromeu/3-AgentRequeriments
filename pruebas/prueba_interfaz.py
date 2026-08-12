@@ -373,10 +373,15 @@ comprobar("dice que anade criterio",
           v.boton_criterio.cget("text"))
 comprobar("y se explica QUE anade, en cristiano",
           "DGT" in interfaz.PIE_CRITERIO and "TEAC" in interfaz.PIE_CRITERIO)
-comprobar("con los dos precios, para poder comparar",
-          "0,22" in interfaz.PIE_CRITERIO and "0,13" in interfaz.PIE_CRITERIO,
+# EL DINERO NO SALE EN PANTALLA. Antes el pie decia «unos 0,22 € frente a
+# 0,13 €», y hacia lo contrario de lo que se pretendia: quien dudaba pulsaba el
+# barato aunque necesitara el criterio. El gasto esta asumido, y verlo solo
+# sirve para que alguien se autolimite. Se sigue midiendo en la traza y en los
+# informes, que es donde le sirve a quien lleva la cuenta.
+comprobar("los dos botones se distinguen por LO QUE HACEN, no por el precio",
+          not any(x in interfaz.PIE_CRITERIO for x in ("€", "0,13", "0,22")),
           interfaz.PIE_CRITERIO)
-comprobar("el precio NO va dentro del boton, para que no parezca un aviso",
+comprobar("ni dentro del boton",
           "€" not in v.boton_criterio.cget("text"))
 v.caja.delete("1.0", "end"); v.caja.insert("1.0", "duda")
 v.ejercicio.set("2023"); v._revisar_boton()
@@ -446,9 +451,12 @@ if hijas:
               "Dirección General de Tributos" in dentro)
     comprobar("y cuantas resoluciones", "Doctrina del TEAC" in dentro
               and "tribunales regionales" in dentro)
-    comprobar("dice lo que cuesta CADA boton",
+    comprobar("nombra los dos botones",
               interfaz.BOTON_LEY in dentro and interfaz.BOTON_CRITERIO in dentro)
-    comprobar("con los dos precios", "0,13" in dentro and "0,22" in dentro)
+    comprobar("y NO dice lo que cuesta ninguno",
+              not any(x in dentro for x in ("€", "0,13", "0,22")),
+              [l for l in dentro.splitlines()
+               if any(x in l for x in ("€", "0,13", "0,22"))][:3])
     comprobar("y si las fuentes responden ahora mismo (el canario)",
               "LAS FUENTES, AHORA MISMO" in dentro)
     comprobar("avisa de que una fuente caida NO impide consultar",

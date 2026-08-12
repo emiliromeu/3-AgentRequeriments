@@ -10,15 +10,14 @@ Tarda hasta un minuto y va diciendo por dónde va.
 
 ## Los dos botones: tú eliges en cada consulta
 
-| botón | qué mira | cuesta |
-|---|---|---|
-| **Consultar la ley** | la Ley del IVA, el Reglamento y la Ley General Tributaria | ~0,13 € |
-| **Consultar también el criterio** | lo anterior **más** consultas de la DGT y resoluciones del TEAC y de los tribunales regionales | ~0,22 € |
+| botón | qué mira |
+|---|---|
+| **Consultar la ley** | la Ley del IVA, el Reglamento y la Ley General Tributaria |
+| **Consultar también el criterio** | lo anterior **más** consultas de la DGT y resoluciones del TEAC y de los tribunales regionales |
 
 No hay que elegir de antemano ni configurar nada: se decide duda a duda. El
-segundo es más caro porque lee bastante más, y **no siempre hace falta**: si lo
-que preguntas lo resuelve el texto de la ley, el primero te da lo mismo por
-menos.
+segundo lee bastante más, y **no siempre hace falta**: si lo que preguntas lo
+resuelve el texto de la ley, el primero te da lo mismo.
 
 Úsalo cuando el asunto dependa de **cómo lo interpreta Hacienda** y no solo de
 lo que dice la norma. Y si dudas, empieza por el primero: siempre puedes repetir
@@ -147,8 +146,7 @@ Ley del IRPF y su Reglamento, y el recuadro de arriba dirá que no había criter
 guardado sobre eso.
 
 **No es un fallo y no hay que insistir**: es que esa copia aún no se ha llenado.
-Para preguntas de Renta, el primer botón hace exactamente lo mismo y cuesta
-menos.
+Para preguntas de Renta, el primer botón hace exactamente lo mismo.
 
 ### Y debajo, dos bloques que no son lo mismo
 
