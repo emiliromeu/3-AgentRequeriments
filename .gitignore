@@ -10,13 +10,50 @@ __pycache__/
 *.pyc
 *.pyo
 
-# ---- datos: se regeneran ingiriendo del BOE -----------------------------
-# Son megas de texto que no aportan nada a la revision del codigo y que se
-# vuelven a bajar con `python3 fase1.py ingerir <ID>`.
-datos/
+# ---- datos ---------------------------------------------------------------
+#
+# POR DEFECTO, NADA DE datos/ VIAJA. Son megas de texto que se regeneran
+# ingiriendo del BOE con `python3 fase1.py ingerir <ID>`.
+#
+# CON UNA EXCEPCION: LA DESPENSA DE CRITERIO. En la oficina no hay USB y se
+# instala con `git pull`, asi que las consultas de la DGT y las resoluciones
+# del TEAC -que se tardan HORAS en sembrar, no se regeneran solas y son
+# documentos publicos- tienen que llegar por aqui.
+#
+# `datos/*` y no `datos/`: git no entra en un directorio excluido, asi que con
+# la regla puesta al directorio entero ningun `!` de dentro se llega a mirar.
+datos/*
+
+# La despensa SI viaja.
+!datos/dgt/
+!datos/teac/
+
+# Pero de ella, solo los documentos. NO el HTML tal cual -67 MB de los 134, y
+# no lo lee nadie en marcha: solo la ingesta, para poder volver a mirarlo-. Ni
+# los registros de la siembra, que son de esta maquina.
+datos/dgt/crudo/
+datos/teac/crudo/
+datos/dgt/busquedas/
+datos/teac/busquedas/
+datos/*/*.log
+
+# LAS TRAZAS NO SALEN DEL DESPACHO. Son las dudas reales de los clientes, con
+# sus nombres y sus cifras. Estan cubiertas por `datos/*`, y se repite aqui
+# por si algun dia alguien afloja la regla de arriba: mejor decirlo dos veces
+# que descubrirlo una.
+datos/trazas/
+
 bruto/
 corpus/
 crudo/
+
+# ---- la guia de la mesa: SE GENERA, no viaja ----------------------------
+# `GUIA.md` sale de `guias/GUIA.md` -que si viaja- mas lo que hay en la
+# despensa de ESTA maquina. Versionarla tenia dos problemas a la vez: cada
+# equipo la reescribe al instalar, asi que el siguiente `git pull` se
+# encuentra el arbol sucio y no puede avanzar; y ademas haria viajar una foto
+# de la despensa de otro ordenador. La fuente viaja, la copia se hace aqui.
+/GUIA.md
 
 # ---- herramientas -------------------------------------------------------
 # settings.local.json guarda los comandos que se han autorizado, y un comando

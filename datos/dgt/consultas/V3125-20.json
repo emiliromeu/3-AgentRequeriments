@@ -1,0 +1,15 @@
+{
+  "numero": "V3125-20",
+  "fecha": "20/10/2020",
+  "organo": "SG de Impuestos sobre la Renta de las Personas Físicas",
+  "normativa": "LIS 27/2014, Art. 12.1.a)\n\n RIS RD 634/2015, Art. 4.1",
+  "cuestion_planteada": "",
+  "descripcion_hechos": "La consultante ejerce la actividad económica de dentista, determinando el rendimiento\n neto de la actividad por el método de estimación directa.\n\n Lleva amortizando durante más de 20 años por tres conceptos, gastos de registro y\n notaría, mejoras del piso e impuesto sobre transmisiones patrimoniales.",
+  "contestacion": "Dada la escasa información aportada en la consulta respecto al sistema de amortización\n utilizado por la consultante, la presente contestación se formula considerando que\n las amortizaciones se están practicando por el sistema de tabla de amortización.\n\n En este sistema de amortización por tablas, el artículo 12.1.a) de la Ley 27/2014,\n de 27 de noviembre, del Impuesto sobre Sociedades (BOE de 28 de noviembre) establece\n un coeficiente lineal máximo que no podrá superar las amortizaciones practicadas para\n que están sean fiscalmente deducibles.\n\n Por su parte, el artículo 4.1 del Reglamento del Impuesto sobre Sociedades, aprobado\n por el Real Decreto 634/2015, de 10 de julio (BOE de 11 de julio), establece al respecto:\n\n “1. Cuando el contribuyente utilice el método de amortización según la tabla de amortización\n establecida en la Ley del Impuesto, la depreciación se entenderá efectiva si se corresponde\n con el resultado de aplicar al precio de adquisición o coste de producción del elemento\n patrimonial del inmovilizado alguno de los siguientes coeficientes:\n\n a) El coeficiente de amortización lineal máximo establecido en la tabla.\n\n b) El coeficiente de amortización lineal que se deriva del período máximo de amortización\n establecido en la tabla.\n\n c) Cualquier otro coeficiente de amortización lineal comprendido entre los dos anteriormente\n mencionados.”\n\n Por tanto, si la consultante ya está aplicando el coeficiente lineal máximo aplicable\n a los elementos que se mencionan en la consulta, circunstancia que se desconoce, no\n podrá aplicar un coeficiente de amortización mayor.\n\n En caso de no estar aplicando el coeficiente lineal máximo, podría en el futuro practicar\n las amortizaciones aplicando este coeficiente de amortización lineal máximo, de acuerdo\n con lo dispuesto en el precepto reglamentario antes citado. \n\n Lo que comunico a Vd. con efectos vinculantes, conforme a lo dispuesto en el apartado\n 1 del artículo 89 de la Ley 58/2003, de 17 de diciembre, General Tributaria.",
+  "doc_id": "39944",
+  "tab": "2",
+  "url_navegador": "https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V3125-20",
+  "descargado": "2026-08-12T10:45:31Z",
+  "sha256_crudo": "8c840c67db873d42f2ccf0ffa384a65558604e30549450f5c5295e7f2761d738",
+  "crudo": "datos/dgt/crudo/V3125-20.html"
+}

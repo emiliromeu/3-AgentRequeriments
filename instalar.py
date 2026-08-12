@@ -114,6 +114,26 @@ def falta_corpus() -> list:
     return [(i, n) for i, n in NORMAS if not (CORPUS / f"{i}.jsonl").is_file()]
 
 
+DESPENSA_DGT = RAIZ / "datos" / "dgt" / "consultas"
+DESPENSA_TEAC = RAIZ / "datos" / "teac" / "criterios"
+
+
+def despensa() -> tuple:
+    """(consultas de la DGT, resoluciones) que hay en este disco.
+
+    LA DESPENSA VIAJA POR GIT, y por eso hay que mirarla aqui. En la oficina
+    no hay USB: se instala con `git pull`, y despues del pull la copia ya esta
+    en su sitio sin que nadie importe nada. Lo que no puede pasar es que
+    falte y el agente se quede en cero EN SILENCIO: quien pregunte pensaria
+    que no hay criterio sobre su duda, cuando lo que pasa es que no se ha
+    bajado la copia.
+    """
+    n_dgt = len(list(DESPENSA_DGT.glob("*.json"))) if DESPENSA_DGT.is_dir() else 0
+    n_teac = (len(list(DESPENSA_TEAC.glob("*.json")))
+              if DESPENSA_TEAC.is_dir() else 0)
+    return n_dgt, n_teac
+
+
 def hay_clave() -> bool:
     """¿Hay clave utilizable? Vale la del entorno o la del .env, con contenido.
 
@@ -152,6 +172,10 @@ def que_falta() -> list:
         pendiente.append("clave")
     if falta_corpus():
         pendiente.append("corpus")
+    # LA DESPENSA NO SE INSTALA, SE TRAE. No se puede sembrar aqui -son horas
+    # contra un servicio publico- asi que si falta no hay ningun paso que
+    # ejecutar: hay que decirlo y seguir. El agente funciona sin ella, solo
+    # que el segundo boton no encontrara nada.
     return pendiente
 
 
@@ -422,6 +446,57 @@ def ingerir_corpus(pendientes: list) -> int:
 # -------------------------------------------------------------------- flujo
 
 
+def regenerar_la_guia() -> None:
+    """La hoja de la mesa se hace AQUI, con la despensa de ESTE equipo.
+
+    `GUIA.md` no viaja: se genera de `guias/GUIA.md` -que si viaja- mas lo que
+    hay en este disco. Asi la hoja que se imprime en la oficina habla de la
+    copia que tiene la oficina, y no de la que tenia el ordenador donde se
+    escribio.
+
+    Si falla no se para: la guia se puede rehacer despues con
+    `python configurar.py --regenerar-guia`, y quedarse sin abrir por la hoja
+    seria peor que la hoja.
+    """
+    try:
+        import configurar
+        if configurar.aplicar() == 0:
+            ok("Guia de la mesa, hecha con la copia de este equipo.")
+            return
+    except Exception as e:  # noqa: BLE001
+        linea(f"  (no se ha podido rehacer la guia: {e})")
+    linea("  La guia no se ha podido rehacer. Se arregla con:")
+    linea("      python configurar.py --regenerar-guia")
+
+
+def avisar_de_la_despensa() -> None:
+    """Decir si la copia de criterio esta o no. En cristiano, y sin parar.
+
+    SIN PARAR A PROPOSITO: el agente funciona sin despensa -el primer boton da
+    la ley igual- y dejar a la gestoria sin herramienta porque falta una copia
+    que se puede traer despues seria peor que la falta. Pero callarse es lo
+    unico que no vale: en cero y en silencio, el segundo boton parece roto.
+    """
+    n_dgt, n_teac = despensa()
+    if n_dgt or n_teac:
+        ok(f"Copia de criterio: {n_dgt} consultas de la DGT y {n_teac} "
+           f"resoluciones.")
+        return
+    linea()
+    linea("  AVISO: no hay copia de criterio en este equipo.")
+    linea()
+    linea("  El agente abre y funciona: el boton «Consultar la ley» da la ley")
+    linea("  y sus reglamentos igual que siempre. Lo que no va a encontrar es")
+    linea("  criterio de la DGT ni resoluciones, porque no estan aqui.")
+    linea()
+    linea("  La copia viaja con el programa. Se trae con:")
+    linea()
+    linea("      git pull")
+    linea()
+    linea("  Si despues de eso sigue sin aparecer, avisa a Emili.")
+    linea()
+
+
 def main(argv: list) -> int:
     for flujo in (sys.stdout, sys.stderr):
         if hasattr(flujo, "reconfigure"):
@@ -429,11 +504,23 @@ def main(argv: list) -> int:
 
     if "--revisar" in argv:
         pendiente = que_falta()
+        n_dgt, n_teac = despensa()
         print("TODO LISTO" if not pendiente else "FALTA: " + ", ".join(pendiente))
+        print(f"DESPENSA: {n_dgt} consultas de la DGT, {n_teac} resoluciones"
+              + ("" if n_dgt or n_teac else "  <-- NO ESTA, hace falta `git pull`"))
         return 0 if not pendiente else 1
 
     pendiente = que_falta()
     if not pendiente:
+        # Aunque no falte nada que instalar, la despensa se dice: es lo que
+        # cambia entre un `git pull` y el siguiente.
+        avisar_de_la_despensa()
+        # Y la guia SOLO si no esta. Es una comprobacion de fichero, no cuesta
+        # nada; rehacerla en cada arranque costaria cargar el corpus entero
+        # para nada. Que se haya quedado vieja ya lo avisa la ventana, sin
+        # bloquear, y con el comando para rehacerla.
+        if not (RAIZ / "GUIA.md").is_file():
+            regenerar_la_guia()
         return 0
 
     titulo("PRIMER ARRANQUE: preparando el agente")
@@ -461,6 +548,9 @@ def main(argv: list) -> int:
         paso(n, total, "Falta el texto de las normas.")
         if ingerir_corpus(falta_corpus()):
             return 1
+
+    avisar_de_la_despensa()
+    regenerar_la_guia()
 
     # tkinter no se instala: viene o no viene con Python. Se mira al final para
     # no dar por buena una instalacion que no va a poder abrir la ventana.

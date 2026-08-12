@@ -1,0 +1,15 @@
+{
+  "numero": "V0736-09",
+  "fecha": "07/04/2009",
+  "organo": "SG de Tributos",
+  "normativa": "Ley 58/2003, art. 188.3.",
+  "cuestion_planteada": "Si la interposición de recurso hace perder la reducción del 25% aunque el importe\n de la sanción reducida se haya ingresado en periodo voluntario.",
+  "descripcion_hechos": "La consultante tiene dudas sobre si la interposición de un recurso o reclamación hacen\n perder la reducción del 25% por pronto pago.",
+  "contestacion": "La cuestión básica planteada en la consulta es si la interposición de recurso hace\n perder la reducción del 25% aunque el importe de la sanción reducida se haya ingresado\n en periodo voluntario. \n\n El artículo 188.3 de la Ley 58/2003, de 17 de diciembre, General Tributaria, (BOE\n de 18 de diciembre), dispone que:\n\n “3. El importe de la sanción que deba ingresarse por la comisión de cualquier infracción,\n una vez aplicada, en su caso, la reducción por conformidad a la que se refiere el\n párrafo b) del apartado 1 de este artículo, se reducirá en el 25 por 100 si concurren\n las siguientes circunstancias:\n\n a) Que se realice el ingreso total del importe restante de dicha sanción en el plazo\n del apartado 2 del artículo 62 de esta Ley o en el plazo o plazos fijados en el acuerdo\n de aplazamiento o fraccionamiento que la Administración tributaria hubiera concedido\n con garantía de aval o certificado de seguro de caución y que el obligado al pago\n hubiera solicitado con anterioridad a la finalización del plazo del apartado 2 del\n artículo 62 de esta Ley.\n\n b) Que no se interponga recurso o reclamación contra la liquidación o la sanción.\n\n El importe de la reducción practicada de acuerdo con lo dispuesto en este apartado\n se exigirá sin más requisito que la notificación al interesado, cuando se haya interpuesto\n recurso o reclamación en plazo contra la liquidación o la sanción.\n\n La reducción prevista en este apartado no será aplicable a las sanciones que procedan\n en los supuestos de actas con acuerdo.”.\n\n Por tanto, para que opere la reducción se exigen básicamente dos requisitos:\n\n a) Que se ingrese el importe de la sanción ya reducida por conformidad en periodo\n voluntario.\n\n b) Que no se interponga recurso o reclamación contra la liquidación o la sanción.\n\n En consecuencia, si se interpuso un recurso o reclamación contra la liquidación o\n la sanción, en la consulta no se especifica, se excluirá la aplicación de la reducción\n del 25% regulada en el artículo 188.3 de la Ley General Tributaria.\n\n Lo que comunico a Vd. con efectos vinculantes, conforme a lo dispuesto en el apartado\n 1 del artículo 89 de la Ley 58/2003, de 17 de diciembre, General Tributaria.",
+  "doc_id": "23643",
+  "tab": "2",
+  "url_navegador": "https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V0736-09",
+  "descargado": "2026-08-11T21:15:54Z",
+  "sha256_crudo": "09203682bf9cf8d5b2821569b4f5193697538bb38961cc8ef4217e0d15a9269b",
+  "crudo": "datos/dgt/crudo/V0736-09.html"
+}

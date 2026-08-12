@@ -3919,3 +3919,48 @@ le llama, no a quién se parece.**
 ```
 GENERAL 219 · IVA 139 · IRPF 104 · IS 74 · IP 7
 ```
+
+---
+
+# La despensa viaja por git, y eso caduca
+
+En la oficina no hay USB: se instala con `git pull`. Así que las consultas de
+la DGT y las resoluciones del TEAC —62 MB, 2.100 ficheros— están versionadas.
+Todo lo demás de `datos/` sigue fuera, y **las trazas especialmente: son dudas
+reales de clientes y no salen del despacho**.
+
+De la propia despensa tampoco viaja todo. El HTML tal cual —`datos/dgt/crudo`
+y `datos/teac/crudo`— son 67 MB de los 134 y **no los lee nadie en marcha**:
+sólo la ingesta, para poder volver a mirarlos. Se quedan aquí.
+
+## LA CONDICIÓN QUE CADUCA, y es la que hay que vigilar
+
+**Esto vale mientras la despensa esté sembrada POR PLAN.** Hoy se siembra
+contra una lista de artículos decidida por datos —`plan_siembra.py`—, así que
+lo que hay en `datos/dgt` es un catálogo de documentos públicos elegidos por
+un criterio, no un rastro de nada.
+
+**El día que exista la cola de descarga por demanda, esto deja de valer.**
+Entonces la despensa reflejará *lo que el departamento ha preguntado de
+verdad*: qué consultas se bajaron, en qué orden y cuándo. Eso ya no es un
+catálogo público, es el historial de trabajo del despacho deducible de los
+metadatos —y de las fechas de descarga—, y **no puede viajar por un
+repositorio**, ni siquiera privado.
+
+Cuando llegue ese día, las opciones son las de abajo, y hay que elegir antes
+de que la primera descarga por demanda entre en un commit.
+
+## Lo que cuesta, medido
+
+| | |
+|---|---|
+| repositorio sin despensa | 4,1 MB |
+| despensa que viaja | 62,4 MB en 2.096 ficheros |
+| un clon nuevo, comprimido | 31 MB |
+| lo que NO viaja (crudo) | 67 MB |
+
+Git guarda la historia entera: **cada tanda de siembra engorda el repositorio
+para siempre**, aunque el fichero cambie o se borre después. Con la siembra
+llena —543 artículos por 5 consultas— la despensa tiende a ~2.700 documentos,
+y con las resiembras que vengan, el repositorio crece de forma monótona.
+
