@@ -100,6 +100,14 @@ def cargar(expediente: str) -> tuple:
             faltan.append("ningun borrador tiene veredicto ACEPTADO: "
                           "no se enseña texto")
 
+    # EL CODIGO DE SALIDA. Los expedientes anteriores a que existiera no lo
+    # guardaban, y `interfaz._terminar` lo exige: sin esto, ver un ejemplo
+    # viejo revienta con un KeyError. Solo puede ser 0: un expediente con
+    # `estado` y con veredicto llego hasta el final, porque el codigo 3 se
+    # devuelve ANTES de mirar nada y no deja ni estado ni veredicto.
+    if "codigo" not in res:
+        res["codigo"] = 0
+
     recorte = _leer(traza / "recorte_criterio.json")
 
     # CON QUE SE HIZO. Los expedientes anteriores a los dos botones no lo
