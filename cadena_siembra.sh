@@ -36,6 +36,13 @@ for ((i = 1; i <= TANDAS; i++)); do
   echo "########## DGT · TANDA ${i} · $(date '+%d/%m %H:%M:%S')" >> "$LOG"
   "$PY" sembrar.py sembrar --tope "$TOPE" >> "$LOG" 2>&1
   codigo=$?
+  # RESPIRAR ENTRE TANDAS. Encadenadas sin pausa son horas de carga sostenida
+  # sobre un servicio publico. Cinco minutos no cambian nada para nosotros y
+  # parten la carga en trozos.
+  if [ $codigo -eq 0 ] && [ "$i" -lt "$TANDAS" ]; then
+    echo "  (pausa de 5 minutos entre tandas)" >> "$LOG"
+    sleep 300
+  fi
   if [ $codigo -ne 0 ]; then
     echo "PARADA EN LA TANDA ${i} (codigo ${codigo}) $(date '+%d/%m %H:%M:%S')" >> "$LOG"
     exit $codigo

@@ -82,10 +82,25 @@ CERT_FNMT = RAIZ / "agente_fiscal" / "certificados" / "fnmt_ac_componentes.pem"
 UA = ("agente-fiscal-gestoria/1.0 (cliente de consulta de una gestoria; "
       "uso interno y volumen bajo)")
 
+# EL RITMO, BAJADO DESPUES DE QUE LA FUENTE CALLARA DOS VECES.
+#
+# Las dos paradas de la siembra fueron «no contesto en 45 segundos»: silencio,
+# no un 429. Con la pausa de reintento en 8 segundos y tres intentos,
+# insistiamos TRES VECES EN DOS MINUTOS Y MEDIO ante el primer silencio. Si lo
+# que hay al otro lado es un limite, eso es exactamente lo que no hay que
+# hacer: se parece a insistir en la puerta.
+#
+# Medido sobre la unica tanda que termino -302 consultas en 41 minutos, o sea
+# unos 8 segundos por consulta con la pausa en 4-, salen ~2 peticiones por
+# consulta. Con la pausa en 10 la tanda pasa de ~40 a ~100 minutos y las siete
+# a unas doce horas. Preferimos tardar el doble a que nos corten.
+#
+# LA ESPERA NO SE TOCA: 45 segundos es el sintoma, no la causa. Subirla solo
+# haria mas lento cada fallo.
 ESPERA = 45          # segundos maximos por peticion
-REINTENTOS = 3       # y no mas
-PAUSA = 4.0          # segundos entre peticiones, siempre
-PAUSA_REINTENTO = 8.0
+REINTENTOS = 4       # uno mas, pero repartidos en mas tiempo
+PAUSA = 10.0         # segundos entre peticiones, siempre
+PAUSA_REINTENTO = 60.0   # si callo, un minuto de silencio no cuesta nada
 
 ANCHO = 78
 
