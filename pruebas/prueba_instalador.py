@@ -30,7 +30,16 @@ import tempfile
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
-NORMAS = ["BOE-A-1992-28740", "BOE-A-1992-28925", "BOE-A-2003-23186"]
+# Id y nombre, como los da el catalogo: el instalador enseña el NOMBRE
+# mientras baja, y con el id a secas la pantalla diria «bajando
+# BOE-A-1992-28740...», que no le dice nada a nadie. El nombre sale del
+# `norma_titulo` del corpus, asi que aqui se escriben los de verdad.
+NORMAS_CON_NOMBRE = [
+    ("BOE-A-1992-28740", "Ley 37/1992"),
+    ("BOE-A-1992-28925", "Real Decreto 1624/1992"),
+    ("BOE-A-2003-23186", "Ley 58/2003, General Tributaria"),
+]
+NORMAS = [i for i, _n in NORMAS_CON_NOMBRE]
 CLAVE = "sk-ant-de-mentira-para-la-prueba"
 
 fallos = []
@@ -108,6 +117,13 @@ def preparar(nombre, con_venv=True, con_env=True, env_vacio=False,
     (destino / "agente_fiscal" / "__init__.py").write_text("", encoding="utf-8")
     (destino / "agente_fiscal" / "modelo.py").write_text(
         modelo_doble(clave_vale), encoding="utf-8")
+    # EL CATALOGO VA DE VERDAD, NO DOBLADO. Es de quien depende ahora el
+    # instalador para saber que normas existen, y es pura lectura de ficheros:
+    # doblarlo seria probar mi doble en vez de la pieza. Sin el, el instalador
+    # revienta al importar y los escenarios fallan por donde no toca -que es
+    # como se descubrio que faltaba-.
+    shutil.copy2(RAIZ / "agente_fiscal" / "catalogo.py",
+                 destino / "agente_fiscal" / "catalogo.py")
 
     if con_venv:
         subprocess.run([sys.executable, "-m", "venv", str(destino / ".venv")],
@@ -135,6 +151,16 @@ def preparar(nombre, con_venv=True, con_env=True, env_vacio=False,
         (destino / ".env").write_text(
             "ANTHROPIC_API_KEY=\n" if env_vacio
             else f"ANTHROPIC_API_KEY={CLAVE}\n", encoding="utf-8")
+
+    # LA LISTA QUE VIAJA, TAMBIEN EN EL MUNDO DE MENTIRA. Desde que el
+    # instalador pregunta al catalogo en vez de llevar tres ids escritos, un
+    # equipo de prueba sin lista se cree que le faltan las dieciseis del
+    # despacho y se pone a bajar el BOE en mitad de la suite. La lista es parte
+    # del equipo, como el .env: si no esta, no es un equipo realista.
+    import json
+    (destino / "normas_del_corpus.json").write_text(json.dumps(
+        {"normas": [{"id": i, "nombre": n, "titulo": n}
+                    for i, n in NORMAS_CON_NOMBRE]}), encoding="utf-8")
 
     if con_corpus:
         (destino / "datos" / "corpus").mkdir(parents=True)

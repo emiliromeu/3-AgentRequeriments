@@ -424,7 +424,10 @@ def ingerir_corpus(pendientes: list) -> int:
     # SE DICE CUANTAS Y CUANTO TARDA. Quien mira esto no sabe si se ha colgado;
     # «tarda unos minutos» con tres normas por delante es engañoso, y el que
     # espera acaba cerrando la ventana a la mitad.
-    ya = len(list(CORPUS.glob("*.jsonl")))
+    # `*.jsonl` a secas contaba el doble: cada norma deja tambien un
+    # `.descartados.jsonl` al lado. Un equipo con trece decia tener veintiseis.
+    ya = len([p for p in CORPUS.glob("*.jsonl")
+              if not p.name.endswith(".descartados.jsonl")])
     n = len(pendientes)
     if ya:
         ok(f"Este equipo tiene {ya} normas y han aparecido {n} mas.")
@@ -432,8 +435,13 @@ def ingerir_corpus(pendientes: list) -> int:
     else:
         ok("El agente trabaja con el texto oficial del BOE, guardado en este")
         ok("equipo. Hay que bajarlo una vez.")
-    ok(f"Son {n} norma(s): calcula un par de minutos cada una. Puedes dejarlo")
-    ok("trabajando; abajo va diciendo por donde va.")
+    # SE DICE QUE TARDA, PERO NO CUANTO. Que tarda hay que decirlo -si no,
+    # quien mira una pantalla quieta la cierra-. Cuanto, no: depende de la red
+    # de cada sitio, y aqui las tres tardaron segundos mientras que en la
+    # oficina pueden ser minutos. «Un par de minutos cada una» era un numero
+    # inventado, de los que se notan en cuanto no se cumplen.
+    ok(f"Son {n} norma(s) y esto tarda. Abajo va diciendo por donde va;")
+    ok("puedes dejarlo trabajando.")
     linea()
     arranque = time.time()
     for n, (norma_id, nombre) in enumerate(pendientes, 1):
