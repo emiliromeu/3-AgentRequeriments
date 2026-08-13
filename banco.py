@@ -181,10 +181,11 @@ def leer_casos(ruta: Path) -> list[dict]:
         if not linea or linea.startswith("#"):
             continue
         partes = [p.strip() for p in linea.split("|")]
-        if len(partes) not in (4, 5):
+        if len(partes) not in (4, 5, 6):
             raise SystemExit(
-                f"{ruta}:{n}: se esperaban 4 o 5 campos (consulta | norma | "
-                f"articulos | tope [| impuesto]), hay {len(partes)}"
+                f"{ruta}:{n}: se esperaban 4, 5 o 6 campos (consulta | norma | "
+                f"articulos | tope [| impuesto [| comunidad]]), hay "
+                f"{len(partes)}"
             )
         casos.append({
             "consulta": partes[0],
@@ -202,6 +203,16 @@ def leer_casos(ruta: Path) -> list[dict]:
             # fondo: quien pregunta por el articulo 95 de la Ley del IVA
             # pregunta de IVA.
             "impuesto": partes[4] if len(partes) > 4 else "",
+            # EL SEXTO CAMPO: LA COMUNIDAD.
+            #
+            # Hace falta desde que hay normativa autonomica cargada. En
+            # Sucesiones y en Transmisiones la respuesta CAMBIA con ella -la
+            # autonomica fija reducciones y tarifa- y medir esos casos sin
+            # comunidad seria medir un escenario que en la gestoria no ocurre:
+            # el gestor sabe donde vive su cliente.
+            #
+            # Vacia = no se dice, que es lo normal en IVA o en Sociedades.
+            "comunidad": partes[5] if len(partes) > 5 else "",
             "aceptables": [a.strip() for a in partes[2].split(",") if a.strip()],
             "tope": int(partes[3]),
             "linea": n,
@@ -261,7 +272,8 @@ def bloque_1(reg: Registro, ix, grafo, casos) -> None:
                       else AN.FONDO)
         resultados, _h, _reserva = fase4.recuperar(
             ix, grafo, caso["consulta"], impuesto,
-            tope=max(caso["tope"], 10), naturaleza=naturaleza)
+            tope=max(caso["tope"], 10), naturaleza=naturaleza,
+            comunidad=caso.get("comunidad", ""))
         salieron = []
         puesto = None
         for i, r in enumerate(resultados, 1):

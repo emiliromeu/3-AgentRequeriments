@@ -205,3 +205,76 @@ mi cliente olvido incluir unos rendimientos en la renta, como se corrige | Ley 5
 # El ahogamiento por tamaño es OTRA cosa y se arreglo aparte: era el articulo
 # 37 de la Ley 19/1991, que estaba en el puesto 4 contando solo su ley y en el
 # 25 con las 836 generales dentro. Ver `prueba_naturaleza`.
+
+
+# ------------------------------------------- LEY 29/1987 · SUCESIONES Y DONACIONES
+#
+# Dos impuestos recien ingeridos sin un solo caso son dos impuestos que nadie
+# mide. Y van CON COMUNIDAD porque es donde importa: la autonomica fija las
+# reducciones y la tarifa, y sin ella la mitad de la respuesta no existe.
+#
+# Escritos en el orden de siempre: primero se leyo la rubrica del articulo,
+# despues se escribio lo que preguntaria un gestor.
+
+mi cliente hereda la empresa de su padre, que reduccion le corresponde | Ley 29/1987 | 20 | 3 | ISD | Cataluña
+# art. 20: "Base liquidable" - es donde viven las reducciones, incluida la de
+# empresa familiar. La autonomica las modula, pero la base esta aqui.
+#
+# [SISTEMA] ROJO. Con los terminos del propio articulado sale en el puesto 4,
+# no en los 3 primeros: por delante van tres articulos catalanes de
+# reducciones (632-1, 632-12, 632-11), redactados mas cerca de la pregunta.
+#
+# EL SUELO DE ESTATALES NO LO ARREGLA, y es importante no confundirse: el
+# suelo garantiza que la base estatal ESTE en el corte, no en que puesto. Aqui
+# el art. 20 ya estaba dentro -en el 4-, asi que el suelo promociona otro
+# estatal al puesto 6 y este no se mueve. Lo predije verde al aplicarlo y me
+# equivoque; queda escrito para no volver a suponerlo.
+
+un padre quiere donar dinero a su hijo, tributa | Ley 29/1987 | 3 | 3 | ISD | Cataluña
+# art. 3: "Hecho imponible" - apartado b), la adquisicion de bienes por
+# donacion o cualquier otro negocio juridico a titulo gratuito «inter vivos».
+
+por que importe se declara lo heredado, se pueden restar las deudas | Ley 29/1987 | 9, 13 | 3 | ISD | Cataluña
+# art. 9: "Base imponible" - el valor neto de la adquisicion individual.
+# art. 13: "Deudas deducibles".
+
+en que fecha nace la obligacion de pagar una herencia | Ley 29/1987 | 24 | 3 | ISD | Cataluña
+# art. 24: "Devengo" - el dia del fallecimiento del causante.
+
+cuanto plazo hay para presentar el impuesto de una herencia | Ley 29/1987 | 31 | 3 | ISD | Cataluña
+# art. 31: "Declaracion y liquidacion".
+
+
+# ------------------------------ RDLeg 1/1993 · TRANSMISIONES Y ACTOS JURIDICOS
+
+compra de un piso de segunda mano entre particulares, que impuesto se paga | Real Decreto Legislativo 1/1993 | 7 | 3 | ITPAJD | Cataluña
+# art. 7: "Son transmisiones patrimoniales sujetas: A) Las transmisiones
+# onerosas por actos inter vivos de toda clase de bienes y derechos".
+
+que tipo se aplica a la compraventa de una vivienda usada | Real Decreto Legislativo 1/1993 | 11 | 3 | ITPAJD | Cataluña
+# art. 11: "La cuota tributaria se obtendra aplicando sobre la base liquidable
+# los siguientes tipos". La autonomica fija el suyo; el estatal es supletorio.
+#
+# [SISTEMA] ROJO, Y ES UN ROJO DISTINTO DEL DE ARRIBA. Aqui NO LO TAPA NINGUNA
+# CATALANA: con los terminos del articulado sale en el puesto 4 y por delante
+# van su propio Reglamento (arts. 65 y 51) y otro articulo de su propia ley
+# (art. 26, la cuota de operaciones societarias).
+#
+# Asi que el suelo de estatales NO PUEDE arreglarlo y NO DEBE intentarlo: si
+# algun dia se pusiera verde al tocar el suelo, hay que desconfiar, porque
+# querria decir que esta tocando mas de lo que dice tocar.
+#
+# Necesita su propio diagnostico: es un problema de ranking dentro del mismo
+# impuesto, no de estatal contra autonomico.
+
+hay que pagar impuesto por un contrato de alquiler de local | Real Decreto Legislativo 1/1993 | 12 | 3 | ITPAJD | Cataluña
+# art. 12: "La cuota tributaria de los arrendamientos se obtendra aplicando
+# sobre la base liquidable la tarifa que fije la Comunidad Autonoma".
+
+escritura de declaracion de obra nueva, que se paga por actos juridicos documentados | Real Decreto Legislativo 1/1993 | 31 | 3 | ITPAJD | Cataluña
+# art. 31: "Las matrices y las copias de las escrituras y actas notariales..."
+# - es el gravamen de documentos notariales, gradual y de cuota fija.
+
+sobre que valor se calcula el impuesto de una compraventa de inmueble | Real Decreto Legislativo 1/1993 | 10 | 3 | ITPAJD | Cataluña
+# art. 10: "La base imponible esta constituida por el valor del bien
+# transmitido o del derecho que se constituya o ceda".

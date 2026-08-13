@@ -53,10 +53,15 @@ PALABRAS_VACIAS_MATERIA = {"de", "del", "la", "el", "los", "las", "sobre", "y", 
 
 
 def _acronimo(materia: str) -> str:
-    """'Impuesto sobre el Valor Anadido' -> 'IVA'."""
+    """'Impuesto sobre el Valor Anadido' -> 'IVA'.
+
+    SOBRE LA MATERIA LIMPIA. Si no, «Ley del Impuesto sobre Transmisiones...»
+    daria «LDITPAJD» en vez de «ITPAJD», y ese codigo no casaria con el del
+    mismo impuesto en el resto del corpus.
+    """
     iniciales = [
         p[0].upper()
-        for p in re.findall(r"[\wÁÉÍÓÚáéíóúñÑ]+", materia)
+        for p in re.findall(r"[\wÁÉÍÓÚáéíóúñÑ]+", _solo_la_materia(materia))
         if p.lower() not in PALABRAS_VACIAS_MATERIA
     ]
     return "".join(iniciales)
@@ -159,8 +164,20 @@ def es_materia_de_impuesto(materia: str) -> bool:
     sitio: «Reglamento de los Impuestos Especiales» empieza por impuesto, pero
     «Ley de medidas para la prevencion del fraude en los impuestos» no es la
     ley de ningun impuesto.
+
+    Y SE MIRA DESPUES DE QUITAR EL TIPO DE NORMA que a veces viene delante. La
+    materia del texto refundido del ITP es «LEY DEL Impuesto sobre
+    Transmisiones...» -su titulo es «Texto refundido de la Ley del Impuesto
+    sobre...»-, asi que mirada en crudo no empieza por «Impuesto» y sus 75
+    preceptos caian en «generales». Eso no es cosmetico: con una pregunta de
+    fondo la busqueda restringe al impuesto y deja fuera las generales, o sea
+    que la ley del ITP NO PODIA COMPETIR en una pregunta de ITP. Salia su
+    Reglamento y nunca ella.
+
+    Quitar el tipo no afloja la regla: «medidas para la prevencion del fraude»
+    sigue sin empezar por «impuesto».
     """
-    return B.sin_tildes(materia or "").strip().lower().startswith("impuesto")
+    return _solo_la_materia(materia).startswith("impuesto")
 
 
 def _solo_la_materia(texto: str) -> str:

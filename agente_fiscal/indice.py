@@ -32,6 +32,14 @@ from pathlib import Path
 from . import texto as T
 
 # Campos indexados y su peso relativo.
+# CUANTOS ARTICULOS ESTATALES SE GARANTIZAN cuando hay normativa autonomica
+# compitiendo. Dos, medido: con dos, las tres preguntas que salian sin base
+# estatal pasan a cero y no se desplaza NADA en Renta ni en Patrimonio. Con
+# tres se desplazan diez en vez de siete y no se arregla ninguna pregunta mas:
+# seria gastar un hueco por si acaso, que es como empezo el problema de las
+# normas generales. Ver `Indice._con_base_estatal`.
+SUELO_ESTATAL = 2
+
 PESOS_CAMPO = {"titulo": 4.0, "contexto": 0.8, "cuerpo": 1.0}
 # Normalizacion por longitud de campo (b de BM25). Un titulo es corto por
 # naturaleza; penalizarlo por longitud como a un parrafo no tiene sentido.
@@ -276,6 +284,52 @@ class Indice:
         )
         return orden[:tope], huerfanos
 
+    def _con_base_estatal(self, orden: list, tope: int) -> list:
+        """El corte de siempre, garantizando que la BASE ESTATAL esta dentro.
+
+        LO ESTATAL ES LA BASE Y LO AUTONOMICO EL COMPLEMENTO. La autonomica
+        modula reducciones y tarifa; el hecho imponible, el devengo y la base
+        imponible estan en la estatal. Una respuesta hecha solo con la
+        autonomica esta incompleta Y NO LO PARECE, que es lo que la hace
+        peligrosa.
+
+        Medido sobre veinte preguntas en los cuatro impuestos con normativa
+        autonomica: con la comunidad puesta, TRES salian sin un solo articulo
+        estatal -dos de Sucesiones y una de Transmisiones-, y eran justo las
+        de reducciones y tipo de gravamen, donde la autonomica esta redactada
+        mas cerca de la pregunta.
+
+        POR QUE ASI Y NO DE OTRAS DOS MANERAS QUE SE PROBARON:
+
+        · NO son dos ligas con la puntuacion fusionada. El idf de BM25 depende
+          de la coleccion, asi que dos rankings hechos por separado no se
+          pueden mezclar por puntuacion. Aqui hay UN SOLO ranking, el de
+          siempre; esto solo promociona dentro de el.
+
+        · NO son puestos reservados. Se probo alternar estatal/autonomica y
+          medido salia peor: en Renta metia 5 preceptos catalanes que hoy no
+          salen y en Patrimonio 9, desplazando estatales buenos. Una cuota
+          entra aunque no tenga nada que aportar. Esto solo actua CUANDO FALTA
+          LA BASE, y en Renta y Patrimonio no se activa ni una vez.
+
+        Y sale la autonomica PEOR puntuada del corte, no la mejor: lo que
+        sobra es la cola, no la cabeza.
+        """
+        dentro = orden[:tope]
+        estatales = [r for r in dentro
+                     if not self.normas.comunidad_de_precepto(r.doc.registro)]
+        if len(estatales) >= SUELO_ESTATAL:
+            return dentro
+        faltan = SUELO_ESTATAL - len(estatales)
+        fuera = [r for r in orden[tope:]
+                 if not self.normas.comunidad_de_precepto(r.doc.registro)][:faltan]
+        if not fuera:
+            return dentro          # no hay base que promocionar: se deja igual
+        autonomicas = [r for r in dentro
+                       if self.normas.comunidad_de_precepto(r.doc.registro)]
+        sobran = {id(r) for r in autonomicas[-len(fuera):]}
+        return [r for r in dentro if id(r) not in sobran] + fuera
+
     def buscar_del_impuesto(self, consulta: str, tope: int, admitidos,
                             grafo=None, comunidad: str = ""):
         """Como `buscar`, filtrando por impuesto. -> (dentro, huerfanos, reserva)
@@ -321,8 +375,9 @@ class Indice:
         if admitidos is None:
             return orden[:tope], huerfanos, []
 
-        dentro = [r for r in orden
-                  if self.normas.admite(r.doc.registro, admitidos)][:tope]
+        admitidos_todos = [r for r in orden
+                           if self.normas.admite(r.doc.registro, admitidos)]
+        dentro = self._con_base_estatal(admitidos_todos, tope)
         if grafo is None:
             return dentro, huerfanos, []
 
