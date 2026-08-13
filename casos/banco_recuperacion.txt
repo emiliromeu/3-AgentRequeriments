@@ -115,6 +115,37 @@ sanción por no atender un requerimiento de la Administración tributaria | Ley 
 qué ocurre si Hacienda no resuelve en el plazo máximo | Ley 58/2003 | 104 | 3
 # art. 104: "Plazos de resolucion y efectos de la falta de resolucion
 # expresa". El silencio y sus efectos.
+#
+# [PUENTE] ROJO DESDE LA INGESTA DE ISD E ITP. Estaba VERDE y paso a rojo sin
+# que nadie tocara la recuperacion. Diagnosticado antes de aceptarlo:
+#
+#   consulta cruda del gestor      puesto 4  · LLEGA AL MATERIAL: SI
+#   terminos del articulado        puesto 1  · LLEGA AL MATERIAL: SI
+#   como lo diria el analizador    puesto 1  · LLEGA AL MATERIAL: SI
+#
+# LA CAUSA, MEDIDA. Lo adelanta el articulo 26 del Reglamento del ITP -«Cuentas
+# de credito»-, que puntua 8,08 contra 4,23. De sus 8,08 puntos, 5,90 vienen de
+# la palabra «OCURRE»: su texto dice «como ocurre en el caso de las cuentas de
+# credito», y la pregunta dice «que ocurre si Hacienda no resuelve». No
+# comparten ni un termino fiscal.
+#
+# Y POR QUE AHORA: esa palabra esta en 1 precepto de 2.386, y ese uno entro con
+# el Reglamento del ITP. Antes de la ingesta habia CERO. Con cero documentos no
+# aportaba nada; con uno, su idf se dispara -es lo que BM25 hace con un termino
+# rarisimo- y ese unico documento se lleva la pregunta.
+#
+# SE ACEPTA COMO REORDENAMIENTO ESTADISTICO por los 265 preceptos nuevos, que
+# es lo que es: no es contaminacion de ISD ni de ITP -la pregunta es de
+# procedimiento, no hay filtro y todo compite- y ganaria igual si esa frase
+# estuviera en cualquier otra norma.
+#
+# Y LA DEBILIDAD QUE DESTAPA ES MAS PEQUEÑA DE LO QUE PARECIA. Lo primero que
+# escribi fue que «una palabra de relleno puede ganarle al articulo que
+# contesta». Medido: el articulo LLEGA AL MATERIAL hasta con la pregunta cruda,
+# y en produccion el analizador no le pasa «ocurre» al buscador, le pasa «plazo
+# de resolucion» y «silencio administrativo», y entonces sale el PRIMERO. La
+# debilidad solo muerde en el bloque 1, que puentea el analizador a proposito.
+# Queda apuntada aparte; ver el LEEME.
 
 me he retrasado en presentar una declaración y nadie me la ha reclamado | Ley 58/2003 | 27 | 3
 # art. 27: "Recargos por declaracion extemporanea sin requerimiento previo".

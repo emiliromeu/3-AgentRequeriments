@@ -4005,3 +4005,48 @@ estatal en el corte de seis, pero la selección por pertinencia la descarta
 después. La salvaguarda llega menos lejos de lo que creíamos, y eso no lo dijo
 ningún razonamiento: lo dijo el instrumento nuevo el día que existió.
 
+
+---
+
+# Pendiente: un término rarísimo que no es del asunto puede llevarse una pregunta
+
+**Qué se vio.** Tras ingerir Sucesiones e ITP, el caso «qué ocurre si Hacienda
+no resuelve en el plazo máximo» pasó de verde a rojo sin que nadie tocara la
+recuperación. Lo adelanta el artículo 26 del Reglamento del ITP —«Cuentas de
+crédito»—, con 8,08 puntos contra 4,23. **De esos 8,08, cinco con nueve vienen
+de la palabra «ocurre»**: el artículo dice «como *ocurre* en el caso de las
+cuentas de crédito». No comparte con la pregunta ni un término fiscal.
+
+**Por qué.** Esa palabra está en **1 precepto de 2.386**, y ese uno entró con el
+Reglamento del ITP; antes había cero. Con cero documentos no aportaba nada al
+ranking; con uno, su idf se dispara —es lo que BM25 hace con un término
+rarísimo— y ese único documento se lleva la pregunta.
+
+**Cuánto muerde, medido y no supuesto.** Menos de lo que escribí la primera vez.
+El artículo correcto **llega al material hasta con la pregunta cruda** (puesto 4
+de un corte de 6), y con los términos que el analizador manda en producción
+—«plazo de resolución», «silencio administrativo»— sale **el primero**. Así que
+la debilidad sólo se manifiesta en el bloque 1 del banco, que puentea el
+analizador a propósito.
+
+## La tentación, que es la de siempre
+
+El arreglo evidente es **añadir «ocurre» a la lista de palabras vacías**.
+
+Sería **la sexta lista escrita a mano de la semana** —después de los códigos de
+impuesto, el mapa de DYCTEA, las tres normas del lanzador, los precios y las
+frases de cobertura—, y tendría el mismo final que todas: **la próxima palabra
+tampoco estaría**. Mañana alguien pregunta «¿qué **sucede** si…», o «¿cómo
+**afecta** que…», y hay que volver a escribirla.
+
+> Si algún día se ataca, tiene que ser **por una propiedad**: qué distingue una
+> palabra del asunto de una palabra de la forma de preguntar. No por una lista.
+
+Alguna dirección posible, para cuando se mire: un término que aparece en **un
+solo documento de todo el corpus** no está discriminando entre documentos, está
+señalando a uno; y un término que no aparece en **ningún título ni rúbrica** de
+ninguna norma difícilmente es del asunto. Las dos son propiedades medibles sobre
+el propio corpus, no listas.
+
+No se toca hoy.
+
