@@ -1,0 +1,34 @@
+# BANCO · BLOQUE 1B — LA BASE ESTATAL LLEGA AL MATERIAL
+#
+#     consulta | impuesto | comunidad | minimo de preceptos estatales
+#
+# POR QUE EXISTE ESTE FICHERO, Y NO UN CASO MAS EN EL OTRO.
+#
+# El bloque 1 mide PUESTO: «el articulo X entre los N primeros». El suelo de
+# estatales no garantiza puesto, garantiza PRESENCIA: que en lo que se le
+# manda al redactor haya base estatal del impuesto de la pregunta. Medido con
+# la vara del puesto, el suelo es invisible -se aplico y no movio ni un caso
+# del bloque 1- y una salvaguarda que el instrumento no puede ver es una
+# salvaguarda que nadie sabe si sigue viva.
+#
+# Cuando el instrumento no puede medir la propiedad que importa, SE AMPLIA EL
+# INSTRUMENTO. No se ajusta la propiedad para que quepa en el instrumento.
+#
+# QUE MIDE. Se recupera como el agente, se selecciona el material como el
+# agente -mismo umbral, mismo tope- y se cuenta cuantos de los preceptos
+# ENVIADOS AL REDACTOR son estatales y del impuesto de la pregunta. Lo
+# autonomico modula reducciones y tarifa; el hecho imponible, el devengo y la
+# base imponible estan en la estatal, y una respuesta sin ellos esta
+# incompleta sin parecerlo.
+#
+# Las tres consultas de abajo son las que se midieron saliendo SIN UN SOLO
+# articulo estatal antes del suelo. No gasta llamadas al modelo.
+
+reduccion por adquisicion de empresa familiar en el impuesto sobre sucesiones | ISD | Cataluña | 1
+# Salia con seis preceptos catalanes de reducciones y ni uno de la Ley 29/1987.
+
+que se incluye en la base imponible de una donacion de dinero | ISD | Cataluña | 1
+# La base imponible es del art. 9 de la ley estatal; la autonomica no la fija.
+
+tipo de gravamen en la compraventa de una vivienda usada | ITPAJD | Cataluña | 1
+# La autonomica fija el tipo, pero el hecho imponible y la base son estatales.

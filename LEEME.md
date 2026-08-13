@@ -3964,3 +3964,44 @@ para siempre**, aunque el fichero cambie o se borre después. Con la siembra
 llena —543 artículos por 5 consultas— la despensa tiende a ~2.700 documentos,
 y con las resiembras que vengan, el repositorio crece de forma monótona.
 
+
+---
+
+# Cuando el instrumento no puede medir lo que importa
+
+El banco mide **puesto**: «el artículo X entre los N primeros». Es la vara que
+ha servido para todo, y por eso fue la primera que cogí para comprobar el suelo
+de estatales.
+
+No servía. **El suelo no garantiza puesto, garantiza presencia**: que en lo que
+se le manda al redactor haya base estatal del impuesto de la pregunta. Medido
+con la vara del puesto, el suelo es invisible — se aplicó y no movió ni un caso
+del bloque 1. Predije que el caso de ISD art. 20 se pondría verde y no se puso,
+porque ese artículo ya estaba dentro del corte, en el puesto 4: el suelo
+promocionó otro estatal al 6 y no lo tocó.
+
+De ahí salieron dos tentaciones, y las dos habrían sido un error:
+
+- **bajar el listón del caso** de «entre los 3 primeros» a «entre los 6», para
+  que el suelo se viera; o
+- **dar el suelo por bueno** porque las mediciones sueltas decían que
+  funcionaba, aunque ningún caso del banco lo comprobara.
+
+La primera cambia una expectativa para que quepa en el resultado. La segunda
+deja viva una salvaguarda que **nadie puede ver fallar**, que es como se acaba
+descubriendo tres meses después que llevaba semanas apagada.
+
+> **Cuando el instrumento no puede medir la propiedad que importa, se amplía el
+> instrumento. No se ajusta la propiedad para que quepa en el instrumento.**
+
+El bloque 1B es esa ampliación: una clase de caso nueva —«en el material
+enviado hay al menos N preceptos estatales del impuesto de la pregunta»— que se
+pone verde cuando el suelo funciona y roja cuando se apaga. Comprobado
+apagándolo: los dos casos de Sucesiones pasan de 1 a 0.
+
+**Y a la primera encontró algo que no sabíamos**: el tercer caso —el tipo de
+gravamen del ITP— sigue en cero *con el suelo puesto*. El suelo mete la ley
+estatal en el corte de seis, pero la selección por pertinencia la descarta
+después. La salvaguarda llega menos lejos de lo que creíamos, y eso no lo dijo
+ningún razonamiento: lo dijo el instrumento nuevo el día que existió.
+

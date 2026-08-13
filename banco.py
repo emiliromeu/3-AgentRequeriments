@@ -53,6 +53,7 @@ from agente_fiscal import texto as T
 
 RAIZ = Path(__file__).resolve().parent
 CASOS = RAIZ / "casos" / "banco_recuperacion.txt"
+CASOS_MATERIAL = RAIZ / "casos" / "banco_material.txt"
 DIR_BANCO = RAIZ / "datos" / "banco"
 # La linea base SI se versiona: es el ultimo resultado bueno conocido, y es lo
 # unico contra lo que comparar en una maquina recien clonada, donde datos/ no
@@ -229,6 +230,54 @@ def ejecutar_consulta(pregunta, ejercicio, motor, ix, grafo):
 
 
 # ------------------------------------------------------------------ bloque 1
+
+
+def cargar_material(ruta: Path) -> list:
+    """consulta | impuesto | comunidad | minimo de estatales."""
+    casos = []
+    for n, linea in enumerate(ruta.read_text(encoding="utf-8").splitlines(), 1):
+        linea = linea.strip()
+        if not linea or linea.startswith("#"):
+            continue
+        partes = [p.strip() for p in linea.split("|")]
+        if len(partes) != 4:
+            raise SystemExit(f"{ruta}:{n}: se esperaban 4 campos, hay "
+                             f"{len(partes)}")
+        casos.append({"consulta": partes[0], "impuesto": partes[1],
+                      "comunidad": partes[2], "minimo": int(partes[3]),
+                      "linea": n})
+    return casos
+
+
+def bloque_1b(reg: Registro, ix, grafo, casos) -> None:
+    """La BASE ESTATAL llega al redactor. Presencia, no puesto.
+
+    El bloque 1 no puede ver funcionar el suelo de estatales porque mide otra
+    cosa. Ampliar el instrumento, no ajustar la propiedad.
+    """
+    from agente_fiscal import estado as EST
+    bloque("BLOQUE 1B · LA BASE ESTATAL EN EL MATERIAL  (no gasta llamadas)")
+    print("Con la comunidad puesta, lo autonomico no puede dejar fuera la "
+          "ley estatal.\n")
+    for caso in casos:
+        docs, _h, reserva = fase4.recuperar(
+            ix, grafo, caso["consulta"], caso["impuesto"],
+            tope=fase4.TOPE_MATERIAL, naturaleza=AN.FONDO,
+            comunidad=caso["comunidad"])
+        sel = EST.seleccionar_material(ix, caso["consulta"], docs, grafo,
+                                       reserva=reserva, naturaleza=AN.FONDO)
+        estatales = [e for e in sel.elegidos
+                     if not ix.normas.comunidad_de_precepto(e)
+                     and ix.normas.impuesto_de_precepto(e) == caso["impuesto"]]
+        veredicto = VERDE if len(estatales) >= caso["minimo"] else ROJO
+        cuales = ", ".join(str(e.get("referencia_corta")) for e in estatales)
+        reg.anota("1B", f"«{caso['consulta']}»",
+                  f"al menos {caso['minimo']} precepto(s) estatales de "
+                  f"{caso['impuesto']} en el material",
+                  f"{len(estatales)} de {len(sel.elegidos)} enviados"
+                  + (f": {cuales}" if cuales else ""),
+                  veredicto, {"linea_caso": caso["linea"]},
+                  ident=f"b1b:{caso['impuesto']}:{caso['linea']}")
 
 
 def bloque_1(reg: Registro, ix, grafo, casos) -> None:
@@ -1056,6 +1105,7 @@ def main(argv: list[str]) -> int:
 
     if "1" in pedidos:
         bloque_1(reg, ix, grafo, casos)
+        bloque_1b(reg, ix, grafo, cargar_material(CASOS_MATERIAL))
     if "2" in pedidos:
         bloque_2(reg, ix, grafo, casos, motor)
     if "3" in pedidos:
