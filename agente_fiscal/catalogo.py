@@ -1,0 +1,122 @@
+"""QUE NORMAS COMPONEN EL CORPUS. La lista viaja; el texto no.
+
+EL PROBLEMA QUE RESUELVE. `datos/corpus` esta excluido de git a proposito: son
+26 MB que se regeneran solos desde el BOE, y versionar una copia del texto
+oficial es guardar algo que ya esta guardado en otro sitio mejor. Pero al
+excluir el texto se excluyo tambien, sin querer, LA LISTA DE QUE NORMAS HAY. Y
+sin la lista el texto no se puede regenerar, porque nadie sabe que pedir.
+
+Resultado: en el despacho habia dieciseis normas y en la oficina trece, y no
+habia ningun camino para que llegaran las tres que faltaban.
+
+  - `git pull` no las traia: el corpus no viaja.
+  - El instalador tenia TRES ids escritos a mano, de cuando esto era solo IVA.
+  - El boton «actualizar las normas» re-ingeria lo que hubiera EN LOCAL, asi
+    que una maquina con trece se quedaba con trece para siempre. Cada equipo
+    conservaba su propio agujero.
+
+LA LISTA SE GENERA, NO SE ESCRIBE. Sale de `sellos.json`, que es lo que la
+ingesta deja al terminar, mas el titulo que trae cada `.jsonl`. `fase1.py
+ingerir` la regenera al acabar, asi que ingerir una norma aqui la publica para
+todos los equipos en el siguiente commit, sin que nadie se acuerde de nada.
+
+Una lista escrita a mano seria la septima de la semana, y ya sabemos como
+acaban: la del instalador se quedo en tres.
+"""
+from __future__ import annotations
+
+import json
+from datetime import date
+from pathlib import Path
+
+RAIZ = Path(__file__).resolve().parent.parent
+
+# VIVE FUERA DE `datos/`, que esta excluido entero. Es el punto: esto es lo
+# unico del corpus que tiene que viajar.
+LISTA = RAIZ / "normas_del_corpus.json"
+
+CORPUS = RAIZ / "datos" / "corpus"
+SELLOS = CORPUS / "sellos.json"
+
+
+def _titulo_de(norma_id: str) -> str:
+    """El titulo oficial, sacado del propio corpus. No se escribe aqui."""
+    ruta = CORPUS / f"{norma_id}.jsonl"
+    if not ruta.is_file():
+        return ""
+    with ruta.open(encoding="utf-8") as f:
+        for linea in f:
+            if linea.strip():
+                return str(json.loads(linea).get("norma_titulo") or "")
+    return ""
+
+
+def corto(titulo: str, norma_id: str) -> str:
+    """«Ley 37/1992, de 28 de diciembre, del IVA.» -> «Ley 37/1992».
+
+    Para las lineas de progreso del instalador, que se leen de reojo mientras
+    se espera. El titulo entero no cabe y el id no dice nada a nadie.
+    """
+    if not titulo:
+        return norma_id
+    return titulo.split(",")[0].strip() or norma_id
+
+
+def del_corpus() -> list[dict]:
+    """La lista TAL COMO ESTA el corpus de este equipo. La verdad de campo."""
+    if not SELLOS.is_file():
+        return []
+    sellos = json.loads(SELLOS.read_text(encoding="utf-8"))
+    ids = sorted({k.split("#")[0] for k in sellos})
+    salida = []
+    for i in ids:
+        t = _titulo_de(i)
+        salida.append({"id": i, "nombre": corto(t, i), "titulo": t})
+    return salida
+
+
+def regenerar() -> list[dict]:
+    """Reescribe la lista desde el corpus. La llama `fase1.py` al ingerir."""
+    normas = del_corpus()
+    LISTA.write_text(json.dumps(
+        {"generado": date.today().isoformat(),
+         "de": "datos/corpus/sellos.json — NO SE ESCRIBE A MANO",
+         "normas": normas}, ensure_ascii=False, indent=1) + "\n",
+        encoding="utf-8")
+    return normas
+
+
+def del_disco() -> list[dict]:
+    """La lista que ha viajado por git. Es la que manda para instalar."""
+    if not LISTA.is_file():
+        return []
+    try:
+        d = json.loads(LISTA.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return []
+    return [n for n in d.get("normas", []) if n.get("id")]
+
+
+def ingerida(norma_id: str) -> bool:
+    return (CORPUS / f"{norma_id}.jsonl").is_file()
+
+
+def faltan() -> list[dict]:
+    """Las de la lista que este equipo NO tiene todavia.
+
+    ES LA LISTA LA QUE MANDA, NO LO QUE HAYA EN LOCAL. Al reves -que es como
+    estaba- una maquina con trece normas no descubre nunca que existen tres
+    mas: mira lo suyo, lo encuentra completo y se queda tranquila.
+    """
+    return [n for n in del_disco() if not ingerida(n["id"])]
+
+
+def sobran() -> list[str]:
+    """Lo ingerido aqui que NO esta en la lista. Solo para avisar.
+
+    No se borra nada: puede ser una norma que se acaba de ingerir y todavia no
+    se ha publicado. Pero conviene verlo, porque significa que la lista y el
+    corpus se han separado.
+    """
+    de_la_lista = {n["id"] for n in del_disco()}
+    return sorted(n["id"] for n in del_corpus() if n["id"] not in de_la_lista)

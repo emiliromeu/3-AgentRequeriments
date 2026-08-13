@@ -1313,13 +1313,26 @@ class Ventana:
         import threading
 
         def trabajar() -> None:
+            # SE RE-INGIERE LA LISTA, NO LO QUE HAYA EN LOCAL.
+            #
+            # Antes recorria `self.ix.rutas`, o sea las normas de ESTE equipo, y
+            # por eso una maquina con trece se quedaba con trece para siempre:
+            # el boton la ponia al dia de sus trece y las tres que no tenia
+            # seguian sin existir para ella. Cada equipo conservaba su agujero,
+            # y el boton parecia que lo arreglaba.
+            from agente_fiscal import catalogo as CAT
+            lista = CAT.del_disco() or [
+                {"id": r.stem, "nombre": r.stem} for r in self.ix.rutas]
             fallos = []
-            for nid in sorted({r.stem for r in self.ix.rutas}):
+            for i, n in enumerate(lista, 1):
+                self.raiz.after(0, lambda i=i, n=n: self._bloquear(
+                    f"Actualizando las normas desde el BOE ({i} de "
+                    f"{len(lista)}): {n['nombre']}.\nNo cierres la ventana."))
                 r = subprocess.run(
-                    [sys.executable, str(RAIZ / "fase1.py"), "ingerir", nid],
+                    [sys.executable, str(RAIZ / "fase1.py"), "ingerir", n["id"]],
                     capture_output=True, text=True, cwd=str(RAIZ))
                 if r.returncode:
-                    fallos.append(nid)
+                    fallos.append(n["id"])
             self.raiz.after(0, lambda: self._bloquear(
                 "Normas actualizadas. Cierra y vuelve a abrir el agente."
                 if not fallos else

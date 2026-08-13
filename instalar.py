@@ -35,14 +35,14 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent
 ANCHO = 70
 
-# Las cuatro normas del corpus, en los tres documentos del BOE que las
-# contienen: el Real Decreto 1624/1992 trae dos articulados dentro -el suyo y
-# el del Reglamento que aprueba-, y por eso son cuatro cuerpos y tres ids.
-NORMAS = [
-    ("BOE-A-1992-28740", "Ley 37/1992, del IVA"),
-    ("BOE-A-1992-28925", "RD 1624/1992 y Reglamento del IVA"),
-    ("BOE-A-2003-23186", "Ley 58/2003, General Tributaria"),
-]
+# LAS NORMAS NO SE ESCRIBEN AQUI. Estuvieron escritas, tres ids, con un
+# comentario que decia «las cuatro normas del corpus»: era verdad cuando esto
+# era solo IVA. El corpus crecio a dieciseis y esta lista se quedo en tres, sin
+# que nada avisara, porque una instalacion con tres normas funciona -da peores
+# respuestas, que es distinto de fallar-.
+#
+# Ahora salen de `normas_del_corpus.json`, que se genera de `sellos.json` al
+# ingerir y viaja por git. Ver `agente_fiscal/catalogo`.
 
 CORPUS = RAIZ / "datos" / "corpus"
 ENV = RAIZ / ".env"
@@ -110,8 +110,14 @@ def falta_dependencia() -> bool:
 
 
 def falta_corpus() -> list:
-    """Las normas que no estan ingeridas todavia."""
-    return [(i, n) for i, n in NORMAS if not (CORPUS / f"{i}.jsonl").is_file()]
+    """Las normas de LA LISTA que este equipo no tiene todavia.
+
+    MANDA LA LISTA, NO LO QUE HAYA EN LOCAL. Es la diferencia entre «me faltan
+    tres» y «lo mio esta completo»: una maquina con trece normas mirandose a si
+    misma no descubre nunca que existen dieciseis.
+    """
+    from agente_fiscal import catalogo as CAT
+    return [(n["id"], n["nombre"]) for n in CAT.faltan()]
 
 
 DESPENSA_DGT = RAIZ / "datos" / "dgt" / "consultas"
@@ -415,8 +421,19 @@ def _ingerir_con_progreso(norma_id: str) -> _Resultado:
 
 
 def ingerir_corpus(pendientes: list) -> int:
-    ok("El agente trabaja con el texto oficial del BOE, guardado en este")
-    ok("equipo. Hay que bajarlo una vez. Tarda unos minutos.")
+    # SE DICE CUANTAS Y CUANTO TARDA. Quien mira esto no sabe si se ha colgado;
+    # «tarda unos minutos» con tres normas por delante es engañoso, y el que
+    # espera acaba cerrando la ventana a la mitad.
+    ya = len(list(CORPUS.glob("*.jsonl")))
+    n = len(pendientes)
+    if ya:
+        ok(f"Este equipo tiene {ya} normas y han aparecido {n} mas.")
+        ok("Se bajan ahora; las que ya estan NO se vuelven a bajar.")
+    else:
+        ok("El agente trabaja con el texto oficial del BOE, guardado en este")
+        ok("equipo. Hay que bajarlo una vez.")
+    ok(f"Son {n} norma(s): calcula un par de minutos cada una. Puedes dejarlo")
+    ok("trabajando; abajo va diciendo por donde va.")
     linea()
     arranque = time.time()
     for n, (norma_id, nombre) in enumerate(pendientes, 1):
@@ -523,8 +540,16 @@ def main(argv: list) -> int:
             regenerar_la_guia()
         return 0
 
-    titulo("PRIMER ARRANQUE: preparando el agente")
-    linea("  Esto pasa UNA VEZ. Las siguientes veces se abre directamente.")
+    # NO SIEMPRE ES UN PRIMER ARRANQUE. Desde que la lista de normas viaja, un
+    # equipo ya instalado puede entrar aqui porque han aparecido normas nuevas.
+    # Decirle «primer arranque» a quien lleva meses usandolo suena a que se ha
+    # perdido algo, y lo que ha pasado es lo contrario.
+    if pendiente == ["corpus"] and list(CORPUS.glob("*.jsonl")):
+        titulo("HAY NORMAS NUEVAS: poniendo el agente al dia")
+        linea("  Han llegado normas que este equipo todavia no tenia.")
+    else:
+        titulo("PRIMER ARRANQUE: preparando el agente")
+        linea("  Esto pasa UNA VEZ. Las siguientes veces se abre directamente.")
     linea("  No cierres esta ventana: cuando termine se abre el agente solo.")
     linea()
 

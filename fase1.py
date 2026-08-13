@@ -474,6 +474,25 @@ def modo_ingerir(norma_id: str, descargar: bool,
         if len(con_incid) > 10:
             print(f"    ... y {len(con_incid) - 10} mas (se ven todas en 'verificar')")
 
+    # LA LISTA QUE VIAJA, AL DIA SOLA.
+    #
+    # `datos/corpus` no va por git -son 26 MB que se regeneran del BOE-, asi
+    # que lo unico que puede llegar a otro equipo es la LISTA de que normas hay.
+    # Si hubiera que acordarse de actualizarla a mano, se olvidaria: es
+    # exactamente lo que paso con los tres ids escritos en el instalador, que
+    # se quedaron en tres mientras el corpus crecia a dieciseis.
+    #
+    # Se regenera AQUI, donde acaba de cambiar el corpus, para que ingerir una
+    # norma la publique sin ningun paso mas. Si falla, no se toca el resultado
+    # de la ingesta: la norma esta bien y lo que falta es un fichero derivado.
+    try:
+        from agente_fiscal import catalogo as CAT
+        print(f"  lista       -> {len(CAT.regenerar())} normas en "
+              f"{CAT.LISTA.name} (viaja por git)")
+    except Exception as e:                       # noqa: BLE001
+        print(f"  [AVISO] no se ha podido regenerar {norma_id}: {e}")
+        print("          la norma esta bien; falta publicarla en la lista.")
+
     print("\nSiguiente paso:  python fase1.py verificar " + norma_id)
     return 0
 

@@ -1,0 +1,86 @@
+{
+ "generado": "2026-08-13",
+ "de": "datos/corpus/sellos.json — NO SE ESCRIBE A MANO",
+ "normas": [
+  {
+   "id": "BOE-A-1987-28141",
+   "nombre": "Ley 29/1987",
+   "titulo": "Ley 29/1987, de 18 de diciembre, del Impuesto sobre Sucesiones y Donaciones."
+  },
+  {
+   "id": "BOE-A-1991-14392",
+   "nombre": "Ley 19/1991",
+   "titulo": "Ley 19/1991, de 6 de junio, del Impuesto sobre el Patrimonio."
+  },
+  {
+   "id": "BOE-A-1992-28740",
+   "nombre": "Ley 37/1992",
+   "titulo": "Ley 37/1992, de 28 de diciembre, del Impuesto sobre el Valor Añadido."
+  },
+  {
+   "id": "BOE-A-1992-28925",
+   "nombre": "Real Decreto 1624/1992",
+   "titulo": "Real Decreto 1624/1992, de 29 de diciembre, por el que se aprueba el Reglamento del Impuesto sobre el Valor Añadido y se modifica el Real Decreto 1041/1990, de 27 de julio, por el que se regulan las declaraciones censales que han de presentar a efectos fiscales los empresarios, los profesionales y otros obligados tributarios; el Real Decreto 338/1990, de 9 de marzo, por el que se regula la composición y la forma de utilización del número de identificación fiscal, el Real Decreto 2402/1985, de 18 de diciembre, por el que se regula el deber de expedir y entregar factura que incumbe a los empresarios y profesionales, y el Real Decreto 1326/1987, de 11 de septiembre, por el que se establece el procedimiento de aplicación de las Directivas de la Comunidad Económica Europea sobre intercambio de información tributaria."
+  },
+  {
+   "id": "BOE-A-1993-25359",
+   "nombre": "Real Decreto Legislativo 1/1993",
+   "titulo": "Real Decreto Legislativo 1/1993, de 24 de septiembre, por el que se aprueba el Texto refundido de la Ley del Impuesto sobre Transmisiones Patrimoniales y Actos Jurídicos Documentados."
+  },
+  {
+   "id": "BOE-A-1995-15071",
+   "nombre": "Real Decreto 828/1995",
+   "titulo": "Real Decreto 828/1995, de 29 de mayo, por el que se aprueba el Reglamento del Impuesto sobre Transmisiones Patrimoniales y Actos Jurídicos Documentados."
+  },
+  {
+   "id": "BOE-A-2003-23186",
+   "nombre": "Ley 58/2003",
+   "titulo": "Ley 58/2003, de 17 de diciembre, General Tributaria."
+  },
+  {
+   "id": "BOE-A-2004-18398",
+   "nombre": "Real Decreto 2063/2004",
+   "titulo": "Real Decreto 2063/2004, de 15 de octubre, por el que se aprueba el Reglamento general del régimen sancionador tributario."
+  },
+  {
+   "id": "BOE-A-2005-14803",
+   "nombre": "Real Decreto 939/2005",
+   "titulo": "Real Decreto 939/2005, de 29 de julio, por el que se aprueba el Reglamento General de Recaudación."
+  },
+  {
+   "id": "BOE-A-2006-20764",
+   "nombre": "Ley 35/2006",
+   "titulo": "Ley 35/2006, de 28 de noviembre, del Impuesto sobre la Renta de las Personas Físicas y de modificación parcial de las leyes de los Impuestos sobre Sociedades, sobre la Renta de no Residentes y sobre el Patrimonio."
+  },
+  {
+   "id": "BOE-A-2007-15984",
+   "nombre": "Real Decreto 1065/2007",
+   "titulo": "Real Decreto 1065/2007, de 27 de julio, por el que se aprueba el Reglamento General de las actuaciones y los procedimientos de gestión e inspección tributaria y de desarrollo de las normas comunes de los procedimientos de aplicación de los tributos."
+  },
+  {
+   "id": "BOE-A-2007-6820",
+   "nombre": "Real Decreto 439/2007",
+   "titulo": "Real Decreto 439/2007, de 30 de marzo, por el que se aprueba el Reglamento del Impuesto sobre la Renta de las Personas Físicas y se modifica el Reglamento de Planes y Fondos de Pensiones, aprobado por Real Decreto 304/2004, de 20 de febrero."
+  },
+  {
+   "id": "BOE-A-2012-14696",
+   "nombre": "Real Decreto 1619/2012",
+   "titulo": "Real Decreto 1619/2012, de 30 de noviembre, por el que se aprueba el Reglamento por el que se regulan las obligaciones de facturación."
+  },
+  {
+   "id": "BOE-A-2014-12328",
+   "nombre": "Ley 27/2014",
+   "titulo": "Ley 27/2014, de 27 de noviembre, del Impuesto sobre Sociedades."
+  },
+  {
+   "id": "BOE-A-2015-7771",
+   "nombre": "Real Decreto 634/2015",
+   "titulo": "Real Decreto 634/2015, de 10 de julio, por el que se aprueba el Reglamento del Impuesto sobre Sociedades."
+  },
+  {
+   "id": "BOE-A-2024-6951",
+   "nombre": "Decreto Legislativo 1/2024",
+   "titulo": "Decreto Legislativo 1/2024, de 12 de marzo, por el que se aprueba el libro sexto del Código tributario de Catalunya, que integra el texto refundido de los preceptos legales vigentes en Catalunya en materia de tributos cedidos."
+  }
+ ]
+}
