@@ -14,6 +14,12 @@
 # devuelve 1 y LA CADENA PARA AQUI. Bajar y no poder encontrarlo ocupa disco,
 # parece cobertura y no lo es.
 #
+# Y EL FINAL POR TRABAJO, NO POR CUENTA. Si una tanda entera no baja nada
+# nuevo, `sembrar.py` devuelve 2 y la cadena TERMINA BIEN. Antes solo se
+# acababa al agotar el numero de tandas: el 13/08 quedaban cuatro por delante
+# -unas 2.200 peticiones- cuando ya no habia nada que traer, y hubo que
+# cortarla a mano. Un plan se agota por lo que se baja, no por lo que queda.
+#
 # Y LA PRUEBA PEQUEÑA ANTES DE LA LARGA se hace con ESTE MISMO guion y tope 2,
 # no con otra orden parecida: probar el modo barato no prueba el caro.
 set -u
@@ -36,6 +42,16 @@ for ((i = 1; i <= TANDAS; i++)); do
   echo "########## DGT · TANDA ${i} · $(date '+%d/%m %H:%M:%S')" >> "$LOG"
   "$PY" sembrar.py sembrar --tope "$TOPE" >> "$LOG" 2>&1
   codigo=$?
+  # PLAN AGOTADO: se termina AQUI, y bien. No es una averia.
+  if [ $codigo -eq 2 ]; then
+    {
+      echo ""
+      echo "PLAN AGOTADO EN LA TANDA ${i} de ${TANDAS} · $(date '+%d/%m %H:%M:%S')"
+      echo "  Una tanda entera sin nada nuevo: no queda nada por sembrar con el"
+      echo "  plan de hoy. Las ${TANDAS} tandas no se agotan porque no hace falta."
+    } >> "$LOG"
+    exit 0
+  fi
   # RESPIRAR ENTRE TANDAS. Encadenadas sin pausa son horas de carga sostenida
   # sobre un servicio publico. Cinco minutos no cambian nada para nosotros y
   # parten la carga en trozos.

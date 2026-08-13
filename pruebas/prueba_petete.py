@@ -89,6 +89,39 @@ otro = P.extraer(crudo, "V9999-99")
 comprobar("pidiendo un numero que no es el de la pagina, NO se devuelve ese "
           "numero", otro.get("numero") != "V9999-99", otro.get("numero"))
 
+# ============ 2 bis. «SIN RESULTADOS» NO ES «FORMA INESPERADA»
+print("\n=== 2bis. UN ARTICULO SIN CONSULTAS NO ES UNA RAREZA ===")
+print("  Se contaban juntas: 53 «rarezas» por pasada que nadie miraba. Y ahi")
+print("  dentro se habria perdido un cambio de plantilla de verdad, que es")
+print("  justo para lo que ese aviso existe.\n")
+
+VACIAS = RAIZ / "casos" / "petete_vacias"
+paginas_vacias = sorted(VACIAS.glob("*.html"))
+comprobar("hay paginas vacias cacheadas con las que probar",
+          bool(paginas_vacias), str(VACIAS))
+
+normales = raras = 0
+for pagina in paginas_vacias:
+    try:
+        r = P.extraer_resultados(pagina.read_text(encoding="utf-8"))
+        normales += 1 if not r else 0
+    except P.FormaInesperada:
+        raras += 1
+print(f"    {len(paginas_vacias)} paginas sin resultados de la fuente real")
+comprobar("todas se leen como CERO RESULTADOS, no como rareza",
+          raras == 0, f"{raras} salieron como forma inesperada")
+comprobar("y devuelven lista vacia, no un error",
+          normales == len(paginas_vacias), f"{normales}/{len(paginas_vacias)}")
+
+# EL CONTROL QUE IMPIDE PASARSE DE LISTO. Si se relajara hasta tragarse
+# cualquier cosa, el aviso dejaria de existir y no nos enterariamos nunca.
+try:
+    P.extraer_resultados("<html><body>una pagina que no dice nada</body></html>")
+    comprobar("una pagina MUDA sigue siendo forma inesperada", False,
+              "se la trago")
+except P.FormaInesperada:
+    comprobar("una pagina MUDA sigue siendo forma inesperada", True)
+
 # ==================================== 3. LOS TRES CUBOS DEL CANARIO
 print("\n=== 3. LOS TRES CUBOS: CULPA NUESTRA, SUYA, O SIN RESPUESTA ===")
 print("  Tres reacciones distintas. Si un 500 de ellos se lee como fallo")
@@ -159,9 +192,22 @@ d2 = roto2.extraer(crudo, "V9999-99")
 comprobar("(b) ignorando el numero pedido, el bloque 2 lo cazaria",
           d2.get("numero") != "V9999-99" or True, d2.get("numero"))
 
-# (c) sin mutar, todo vuelve
+# (c) que se vuelva a la frase de antes, la que NUNCA aparecia. Es el defecto
+#     exacto que se corrigio: tres frases plausibles, ninguna real, y los 53
+#     articulos sin consultas saliendo por la rama del aviso.
+roto3 = con_el_codigo_roto(r'r"(?i)no\s+devuelve\s+resultados"',
+                           r'r"(?i)ESTA_FRASE_NO_SALE_NUNCA"')
+if paginas_vacias:
+    try:
+        roto3.extraer_resultados(paginas_vacias[0].read_text(encoding="utf-8"))
+        comprobar("(c) con la frase equivocada, el bloque 2bis lo caza", False,
+                  "no fallo")
+    except roto3.FormaInesperada:
+        comprobar("(c) con la frase equivocada, el bloque 2bis lo caza", True)
+
+# (d) sin mutar, todo vuelve
 d3 = P.extraer(crudo, esperado)
-comprobar("(c) sin mutar, el troceo vuelve a salir limpio",
+comprobar("(d) sin mutar, el troceo vuelve a salir limpio",
           "<" not in str(d3.get("contestacion") or "")
           and d3.get("numero") == esperado)
 

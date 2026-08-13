@@ -1,0 +1,38 @@
+LAS 53 BUSQUEDAS QUE NO DEVUELVEN NADA
+======================================
+
+QUE HAY AQUI. El HTML que devuelve PETETE cuando se busca un articulo del que
+no tiene ninguna consulta. Son 53 ficheros, uno por articulo, y los 53 pesan
+exactamente lo mismo porque son la misma pagina:
+
+    <div class="extra_padding">
+        <div class="message">La consulta realizada no devuelve resultados.</div>
+    </div>
+
+POR QUE ESTA GUARDADO. Porque el detector de «cero resultados» se escribia a
+ojo. Buscaba «sin resultados», «no se han encontrado» y «0 documentos»: tres
+frases perfectamente plausibles, y NINGUNA de las tres es la que dice la
+fuente. Resultado: los 53 articulos sin doctrina salian por la rama del AVISO
+-«forma inesperada, o han cambiado la plantilla del buscador»- 53 veces por
+pasada, 211 veces en el log. Un aviso que salta 211 veces no avisa: se ignora,
+y el dia que la plantilla cambie de verdad se perdera ahi dentro.
+
+Con el crudo en disco, el detector se escribe contra lo que la fuente dice de
+verdad y `prueba_petete` lo comprueba sin pedir nada.
+
+DE DONDE SALE. De `medir_sin_resultados.py`, que rehizo las 53 busquedas con la
+pausa de siempre y guardo la respuesta. Se puede repetir:
+
+    .venv/bin/python medir_sin_resultados.py --tope 2    <- la prueba pequeña
+    .venv/bin/python medir_sin_resultados.py             <- las 53
+
+NO ES LA COPIA DE TRABAJO. Nada de la cadena lee esta carpeta. Es fixture: si
+alguien la borra, la siembra sigue igual y la que se pone roja es la suite.
+
+Y NI UNA PETICION DESDE LAS PRUEBAS. `prueba_petete` lee estos ficheros y ya.
+La cadena de siembra usa esa fuente con diez segundos de pausa entre
+peticiones; una suite que pidiera «solo una pagina» se sumaria a ese ritmo sin
+saberlo, y ademas mediria la web de hoy en vez del troceo de siempre.
+
+MEDIDO EL 13 DE AGOSTO DE 2026. 53 de 53 respondieron, 53 de 53 sin resultados,
+0 formas inesperadas de verdad.

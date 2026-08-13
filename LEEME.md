@@ -1561,6 +1561,31 @@ mirándolo cuesta muchísimo más que el mismo proceso escribiendo a un `.log` q
 se lee cuando ha terminado. Vale para la siembra, para la ingesta del BOE y para
 cualquier cosa que tarde: se lanza al fondo, escribe a fichero, y se mira luego.
 
+## La tapa del portátil, que es la que corta las tandas largas
+
+La cadena de siembra se lanza así, y el `caffeinate` está a propósito:
+
+```
+caffeinate -i nohup ./cadena_siembra.sh 300 7 &
+```
+
+**`-i` impide que el Mac se duerma por inactividad. NO impide que se duerma al
+cerrar la tapa.** Son dos cosas distintas y es fácil creer que `caffeinate` te
+cubre las dos.
+
+El 13 de agosto la tanda 3 arrancó a las 11:52 y a las 20:31 llevaba **87
+minutos de trabajo real**: siete horas dormida con la tapa cerrada. No se
+perdió nada —la siembra guarda el avance y retoma donde iba, que es para lo que
+está—, pero una cadena de siete tandas que debía acabar por la tarde seguía
+viva de madrugada.
+
+> **Si dejas una cadena corriendo, deja el portátil ABIERTO.** Con la tapa
+> cerrada no hay bandera que valga: `-i` no cubre eso.
+
+Si algún día hace falta cubrirlo de verdad, es `sudo pmset disablesleep 1` —y
+hay que acordarse de deshacerlo—. Para lo que hacemos, dejar la tapa abierta es
+más simple y no deja el equipo tocado.
+
 ## 1 · El techo duro
 
 Había un reintento controlado en `fase4`, y está bien. Pero **un tope que vive
@@ -4154,3 +4179,88 @@ comparte nada con la pregunta; no sirve para decidir qué es la base de un
 impuesto. Cambiar el criterio del suelo por otro igual de débil sólo cambia qué
 relleno entra.
 
+
+---
+
+# FASE 34 · UN PLAN SE AGOTA POR LO QUE SE BAJA, NO POR LO QUE QUEDA
+
+La cadena de siembra llevaba once horas corriendo y estaba a punto de hacer
+cuatro tandas más. El problema es que no quedaba nada que traer:
+
+```
+tanda 1  ·  140 consultas
+tanda 2  ·  nada nuevo
+tanda 3  ·  nada nuevo
+```
+
+Y no era mala suerte. **La tanda 1 bajó 140 con un tope de 300: no llegó al
+tope, luego no quedaba cola.** Desde ese momento el trabajo estaba hecho, y las
+cuatro tandas restantes eran **unas 2.200 peticiones a un servicio público para
+traer cero consultas**.
+
+## Lo que estaba mal no era el número de tandas
+
+La tentación era bajar el 7 a un 3. Habría funcionado hoy y habría vuelto a
+fallar la próxima vez, porque el 7 nunca fue el problema: **la cadena terminaba
+cuando se acababan las TANDAS, no cuando se acababa el TRABAJO**. Con siete
+tandas y trabajo para nueve se queda corta; con siete y trabajo para una,
+sobran seis.
+
+Ahora `sembrar.py` devuelve un código propio cuando una tanda entera no baja
+nada:
+
+| código | significa | la cadena |
+|---|---|---|
+| `0` | tanda correcta | sigue |
+| `1` | algo bajado no se puede encontrar | **para** (avería) |
+| `2` | plan agotado | **termina bien** |
+
+Que sea un código **propio** y no un `0` es el punto. `0` significa «sigue» y
+`1` significa «algo va mal»; esto no es ninguna de las dos —es «ya está»— y
+quien encadena tiene que poder distinguirlo para terminar limpio en vez de
+parecer una avería.
+
+## Y de paso: «sin resultados» no es «forma inesperada»
+
+En el log había **211 avisos de FORMA INESPERADA**, que suena a que la fuente ha
+cambiado bajo nuestros pies. Eran **53 artículos, repetidos una vez por
+pasada**.
+
+El detector distinguía las dos cosas —el comentario lo decía— pero buscaba
+estas tres frases:
+
+```
+«sin resultados»  ·  «no se han encontrado»  ·  «0 documentos»
+```
+
+Perfectamente plausibles. **Ninguna de las tres es la que dice PETETE**, que
+devuelve 123 bytes con:
+
+> La consulta realizada no devuelve resultados.
+
+Así que los 53 artículos sin doctrina salían por la rama del aviso. **Un aviso
+que salta 211 veces no avisa**: se ignora, y el día que la plantilla cambie de
+verdad se perderá ahí dentro.
+
+**Medido, no supuesto.** `medir_sin_resultados.py` rehizo las 53 búsquedas y
+guardó el crudo en `casos/petete_vacias`:
+
+| | |
+|---|---|
+| artículos remedidos | 53 de 53, sin un solo fallo |
+| sin consultas (dato normal) | **53** |
+| forma inesperada de verdad | **0** |
+| tamaños distintos de página | uno solo: 118 bytes |
+
+Los 53 son la misma página. **De las 211, no queda ninguna.**
+
+El informe de cada tanda ahora los separa: los artículos sin consultas se
+cuentan en una línea y ya, y el bloque de aviso solo aparece si hay algo que
+avisar. Y el crudo guardado sirve para que `prueba_petete` lo compruebe sin
+pedir nada —con un control que impide pasarse de listo: una página **muda**,
+que no trae resultados y tampoco dice que no los haya, sigue siendo una rareza.
+
+## La tapa del portátil
+
+Ver la sección de la fase 17. `caffeinate -i` no cubre cerrar la tapa, y por eso
+la tanda 3 pasó siete horas dormida.

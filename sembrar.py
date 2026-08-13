@@ -53,6 +53,10 @@ DIARIO = RAIZ / "datos" / "dgt" / "siembra.log"
 ANCHO = 78
 
 TOPE_POR_DEFECTO = 800
+
+# EL CODIGO DE «YA ESTA», que no es ni «sigue» (0) ni «algo va mal» (1). Lo lee
+# `cadena_siembra.sh` para terminar limpio en vez de encadenar tandas vacias.
+PLAN_AGOTADO = 2
 POR_ARTICULO = 5          # cuantas consultas, las mas recientes, de cada uno
 
 
@@ -271,6 +275,12 @@ def modo_sembrar(args) -> int:
         apuntar(f"se retoma: {ya} consultas ya descargadas en pasadas anteriores")
 
     bajadas = 0
+    # LOS DOS CUBOS, QUE HASTA HOY ERAN UNO. «Sin consultas» es un dato normal;
+    # «forma inesperada» es un aviso. Contarlos juntos daba 53 rarezas por
+    # pasada que nadie miraba -y ahi dentro se habria perdido un cambio real de
+    # la plantilla del buscador, que es justo lo que ese aviso existe para ver-.
+    sin_consultas: list[str] = []
+    formas_raras: list[str] = []
     for n, fila in enumerate(filas, 1):
         etiqueta = f"{fila['norma']} art. {fila['articulo']}"
         if nuevas_tanda >= args.tope:
@@ -298,6 +308,9 @@ def modo_sembrar(args) -> int:
                 guardar_avance(av)
                 return _resumen_corte(av, args)
             except petete.FormaInesperada as e:
+                # AHORA ESTO ES RARO DE VERDAD. Los articulos sin consultas ya
+                # no llegan aqui: `extraer_resultados` los devuelve vacios.
+                formas_raras.append(etiqueta)
                 apuntar(f"  [{n:2d}/{len(filas)}] {etiqueta:18s} FORMA INESPERADA: {e}")
                 av["fallidas"][etiqueta] = f"forma inesperada: {e}"
                 guardar_avance(av)
@@ -308,9 +321,26 @@ def modo_sembrar(args) -> int:
                 if r["numero"]:
                     cache.apuntar_id(r["numero"], r["doc_id"],
                                      r.get("tab") or petete.TAB_VINCULANTES)
+            if not resultados:
+                # UN DATO NORMAL, NO UNA RAREZA. No todos los articulos tienen
+                # doctrina de la DGT, y decirlo asi evita que se lea como fallo.
+                sin_consultas.append(etiqueta)
             av["articulos"][etiqueta] = {"numeros": pendientes,
                                          "hallados": len(resultados),
+                                         "sin_resultados": not resultados,
                                          "cuando": ahora()}
+            guardar_avance(av)
+
+        # SI ANTES FALLO Y AHORA SALE BIEN, SE BORRA DE `fallidas`.
+        #
+        # Y VA AQUI, FUERA DEL BLOQUE DE BUSQUEDA, POR ALGO. La primera version
+        # estaba dentro, junto al resto de lo que se apunta tras buscar, y no
+        # limpio nada: los 53 articulos ya estaban resueltos en `articulos`, asi
+        # que la busqueda se salta y con ella la limpieza. Un registro de fallos
+        # que solo se limpia si se vuelve a pedir a la fuente no se limpia
+        # nunca, y entonces el fichero de avance dice que hay 59 problemas
+        # cuando no queda ninguno.
+        if av["fallidas"].pop(etiqueta, None) is not None:
             guardar_avance(av)
 
         apuntar(f"  [{n:2d}/{len(filas)}] {etiqueta:18s} "
@@ -349,6 +379,46 @@ def modo_sembrar(args) -> int:
     nuevas_de_esta = av["descargadas"][ya:]
     apuntar(f"\nsiembra terminada: {bajadas} nuevas en esta pasada, "
             f"{len(av['descargadas'])} en total")
+
+    # LAS FALLIDAS QUE YA NO SIGNIFICAN NADA. Quedaban cinco con nombres de un
+    # esquema anterior -«LGT art. 203», «RIVA art. 53»- que hoy se llaman «Ley
+    # 58/2003 art. 203». Nunca van a coincidir con una etiqueta actual, asi que
+    # nunca se limpiarian solas y el fichero seguiria contando problemas que no
+    # existen. Se van las que ya no estan en el plan; las que son numero de
+    # consulta -y no etiqueta de articulo- se quedan, que esas si significan.
+    del_plan = {f"{f['norma']} art. {f['articulo']}" for f in filas}
+    huerfanas = [k for k in av["fallidas"]
+                 if " art. " in k and k not in del_plan]
+    for k in huerfanas:
+        del av["fallidas"][k]
+    if huerfanas:
+        apuntar(f"  se olvidan {len(huerfanas)} fallidas de articulos que ya no "
+                f"estan en el plan")
+
+    # SEPARADOS, Y EL AVISO SOLO CUANDO LO ES.
+    #
+    # EL RECUENTO SALE DEL AVANCE, NO DE LO BUSCADO EN ESTA TANDA. Contando
+    # solo lo buscado ahora daba 53 en una pasada fresca y 0 en la siguiente
+    # -porque venian de cache-, y un numero que cambia sin que cambie nada no
+    # se puede leer.
+    sin_criterio = sum(1 for v in av["articulos"].values()
+                       if v.get("sin_resultados"))
+    apuntar(f"  articulos SIN CONSULTAS de la DGT : {sin_criterio}  "
+            f"(normal: no todo articulo tiene doctrina)")
+    if sin_consultas:
+        apuntar(f"    de ellos, vistos por primera vez en esta tanda: "
+                f"{len(sin_consultas)}")
+    if formas_raras:
+        apuntar("")
+        apuntar(f"  !! FORMA INESPERADA en {len(formas_raras)} articulo(s). Esto SI")
+        apuntar("     es un aviso: la pagina no dice que no haya resultados y")
+        apuntar("     tampoco trae ninguno. Puede ser la plantilla cambiada.")
+        for e in formas_raras[:10]:
+            apuntar(f"       - {e}")
+        if len(formas_raras) > 10:
+            apuntar(f"       ... y {len(formas_raras) - 10} mas")
+    else:
+        apuntar("  formas inesperadas               : 0")
     guardar_avance(av)
     modo_informe(args)
     # LA PUERTA DE LA CADENA. Devuelve 1 si algo de lo bajado AHORA no se
@@ -388,7 +458,8 @@ def informe_de_tanda(nuevas: list) -> int:
     que salta siempre se acaba ignorando. Lo que hay que cazar es material
     NUEVO que se baje y no se pueda encontrar.
 
-    Devuelve el codigo de salida: 0 si todo lo bajado es alcanzable, 1 si no.
+    Devuelve el codigo de salida: 0 si todo lo bajado es alcanzable, 1 si no,
+    y PLAN_AGOTADO si esta tanda entera no ha traido nada nuevo.
     """
     import fase4
     ix, _g = fase4.cargar_corpus()
@@ -396,8 +467,23 @@ def informe_de_tanda(nuevas: list) -> int:
     porn = {c.numero: c for c in cache.todas()}
     de_tanda = [porn[n] for n in nuevas if n in porn]
     if not de_tanda:
+        # EL PLAN SE AGOTA POR LO QUE SE BAJA, NO POR LO QUE QUEDA.
+        #
+        # Antes esto devolvia 0 -«tanda correcta»- y la cadena seguia pidiendo
+        # tandas. El 13/08 la tanda 1 bajo 140 con tope 300: como no llego al
+        # tope, no quedaba cola, y las tandas 2 y 3 bajaron CERO. Las cuatro
+        # que faltaban eran ~2.200 peticiones a un servicio publico para traer
+        # nada, y solo iban a parar cuando se acabaran las TANDAS, no cuando se
+        # acabara el TRABAJO.
+        #
+        # Que sea un codigo propio y no un 0 importa: 0 significa «sigue», 1
+        # significa «algo va mal». Esto no es ninguna de las dos -es «ya esta»-
+        # y quien encadena tiene que poder distinguirlo para terminar limpio en
+        # vez de parecer una averia.
         print("\n  TANDA: no se ha bajado nada nuevo.")
-        return 0
+        print("  PLAN AGOTADO: una tanda entera sin nada nuevo. No hay mas que")
+        print("  sembrar con el plan de hoy; seguir seria pedir por pedir.")
+        return PLAN_AGOTADO
     from agente_fiscal import causas as CAU
     alc, tot, malas = alcanzables_de(de_tanda, ix.normas)
     pct = 100 * alc / tot

@@ -363,10 +363,22 @@ def extraer_resultados(crudo: str) -> list[dict]:
     pone en cada fila. Es el unico sitio donde aparece.
     """
     if "viewDocument" not in crudo:
-        # Puede ser legitimo (cero resultados) o que hayan cambiado la
-        # plantilla. Se distingue mirando si dice algo de resultados.
-        if re.search(r"(?i)(sin resultados|no se han encontrado|0 documentos)",
-                     crudo):
+        # SIN RESULTADOS NO ES FORMA INESPERADA, Y HASTA HOY SE CONTABAN
+        # JUNTAS. Un articulo sin consultas de la DGT es un dato NORMAL -no
+        # todos los articulos tienen doctrina-; una plantilla que no sabemos
+        # leer es un AVISO. Mezclarlas dejaba 53 «rarezas» por pasada que
+        # nadie miraba, y ahi dentro se habria perdido un cambio de verdad.
+        #
+        # LA FRASE ES LA QUE DICE LA FUENTE, MEDIDA, NO IMAGINADA. Las tres
+        # que habia aqui -«sin resultados», «no se han encontrado», «0
+        # documentos»- eran plausibles y NINGUNA aparecia: PETETE devuelve 123
+        # bytes con «La consulta realizada no devuelve resultados.». Por eso
+        # los 53 salian por la rama del aviso. El crudo esta guardado en
+        # `casos/petete_vacias` y `prueba_petete` lo prueba contra el.
+        if re.search(r"(?i)no\s+devuelve\s+resultados"
+                     r"|sin\s+resultados"
+                     r"|no\s+se\s+han\s+encontrado"
+                     r"|0\s+documentos", crudo):
             return []
         raise FormaInesperada(
             "la lista de resultados no trae ningun 'viewDocument': o no hay "

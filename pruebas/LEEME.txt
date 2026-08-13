@@ -118,6 +118,20 @@ copiarse.
 
   El DETECTOR DE ANEXOS ya volvio: es `prueba_anexos.py`.
 
+LA CADENA, QUE NO TENIA NINGUNA (13/08/2026)
+--------------------------------------------
+  prueba_cadena.py       La cadena de siembra termina POR TRABAJO, NO POR
+                         CUENTA. El 13/08 iba a hacer cuatro tandas mas -unas
+                         2.200 peticiones a un servicio publico- para bajar
+                         cero, y hubo que cortarla a mano. Los tres codigos:
+                         0 sigue, 1 averia, 2 plan agotado. Que el 2 sea propio
+                         y no un 0 es el punto entero.
+
+                         Prueba el guion DE VERDAD -no una copia- con un
+                         `sembrar.py` de mentira que devuelve el codigo que se
+                         le pida, y cuenta cuantas tandas llega a hacer. Cero
+                         red: nada de esto toca PETETE.
+
 LO QUE NUNCA ESTUVO EN /tmp, Y SIGUE
 ------------------------------------
   python fase3.py probar          bateria del verificador, 37 casos adversarios
