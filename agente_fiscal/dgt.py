@@ -206,6 +206,72 @@ def _partir_por_designaciones(trozo: str):
     return [trozo[a:b] for a, b in zip(limites, limites[1:])]
 
 
+# LA LISTA DE ARTICULOS DETRAS DEL NOMBRE, SIN MARCA Y SEPARADA POR GUIONES.
+#
+#     Ley 27/2014 Impuesto sobre Sociedades - 17 - 76 - 87
+#     Ley 37/1992 Impuesto sobre el Valor Añadido IVA - 20.Uno.9º - 69 - 164
+#
+# EL ANCLA ES EL GUION CON ESPACIOS A LOS DOS LADOS, y no es un detalle: en
+# este proyecto el guion ya significa dos cosas mas, y las dos veces que se
+# toco a la ligera hubo que revertir.
+#
+#     80-cuatro, 10-3    apartado del articulo   (sin espacios)
+#     641-14             articulo entero del Codi catalan (sin espacios)
+#     - 17 - 76          separador de lista      (con espacios)
+#
+# Exigiendo « - » con espacios, las otras dos lecturas no se rozan: no hay un
+# solo caso en el corpus ni en la despensa donde un apartado o un articulo
+# catalan se escriban con espacios alrededor del guion.
+#
+# Y ADEMAS SOLO ACTUA EN TROZOS SIN NINGUNA MARCA DE ARTICULO. Donde hay
+# «art.» manda el camino de siempre; esta forma se reconoce por lo que le
+# FALTA, que es justamente lo que la hacia invisible.
+# SE LEE EL ARTICULO, NO EL APARTADO. La forma trae «- 76.2 - 17.3 - 20.Uno.9º»
+# y el «.2» es el apartado, igual que el «-cuatro» de «80-cuatro». Medido: los
+# 29 pares con apartado NO EXISTEN en el indice y el articulo base si, o sea
+# que guardarlos enteros seria bajar consultas que no se pueden encontrar,
+# justo lo que la puerta de la cadena viene a impedir.
+_RE_ITEM_GUION = re.compile(
+    r"\s+-\s+(\d+(?:\s+(?:bis|ter|qu[aá]ter|quinquies|sexies|septies|octies|"
+    r"nonies|decies))?)(?=[\s.,;)ºª-]|$)", re.IGNORECASE)
+
+
+def _lista_tras_guion(trozo: str) -> list:
+    """[(designacion, [numeros])] de la forma «Norma Nombre - 17 - 76».
+
+    Lista vacia si el trozo no es de esa forma, que es lo que pasa con todo lo
+    demas: asi este camino no puede cambiar ni una consulta de las que ya
+    resuelven.
+    """
+    if _RE_MARCA_ART.search(trozo):
+        return []                       # con marca manda el camino de siempre
+    if not _RE_ITEM_GUION.search(trozo):
+        return []
+    # Se parte por cada designacion explicita: un trozo puede traer dos normas
+    # con su lista cada una, y aqui no hay marca que sirva de frontera.
+    cortes = []
+    pos = 0
+    while True:
+        m = _RE_NORMA_EXPLICITA.search(trozo, pos)
+        if not m:
+            break
+        cortes.append(m.start())
+        pos = m.end()
+    if not cortes:
+        return []
+    limites = [*cortes, len(trozo)]
+    fuera = []
+    for a, b in zip(limites, limites[1:]):
+        pieza = trozo[a:b]
+        nums = _RE_ITEM_GUION.findall(pieza)
+        if not nums:
+            continue
+        # La designacion es lo que va ANTES del primer guion de la lista.
+        corte = _RE_ITEM_GUION.search(pieza).start()
+        fuera.append((pieza[:corte].strip(" ,.;:"), nums))
+    return fuera
+
+
 def analizar_normativa(texto: str, normas=None) -> Normativa:
     """Como `pares_de_normativa`, pero contando ademas lo que no se reconocio."""
     from . import referencias as R
@@ -294,6 +360,21 @@ def analizar_normativa(texto: str, normas=None) -> Normativa:
             numeros, resto = [], ""
             # Un trozo sin marca de articulo es normal ("Ley 38/1992" a secas):
             # nombra la norma y no cita ningun precepto. No es forma nueva.
+            #
+            # PERO DESDE 2026 LA DGT ESCRIBE ASI, Y NO LLEVA MARCA NINGUNA:
+            #
+            #     Ley 27/2014 Impuesto sobre Sociedades - 17 - 76 - 87
+            #
+            # `_lista_tras_guion` la lee. Devuelve [] para todo lo demas, asi
+            # que este trozo sigue comportandose igual que siempre.
+            for desig, nums in _lista_tras_guion(trozo):
+                cuerpo_g, estado_g = _resolver_designacion(desig, normas)
+                for n in nums:
+                    salida.preceptos.append(Precepto(
+                        numero=n, cuerpo=cuerpo_g, norma_bruta=desig,
+                        estado=estado_g))
+            if _lista_tras_guion(trozo):
+                continue
 
         cuerpo, estado = _resolver_designacion(designacion, normas)
 

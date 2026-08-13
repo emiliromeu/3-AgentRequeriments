@@ -398,18 +398,48 @@ def informe_de_tanda(nuevas: list) -> int:
     if not de_tanda:
         print("\n  TANDA: no se ha bajado nada nuevo.")
         return 0
+    from agente_fiscal import causas as CAU
     alc, tot, malas = alcanzables_de(de_tanda, ix.normas)
     pct = 100 * alc / tot
     print(f"\n  LO BAJADO EN ESTA TANDA: {tot} consultas")
     print(f"  ALCANZABLE por (norma, art.): {alc} de {tot} ({pct:.1f}%)")
+
+    # LA PUERTA DISTINGUE CAUSAS. Antes paraba en cuanto la alcanzabilidad no
+    # llegaba al 100%, y paraba SIEMPRE por la abreviatura `RD 1065/2007`, que
+    # esta medida y decidida -recupera 152 y pierde 96, asi que no se aplica-.
+    # Una puerta que salta siempre por lo mismo se acaba ignorando, y entonces
+    # no sirve el dia que salta por algo nuevo.
+    por_causa = CAU.clasificar(malas, ix.normas) if malas else {}
+    nuevas = por_causa.get("", [])
     if malas:
-        print(f"  [PARADA] {len(malas)} de las bajadas AHORA no se encuentran.")
-        print(f"           La cadena se para aqui. Bajar y no poder encontrarlo")
-        print(f"           ocupa disco, parece cobertura y no lo es.")
-        for c in malas[:6]:
+        print("  de las que no se encuentran, por causa:")
+        for k in sorted(por_causa, key=lambda k: -len(por_causa[k])):
+            if not k:
+                continue
+            print(f"     {len(por_causa[k]):4d}  {k}")
+
+    # LA DEUDA ACUMULADA, aunque no pare nada: si una causa se dispara hay que
+    # verlo, y el informe de la tanda solo mira lo de esta tanda.
+    todas = [c for c in cache.todas()
+             if not any(p.cuerpo for p in c.preceptos(ix.normas))]
+    if todas:
+        acum = CAU.clasificar(todas, ix.normas)
+        print(f"  DEUDA CONOCIDA ACUMULADA: {len(todas)} de "
+              f"{len(cache.todas())} consultas")
+        for k in sorted(acum, key=lambda k: -len(acum[k])):
+            print(f"     {len(acum[k]):4d}  {k or 'SIN CLASIFICAR'}")
+
+    if nuevas:
+        print(f"  [PARADA] {len(nuevas)} de las bajadas AHORA no se encuentran")
+        print(f"           Y NO ENCAJAN EN NINGUNA CAUSA CONOCIDA. Para eso")
+        print(f"           existe esta puerta: lo demas es deuda diagnosticada.")
+        for c in nuevas[:6]:
             print(f"             {c.numero}: {(c.normativa or '')[:58]}")
         return 1
-    print("  todo lo bajado en esta tanda se puede encontrar.")
+    if malas:
+        print("  todo lo no alcanzable cae en causas ya diagnosticadas: sigue.")
+    else:
+        print("  todo lo bajado en esta tanda se puede encontrar.")
     return 0
 
 

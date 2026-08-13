@@ -213,8 +213,13 @@ comprobar("pero si el nombre es una norma nuestra, AHORA si se encuentra",
           clave_ == "BOE-A-2006-20764#0", f"{clave_} ({como})")
 comprobar("  y dice que fue por nombre, no por codigo", "nombre" in como, como)
 
-clave_, como = T.resolver_norma("Ley 29/1987 Impuesto sobre Sucesiones y "
-                                "Donaciones", N, "09:99:99:00:00")
+# SE CAMBIO LA NORMA DEL CASO, NO LA EXPECTATIVA. Aqui ponia la Ley 29/1987,
+# que se ingirio el 12/08/2026: en cuanto entro en el corpus, este caso dejo de
+# probar lo que se escribio para probar -una norma que NO tenemos-. Se
+# sustituye por los Impuestos Especiales, que sigue fuera. Lo que se comprueba
+# es identico.
+clave_, como = T.resolver_norma("Ley 38/1992 Impuestos Especiales",
+                                N, "09:99:99:00:00")
 comprobar("y la MISMA forma con una norma que no tenemos NO se resuelve: "
           "que mande el numero no es que encaje con lo que sea",
           clave_ == "", f"{clave_} ({como})")

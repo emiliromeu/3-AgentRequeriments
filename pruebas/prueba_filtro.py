@@ -182,7 +182,10 @@ print("  Filtrar con un impuesto equivocado es peor que no filtrar: se pierde")
 print("  la ley que tocaba y la respuesta sale igual de segura citando otra.\n")
 
 for valor, que in (("", "vacio"), (None, "nulo"), ("desconocido", "desconocido"),
-                   ("otro", "otro"), ("ISD", "un impuesto que no tenemos")):
+                   # ISD estaba aqui como «impuesto que no tenemos» hasta que
+                   # se ingirio el 12/08/2026. Se cambia por uno que siga
+                   # fuera; lo que se comprueba no cambia.
+                   ("otro", "otro"), ("IIEE", "un impuesto que no tenemos")):
     comprobar(f"con «{que}» no se filtra", N.admitidos_para(valor) is None,
               N.admitidos_para(valor))
 sin, _h, res_sin = ix.buscar_del_impuesto("escala de gravamen base liquidable",

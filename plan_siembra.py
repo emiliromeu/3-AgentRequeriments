@@ -82,10 +82,17 @@ CORPUS = RAIZ / "datos" / "corpus"
 # que se mencionan una vez de pasada.
 MINIMO_REMISIONES = 2
 
-# Sin cuota por impuesto: con el umbral puesto, el reparto lo decide el propio
-# corpus. Se deja el diccionario porque el informe lo usa para enseñar el
-# reparto, pero ya no recorta.
-CUOTA = {"IVA": 999, "IRPF": 999, "IS": 999, "IP": 999, "GENERAL": 999}
+# SIN CUOTA POR IMPUESTO, Y SIN LISTA DE IMPUESTOS. El reparto lo decide el
+# umbral de remisiones sobre el propio corpus.
+#
+# Aqui habia un diccionario con cinco impuestos escritos a mano. Decia «ya no
+# recorta» -y con 999 no recortaba a los que estaban- pero `CUOTA.get(imp, 0)`
+# devolvia CERO para los que NO estaban, asi que recortaba del todo: al
+# ingerir Sucesiones y Transmisiones, sus articulos se descartaron enteros y
+# el plan salio con cero de los dos impuestos nuevos.
+#
+# Es la septima lista escrita a mano de la semana, y el mismo final que todas:
+# era cierta el dia que se escribio. Si un impuesto esta en el corpus, entra.
 
 # Un articulo del banco vale por estas remisiones entrantes. No es un ajuste
 # fino: es decir que una pregunta real pesa mas que una cita interna.
@@ -172,7 +179,7 @@ def plan() -> dict:
     for clave, n in puntos.most_common():
         doc = ix.por_clave[clave]
         imp = N.impuesto_de_cuerpo(doc.registro.get("cuerpo_clave") or "") or "GENERAL"
-        if len(por_impuesto[imp]) >= CUOTA.get(imp, 0):
+        if False:          # sin tope por impuesto: ver la nota de arriba
             continue
         cuerpo = N.cuerpos.get(doc.registro.get("cuerpo_clave") or "")
         por_impuesto[imp].append({
@@ -203,10 +210,11 @@ def main(argv: list) -> int:
     print("=" * 76)
     total = sum(len(v) for v in p.values())
     print(f"{total} articulos. Cuota por impuesto: "
-          + " · ".join(f"{k} {v}" for k, v in CUOTA.items()))
+          + " · ".join(f"{k} {len(v)}" for k, v in sorted(
+              por_impuesto.items(), key=lambda kv: -len(kv[1]))))
     for imp in ("IVA", "IRPF", "IS", "IP", "GENERAL"):
         lista = p.get(imp) or []
-        print(f"\n{'-' * 76}\n{imp}  ({len(lista)} de {CUOTA.get(imp, 0)})")
+        print(f"\n{'-' * 76}\n{imp}  ({len(lista)} articulos)")
         cuerpos = collections.Counter(x["cuerpo"] for x in lista)
         for c, n in cuerpos.most_common():
             print(f"    {n:>3}  {c[:64]}")

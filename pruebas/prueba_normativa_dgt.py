@@ -46,6 +46,7 @@ LIRPF = "BOE-A-2006-20764#0"
 LIS = "BOE-A-2014-12328#0"
 IP = "BOE-A-1991-14392#0"
 RIVA1 = "BOE-A-1992-28925#1"
+ISD = "BOE-A-1987-28141#0"
 
 fallos = []
 
@@ -129,10 +130,16 @@ CASOS = [
     ("POSITIVO D  dos normas seguidas sin separador",
      "Ley 37/1992 arts. 90, 91 Ley 58/2003, arts. 105, 106",
      [("90", LIVA), ("91", LIVA), ("105", LGT), ("106", LGT)]),
-    ("POSITIVO D  tres normas, la de en medio no la tenemos",
+    # SE LLAMABA «la de en medio no la tenemos» Y YA LA TENEMOS. La Ley
+    # 29/1987 se ingirio el 12/08/2026, asi que sus articulos 3 y 28 dejaron de
+    # salir sin cuerpo. La expectativa se actualiza por eso -la norma esta
+    # cargada, es evidencia independiente del sistema- y no porque el buscador
+    # devolviera otra cosa. Lo que el caso sigue probando es lo mismo: tres
+    # designaciones seguidas en un trozo, cada una con sus articulos.
+    ("POSITIVO D  tres normas seguidas, cada una con los suyos",
      "Ley 19/1991 arts. 1, 3 y 7. Ley 29/1987 art. 3 y 28. "
      "Ley 35/2006 arts 1, 6, 8, 11 y 33",
-     [("1", IP), ("3", IP), ("7", IP), ("3", ""), ("28", ""),
+     [("1", IP), ("3", IP), ("7", IP), ("3", ISD), ("28", ISD),
       ("1", LIRPF), ("6", LIRPF), ("8", LIRPF), ("11", LIRPF),
       ("33", LIRPF)]),
 
@@ -159,7 +166,40 @@ CASOS = [
      "Real Decreto 1007/2023, de 5 de diciembre, RIVA RD 1624/1992 art. 62-6",
      [("62", RIVA1)]),
 
-    # ---- 5. la forma de toda la vida, que no puede haberse movido
+    # ---- 5. EL GUION, QUE YA SIGNIFICA TRES COSAS
+    #
+    # En este proyecto el guion se lee de tres maneras, y dos veces se toco a
+    # la ligera y hubo que revertir. Los tres casos van juntos a proposito: si
+    # alguien afloja el ancla, uno de los tres cae.
+    #
+    #     80-cuatro    apartado del articulo        (SIN espacios)
+    #     641-14       articulo entero, Codi catalan (SIN espacios)
+    #     - 17 - 76    separador de lista            (CON espacios)
+    ("POSITIVO D2  la lista tras el nombre, sin marca de articulo",
+     "Ley 27/2014 Impuesto sobre Sociedades - 17 - 76 - 87",
+     [("17", LIS), ("76", LIS), ("87", LIS)]),
+    ("POSITIVO D2  y con dos normas seguidas, cada una con su lista",
+     "Ley 27/2014 Impuesto sobre Sociedades - 10 "
+     "Ley 37/1992 Impuesto sobre el Valor Añadido IVA - 11",
+     [("10", LIS), ("11", LIVA)]),
+    ("ADVERSARIO D2  el guion SIN espacios es apartado, no separador",
+     "Ley 37/1992 arts. 75, 78, 80-cuatro, 89",
+     [("75", LIVA), ("78", LIVA), ("80", LIVA), ("89", LIVA)]),
+    ("ADVERSARIO D2  «10-3» es el apartado 3 del articulo 10",
+     "Ley 58/2003 art. 10-3",
+     [("10", LGT)]),
+    ("ADVERSARIO D2  y en el Codi catalan el guion va DENTRO del numero",
+     "Codi tributari de Catalunya art. 641-14",
+     [("641", "")]),
+    # Y EL APARTADO TAMPOCO SE CUELA POR LA FORMA NUEVA: «- 76.2» es el
+    # articulo 76. Medido: los 29 pares con apartado no existen en el indice y
+    # el articulo base si, o sea que guardarlos enteros seria bajar consultas
+    # que no se pueden encontrar.
+    ("ADVERSARIO D2  el apartado detras del punto no es el articulo",
+     "Ley 27/2014 Impuesto sobre Sociedades - 76.2 - 81 - 89.2",
+     [("76", LIS), ("81", LIS), ("89", LIS)]),
+
+    # ---- 6. la forma de toda la vida, que no puede haberse movido
     ("CONTROL  la norma DELANTE sigue igual",
      "Ley 37/1992 arts. 75, 78, 80-cuatro, 89",
      [("75", LIVA), ("78", LIVA), ("80", LIVA), ("89", LIVA)]),
@@ -234,7 +274,7 @@ MUTACIONES = [
      "        cortes.append(m.start())",
      "        pass",
      ["POSITIVO D  dos normas seguidas sin separador",
-      "POSITIVO D  tres normas, la de en medio no la tenemos"]),
+      "POSITIVO D  tres normas seguidas, cada una con los suyos"]),
 
     ("(g) se parte sin exigir que el trozo traiga su designacion propia",
      "        propia = _RE_NORMA_EXPLICITA.search(trozo, desde, marca.start())\n"
