@@ -76,43 +76,47 @@ ahora `configuracion.revisar()` AL ARRANCAR, en la ventana y en la terminal. Una
 condicion de arranque protege mas que una suite que hay que acordarse de lanzar.
 Y en cuanto se encendio encontro dos descuadres reales.
 
-Las CINCO que quedan: ninguna esta en el camino critico del boton de criterio, y su
-fallo seria VISIBLE -un estado raro, un aviso repetido- y no silencioso. Queda
-escrito que cubrian, para no descubrirlo en produccion:
+LAS SEIS PERDIDAS, REESCRITAS EL 13/08/2026 (no restauradas)
+------------------------------------------------------------
+Se perdieron cuando el sistema tenia cuatro normas y un impuesto. Reproducir
+sus premisas habria sido traer de vuelta expectativas caducadas, asi que se
+escribieron contra el sistema de hoy y lo que ya no aplica se dice en vez de
+copiarse.
 
-  prueba_9b.py           Las señales de estado de la DGT: que varias consultas
-                         de anos distintos sobre el mismo precepto dan
-                         DISCUTIDO, que una consulta de otra norma va a
-                         cobertura y no a desacuerdo, y que la fuente caida se
-                         dice sin bajar el estado.
+  prueba_estado.py       Reemplaza a `prueba_9b` y `prueba_discutido`, JUNTAS.
+                         Probaban los dos extremos de la misma cuerda -que las
+                         señales se calculan bien y que el estado sale de
+                         ellas- y separadas cada una podia estar verde con la
+                         otra rota. Cubre los dos ejes (desacuerdo mueve el
+                         estado, cobertura no), la fuente caida, y el TEAC por
+                         la misma puerta.
 
-  prueba_9b_e2e.py       Lo mismo de extremo a extremo por `fase4.consultar`,
-                         con la DGT encendida: que una pregunta de IRPF sigue
-                         sin colarse y que la fuente caida deja constancia.
+  prueba_petete.py       El troceo del HTML, contra CACHE de
+                         `casos/petete_prueba`. Ni una peticion: la cadena usa
+                         esa fuente y una suite que pidiera «solo una pagina»
+                         se sumaria a su ritmo. Cubre tambien que no se
+                         devuelva una pagina que no es la pedida y los tres
+                         cubos del canario.
 
-  prueba_discutido.py    Que DISCUTIDO sale de `EST.calcular` y no solo de las
-                         señales sueltas. Incluye los dos ejes: desacuerdo
-                         frente a cobertura, y el criterio revocado de la
-                         fuente caida.
+  prueba_agrupado.py     Un aviso POR ARTICULO y no por criterio, y la
+                         unificacion de criterio delante. Contra el fixture
+                         `casos/teac_asunto`.
 
-  prueba_petete.py       El cliente de PETETE: troceo del HTML cacheado,
-                         mapeo numero<->id, el canario y sus tres cubos de
-                         fallo (culpa nuestra / suya / sin respuesta).
+  prueba_dialogo.py      El dialogo de la clave Y QUE NO HAYA DOS: hoy hay dos
+                         entradas -la instalacion y el boton de la ventana- y
+                         la suite se pone roja si aparece un segundo dialogo.
 
-  prueba_agrupado.py     Que los avisos del TEAC se agrupan por articulo y no
-                         por criterio -salian seis identicos- y que la
-                         unificacion de criterio va delante.
-                         (`prueba_asunto` cubre el filtrado, no el agrupado.)
+  prueba_9b_e2e.py       NO SE REESCRIBE, y es una decision. Repetia lo mismo
+                         de extremo a extremo por `fase4.consultar`. De lo que
+                         cubria: «una pregunta de IRPF no se cuela» lo mide hoy
+                         `prueba_filtro` sobre la puerta de materia, que es
+                         donde vive; y «la fuente caida deja constancia» lo
+                         miden `prueba_estado` (el calculo) y `prueba_caidas`
+                         (en caliente, durante una consulta). Reescribirla
+                         seria tener tres suites afirmando lo mismo y
+                         enterarse tarde de cual manda.
 
-  El DETECTOR DE ANEXOS -que el articulo 95 declare la remision al anexo del
-  RDLeg 339/1990- se quedo sin banco al repartir lo que cubria la vieja
-  `prueba_asunto`. No entra en el camino del boton de criterio, pero conviene
-  que vuelva: sin el, una remision que nadie ve se pierde en silencio.
-
-  prueba_dialogo.py      El dialogo de la clave: que oculta lo que se escribe,
-                         que pega con Ctrl+V UNA vez, que comprueba la clave
-                         antes de cerrar y que con una mala no se cierra.
-                         (`prueba_instalador` cubre el camino, no el dialogo.)
+  El DETECTOR DE ANEXOS ya volvio: es `prueba_anexos.py`.
 
 LO QUE NUNCA ESTUVO EN /tmp, Y SIGUE
 ------------------------------------

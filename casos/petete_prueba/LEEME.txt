@@ -1,0 +1,15 @@
+HTML CACHEADO DE PETETE. NI UNA PETICION A LA FUENTE.
+
+Son dos paginas COPIADAS de `datos/dgt/crudo`, tal cual se bajaron. No estan
+inventadas y no se han tocado: si se editaran, la prueba mediria un troceo que
+funciona sobre un HTML que no existe.
+
+POR QUE NO SE PIDEN A LA WEB
+----------------------------
+La cadena de siembra usa PETETE con diez segundos de pausa entre peticiones
+para no que nos corten. Una suite que pidiera «solo una pagina» se sumaria a
+ese ritmo sin saberlo. Y ademas mediria la web de hoy en vez del troceo: el dia
+que cambien la maquetacion queremos que falle la INGESTA, no la prueba.
+
+Si hace falta otra pagina, se COPIA de datos/dgt/crudo. Nunca se descarga
+desde aqui.
