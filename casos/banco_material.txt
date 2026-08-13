@@ -32,3 +32,14 @@ que se incluye en la base imponible de una donacion de dinero | ISD | Cataluña 
 
 tipo de gravamen en la compraventa de una vivienda usada | ITPAJD | Cataluña | 1
 # La autonomica fija el tipo, pero el hecho imponible y la base son estatales.
+#
+# ROJO, Y ES UN PENDIENTE APUNTADO, NO UN DESCUIDO.
+#
+# El suelo mete la ley estatal en el corte de seis, y `seleccionar_material` la
+# DESCARTA DESPUES por pertinencia: de los seis recuperados solo uno pasa el
+# umbral, y es catalan. Una salvaguarda que otra pieza deshace no es una
+# salvaguarda: garantiza en la recuperacion algo que se pierde antes de llegar
+# al redactor, que es el unico sitio donde importa.
+#
+# No se toca hoy. Cuando se mire, la pregunta es si el umbral de pertinencia
+# tiene que conocer el suelo o si el suelo tiene que aplicarse mas tarde.

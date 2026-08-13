@@ -145,13 +145,24 @@ como se amortiza el inmovilizado de una sociedad y con que tablas | Ley 27/2014 
 # buscador. Por eso sus rojas dicen «el buscador SOLO no llega», que NO es lo
 # mismo que «el sistema falla». Hay dos clases, y confundirlas cuesta caro:
 #
-#   [SISTEMA]  el articulo no sale ni con los terminos del articulado. Aqui hay
-#              algo que arreglar en la recuperacion.
+#   [SISTEMA]  con los terminos del articulado el articulo NO LLEGA AL
+#              MATERIAL. Aqui hay algo que arreglar en la recuperacion.
 #
-#   [PUENTE]   sale mal con la pregunta cruda y sale EL PRIMERO con los
-#              terminos que propondria el analizador. No hay nada roto: falta
-#              el puente de vocabulario, que es justo para lo que existe la
-#              llamada 1. El bloque 5 los repite con el analizador de verdad.
+#   [PUENTE]   con la pregunta cruda no llega, y con los terminos que
+#              propondria el analizador SI LLEGA AL MATERIAL. No hay nada
+#              roto: falta el puente de vocabulario, que es justo para lo que
+#              existe la llamada 1. El bloque 5 los repite con el analizador.
+#
+# LA VARA ES «LLEGA AL MATERIAL», NO «EN QUE PUESTO SALE», y esto costo dos
+# etiquetas mal puestas el 13/08/2026. Se clasificaron dos casos como
+# [SISTEMA] porque con los terminos del articulado salian en el puesto 4 y el
+# liston del caso son 3; medido por si llegaban al redactor, los dos llegaban.
+#
+# El puesto es lo que mide el LISTON DE ESTE FICHERO, y esta bien que sea
+# exigente. Pero para decidir SI HAY ALGO ROTO la pregunta es otra: si el
+# precepto llega a quien redacta. Un articulo en el puesto 4 que se envia al
+# redactor no es un fallo del sistema; uno en el puesto 2 que el corte por
+# pertinencia descarta, si.
 #
 # Medido el 11/08/2026, con el filtro por impuesto ya puesto:
 #
@@ -220,15 +231,24 @@ mi cliente hereda la empresa de su padre, que reduccion le corresponde | Ley 29/
 # art. 20: "Base liquidable" - es donde viven las reducciones, incluida la de
 # empresa familiar. La autonomica las modula, pero la base esta aqui.
 #
-# [SISTEMA] ROJO. Con los terminos del propio articulado sale en el puesto 4,
-# no en los 3 primeros: por delante van tres articulos catalanes de
-# reducciones (632-1, 632-12, 632-11), redactados mas cerca de la pregunta.
+# [PUENTE] ROJO. Con los terminos del propio articulado el articulo LLEGA AL
+# MATERIAL -cobertura 1.0, enviado al redactor-, aunque salga en el puesto 4.
+# Lo que falta es el puente entre «hereda la empresa de su padre» y
+# «reducciones / base liquidable», y ese lo construye el analizador. El bloque
+# 1 lo mide sin el a proposito.
 #
-# EL SUELO DE ESTATALES NO LO ARREGLA, y es importante no confundirse: el
-# suelo garantiza que la base estatal ESTE en el corte, no en que puesto. Aqui
-# el art. 20 ya estaba dentro -en el 4-, asi que el suelo promociona otro
-# estatal al puesto 6 y este no se mueve. Lo predije verde al aplicarlo y me
-# equivoque; queda escrito para no volver a suponerlo.
+# ESTUVO ETIQUETADO [SISTEMA] Y ERA MIO EL ERROR. Lo clasifique con la vara
+# del puesto -«sale en el 4 y el liston es 3»- que es justo la vara que no
+# puede ver lo que importa: si el precepto llega al redactor. Medido con la
+# vara buena, llega. Ver el bloque 1B y la nota del LEEME.
+#
+# POR DELANTE VAN TRES ARTICULOS CATALANES de reducciones (632-1, 632-12,
+# 632-11), redactados mas cerca de la pregunta.
+#
+# EL SUELO DE ESTATALES NO LO SUBE, y conviene no confundirse: el suelo
+# garantiza que la base estatal ESTE en el corte, no en que puesto. El art. 20
+# ya estaba dentro, en el 4, asi que el suelo promociona OTRO estatal al 6 y
+# este no se mueve. Lo predije verde al aplicarlo y me equivoque.
 
 un padre quiere donar dinero a su hijo, tributa | Ley 29/1987 | 3 | 3 | ISD | Cataluña
 # art. 3: "Hecho imponible" - apartado b), la adquisicion de bienes por
@@ -255,10 +275,14 @@ que tipo se aplica a la compraventa de una vivienda usada | Real Decreto Legisla
 # art. 11: "La cuota tributaria se obtendra aplicando sobre la base liquidable
 # los siguientes tipos". La autonomica fija el suyo; el estatal es supletorio.
 #
-# [SISTEMA] ROJO, Y ES UN ROJO DISTINTO DEL DE ARRIBA. Aqui NO LO TAPA NINGUNA
-# CATALANA: con los terminos del articulado sale en el puesto 4 y por delante
-# van su propio Reglamento (arts. 65 y 51) y otro articulo de su propia ley
-# (art. 26, la cuota de operaciones societarias).
+# [PUENTE] ROJO, Y ES UN ROJO DISTINTO DEL DE ARRIBA. Con los terminos del
+# articulado LLEGA AL MATERIAL, asi que la brecha es de vocabulario; tambien
+# estuvo etiquetado [SISTEMA] por la vara del puesto, y tambien era mi error.
+#
+# LO QUE LO DISTINGUE del de arriba es QUIEN LO TAPA: aqui NO ES NINGUNA
+# CATALANA. Sale en el puesto 4 y por delante van su propio Reglamento (arts.
+# 65 y 51) y otro articulo de su propia ley (art. 26, la cuota de operaciones
+# societarias). Es un problema de ranking DENTRO del mismo impuesto.
 #
 # Asi que el suelo de estatales NO PUEDE arreglarlo y NO DEBE intentarlo: si
 # algun dia se pusiera verde al tocar el suelo, hay que desconfiar, porque
