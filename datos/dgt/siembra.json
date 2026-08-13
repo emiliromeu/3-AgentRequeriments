@@ -5442,6 +5442,197 @@
    ],
    "hallados": 20,
    "cuando": "2026-08-13T08:52:17Z"
+  },
+  "Reglamento General de las actuaciones y los procedimientos de gestión e inspección tributaria y de desarrollo de las normas comunes de los procedimientos de aplicación de los tributos art. 40": {
+   "numeros": [
+    "V0668-26",
+    "V0853-22",
+    "V0864-14",
+    "V2814-11"
+   ],
+   "hallados": 4,
+   "cuando": "2026-08-13T08:52:49Z"
+  },
+  "Reglamento General de las actuaciones y los procedimientos de gestión e inspección tributaria y de desarrollo de las normas comunes de los procedimientos de aplicación de los tributos art. 46": {
+   "numeros": [
+    "V2146-23",
+    "V3183-20",
+    "V2716-20",
+    "V1219-19",
+    "V2206-14"
+   ],
+   "hallados": 7,
+   "cuando": "2026-08-13T08:53:03Z"
+  },
+  "Reglamento General de las actuaciones y los procedimientos de gestión e inspección tributaria y de desarrollo de las normas comunes de los procedimientos de aplicación de los tributos art. 47": {
+   "numeros": [
+    "V0648-13"
+   ],
+   "hallados": 1,
+   "cuando": "2026-08-13T08:53:46Z"
+  },
+  "Reglamento General de las actuaciones y los procedimientos de gestión e inspección tributaria y de desarrollo de las normas comunes de los procedimientos de aplicación de los tributos art. 87": {
+   "numeros": [
+    "V3119-23",
+    "V3120-23"
+   ],
+   "hallados": 2,
+   "cuando": "2026-08-13T08:54:20Z"
+  },
+  "Reglamento General de las actuaciones y los procedimientos de gestión e inspección tributaria y de desarrollo de las normas comunes de los procedimientos de aplicación de los tributos art. 125": {
+   "numeros": [
+    "V2388-14"
+   ],
+   "hallados": 1,
+   "cuando": "2026-08-13T08:54:35Z"
+  },
+  "Reglamento General de las actuaciones y los procedimientos de gestión e inspección tributaria y de desarrollo de las normas comunes de los procedimientos de aplicación de los tributos art. 147": {
+   "numeros": [
+    "V0321-26",
+    "V0691-25",
+    "V0701-25"
+   ],
+   "hallados": 3,
+   "cuando": "2026-08-13T08:57:09Z"
+  },
+  "Reglamento por el que se regulan las obligaciones de facturación art. 8 bis": {
+   "numeros": [
+    "V1445-26",
+    "V0175-26"
+   ],
+   "hallados": 2,
+   "cuando": "2026-08-13T08:57:50Z"
+  },
+  "Reglamento por el que se regulan las obligaciones de facturación art. 19": {
+   "numeros": [
+    "V2176-22",
+    "V2022-22",
+    "V0002-21",
+    "V3638-20",
+    "V3294-20"
+   ],
+   "hallados": 18,
+   "cuando": "2026-08-13T08:58:05Z"
+  },
+  "Ley 58/2003 art. 18": {
+   "numeros": [
+    "V5066-26",
+    "V5064-26",
+    "V1554-26",
+    "V5035-26",
+    "V5025-26"
+   ],
+   "hallados": 20,
+   "cuando": "2026-08-13T08:59:51Z"
+  },
+  "Ley 58/2003 art. 19": {
+   "numeros": [
+    "V1090-26",
+    "V0617-26",
+    "V0353-26",
+    "V1733-22",
+    "V1584-21"
+   ],
+   "hallados": 20,
+   "cuando": "2026-08-13T09:00:07Z"
+  },
+  "Ley 58/2003 art. 29 bis": {
+   "numeros": [
+    "V0981-25"
+   ],
+   "hallados": 1,
+   "cuando": "2026-08-13T09:00:54Z"
+  },
+  "Ley 58/2003 art. 46": {
+   "numeros": [
+    "V2005-22",
+    "V3183-20",
+    "V2716-20",
+    "V1219-19",
+    "V3071-17"
+   ],
+   "hallados": 20,
+   "cuando": "2026-08-13T09:01:12Z"
+  },
+  "Ley 58/2003 art. 63": {
+   "numeros": [
+    "V0558-26",
+    "V1123-25",
+    "V0855-25",
+    "V0344-20",
+    "V0589-19"
+   ],
+   "hallados": 17,
+   "cuando": "2026-08-13T09:01:41Z"
+  },
+  "Ley 58/2003 art. 84": {
+   "numeros": [
+    "V2177-25",
+    "V0860-25",
+    "V2512-24",
+    "V1641-24",
+    "V1573-24"
+   ],
+   "hallados": 20,
+   "cuando": "2026-08-13T09:02:26Z"
+  },
+  "Ley 58/2003 art. 86": {
+   "numeros": [
+    "V2096-24",
+    "V0726-18",
+    "V4119-16",
+    "V3868-16",
+    "V0691-14"
+   ],
+   "hallados": 8,
+   "cuando": "2026-08-13T09:03:13Z"
+  },
+  "Ley 58/2003 art. 87": {
+   "numeros": [
+    "V2512-24",
+    "V2096-24",
+    "V0738-24",
+    "V3119-23",
+    "V3120-23"
+   ],
+   "hallados": 9,
+   "cuando": "2026-08-13T09:04:11Z"
+  },
+  "Ley 58/2003 art. 113": {
+   "numeros": [
+    "V0350-22",
+    "V1281-18"
+   ],
+   "hallados": 2,
+   "cuando": "2026-08-13T09:04:26Z"
+  },
+  "Ley 58/2003 art. 117": {
+   "numeros": [
+    "V1924-25",
+    "V1016-25",
+    "V2632-17",
+    "V0783-10"
+   ],
+   "hallados": 4,
+   "cuando": "2026-08-13T09:05:01Z"
+  },
+  "Ley 58/2003 art. 137": {
+   "numeros": [
+    "V0113-14",
+    "V3156-13",
+    "V2093-13",
+    "V1437-13",
+    "V1764-09"
+   ],
+   "hallados": 6,
+   "cuando": "2026-08-13T09:05:28Z"
+  },
+  "Ley 58/2003 art. 138": {
+   "numeros": [
+    "V2429-17"
+   ],
+   "hallados": 1,
+   "cuando": "2026-08-13T09:06:57Z"
   }
  },
  "descargadas": [
@@ -6694,7 +6885,31 @@
   "V2296-24",
   "V1528-24",
   "V2689-23",
-  "V1394-23"
+  "V1394-23",
+  "V3183-20",
+  "V2206-14",
+  "V2388-14",
+  "V2176-22",
+  "V2022-22",
+  "V0002-21",
+  "V3638-20",
+  "V3294-20",
+  "V1733-22",
+  "V1584-21",
+  "V0344-20",
+  "V0589-19",
+  "V1641-24",
+  "V1573-24",
+  "V4119-16",
+  "V3868-16",
+  "V0691-14",
+  "V0350-22",
+  "V2632-17",
+  "V0113-14",
+  "V3156-13",
+  "V2093-13",
+  "V1437-13",
+  "V1764-09"
  ],
  "fallidas": {
   "LGT art. 203": "forma inesperada: la lista de resultados no trae ningun 'viewDocument': o no hay resultados y no lo dice como esperabamos, o han cambiado la plantilla del buscador",
@@ -6734,7 +6949,10 @@
   "Ley 37/1992 art. 163 noniesdecies": "forma inesperada: la lista de resultados no trae ningun 'viewDocument': o no hay resultados y no lo dice como esperabamos, o han cambiado la plantilla del buscador",
   "Ley 58/2003 art. 172": "forma inesperada: la lista de resultados no trae ningun 'viewDocument': o no hay resultados y no lo dice como esperabamos, o han cambiado la plantilla del buscador",
   "Ley 58/2003 art. 210": "forma inesperada: la lista de resultados no trae ningun 'viewDocument': o no hay resultados y no lo dice como esperabamos, o han cambiado la plantilla del buscador",
-  "Ley 58/2003 art. 255": "forma inesperada: la lista de resultados no trae ningun 'viewDocument': o no hay resultados y no lo dice como esperabamos, o han cambiado la plantilla del buscador"
+  "Ley 58/2003 art. 255": "forma inesperada: la lista de resultados no trae ningun 'viewDocument': o no hay resultados y no lo dice como esperabamos, o han cambiado la plantilla del buscador",
+  "Reglamento General de las actuaciones y los procedimientos de gestión e inspección tributaria y de desarrollo de las normas comunes de los procedimientos de aplicación de los tributos art. 73": "forma inesperada: la lista de resultados no trae ningun 'viewDocument': o no hay resultados y no lo dice como esperabamos, o han cambiado la plantilla del buscador",
+  "Reglamento General de las actuaciones y los procedimientos de gestión e inspección tributaria y de desarrollo de las normas comunes de los procedimientos de aplicación de los tributos art. 130": "forma inesperada: la lista de resultados no trae ningun 'viewDocument': o no hay resultados y no lo dice como esperabamos, o han cambiado la plantilla del buscador",
+  "Reglamento General de las actuaciones y los procedimientos de gestión e inspección tributaria y de desarrollo de las normas comunes de los procedimientos de aplicación de los tributos art. 195": "forma inesperada: la lista de resultados no trae ningun 'viewDocument': o no hay resultados y no lo dice como esperabamos, o han cambiado la plantilla del buscador"
  },
  "cortes": [
   {
@@ -6763,5 +6981,5 @@
    "motivo": "no contesto en 45 segundos"
   }
  ],
- "actualizado": "2026-08-13T08:52:32Z"
+ "actualizado": "2026-08-13T09:06:57Z"
 }

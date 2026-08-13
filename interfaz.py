@@ -57,6 +57,16 @@ from agente_fiscal import analizador as AN
 from agente_fiscal import configuracion as CONF
 from agente_fiscal import dgt as DGT
 from agente_fiscal import estado as EST
+from agente_fiscal import frescura as _FR
+
+# CON CUANTOS DIAS DE MARGEN SE AVISA DE UN CERTIFICADO QUE CADUCA.
+#
+# Sesenta, y el argumento es de calendario, no de red: quien tiene que
+# reaccionar puede estar de vacaciones, de viaje o de baja, y un mes no cubre
+# eso. Con dos, el aviso aparece a tiempo de escribir al organismo, esperar
+# respuesta y volver a mirar. Y no sale siempre: un certificado normal dura un
+# año, asi que esta callado diez meses de cada doce.
+DIAS_AVISO_CERTIFICADO = 60
 
 # ----------------------------------------------------------------- textos
 #
@@ -429,6 +439,17 @@ FALLOS = (
 )
 FALLO_GENERICO = ("No se ha podido completar la consulta. Vuelve a intentarlo; "
                   "si sigue igual, avisa a Emili.")
+
+
+def _es_de_credencial(motivo: str) -> bool:
+    """¿El arranque ha fallado por la clave? Entonces hay algo que ofrecer.
+
+    Se mira contra los motivos que escribe `modelo.comprobar`, que son los
+    unicos que llegan aqui: no hay lista de codigos de error por medio.
+    """
+    m = (motivo or "").lower()
+    return any(x in m for x in ("credencial", "clave", "401", "api la rechaza",
+                                "no tiene permiso", "saldo", "credito"))
 
 
 def en_cristiano(mensaje: str) -> str:
@@ -1246,6 +1267,67 @@ class Ventana:
         ancho = min(ancho, int(self.raiz.winfo_screenwidth() * 0.95))
         self.raiz.minsize(max(860, ancho), max(620, alto))
 
+    def _ofrecer_cambiar_clave(self) -> None:
+        """Un boton para volver a pedir la credencial, sin terminal."""
+        b = ttk.Button(self.marco_motor, text="Poner otra clave de acceso",
+                       style="Segundo.TButton", command=self._cambiar_clave)
+        b.pack(pady=(HUECO2, 0))
+        self._pinchable(b)
+        self._boton_clave = b
+
+    def _cambiar_clave(self) -> None:
+        """Abre el MISMO dialogo del primer arranque. Ni uno nuevo ni parecido.
+
+        Si hubiera dos sitios donde se pide la clave, dentro de un mes dirian
+        cosas distintas y uno de los dos guardaria donde no toca.
+        """
+        import dialogo_clave
+        import instalar
+        clave, cancelado = dialogo_clave.pedir_clave(
+            comprobador=instalar.comprobar_clave,
+            guardar=instalar.guardar_clave)
+        if cancelado or not clave:
+            return
+        self._escribir_texto([
+            ("Clave guardada. Cierra y vuelve a abrir el agente.\n", "titulo")])
+
+    def _actualizar_corpus(self) -> None:
+        """Vuelve a bajar las normas del BOE. Desde la ventana, sin terminal.
+
+        NO SE HACE SOLO Y NO SE HACE EN SILENCIO: mueve el corpus entero, o sea
+        cambia los sellos y puede cambiar lo que se recupera. Se pide
+        confirmacion diciendo lo que va a pasar y cuanto tarda.
+        """
+        from tkinter import messagebox
+        if not messagebox.askokcancel(
+                "Actualizar las normas",
+                "Se vuelven a bajar las normas del BOE y se rehace la copia "
+                "local.\n\nTarda unos minutos y hace falta internet. Mientras "
+                "tanto no se puede consultar.\n\nDespués conviene mirar que "
+                "todo sigue en su sitio.", parent=self.raiz):
+            return
+        self._bloquear(
+            "Actualizando las normas desde el BOE. No cierres la ventana; "
+            "cuando termine, cierra y vuelve a abrir el agente.")
+        import subprocess
+        import threading
+
+        def trabajar() -> None:
+            fallos = []
+            for nid in sorted({r.stem for r in self.ix.rutas}):
+                r = subprocess.run(
+                    [sys.executable, str(RAIZ / "fase1.py"), "ingerir", nid],
+                    capture_output=True, text=True, cwd=str(RAIZ))
+                if r.returncode:
+                    fallos.append(nid)
+            self.raiz.after(0, lambda: self._bloquear(
+                "Normas actualizadas. Cierra y vuelve a abrir el agente."
+                if not fallos else
+                f"No se han podido actualizar {len(fallos)} normas. "
+                f"Avisa a Emili."))
+
+        threading.Thread(target=trabajar, daemon=True).start()
+
     def _plegar_campos(self, _evento=None) -> None:
         """El año y la comunidad, al lado si caben; apilados si no.
 
@@ -1714,7 +1796,15 @@ class Ventana:
 
         motor, err = fase4.preparar_motor(self.motor_nombre, silencioso=True)
         if motor is None:
+            # SI LO QUE FALLA ES LA CREDENCIAL, HAY BOTON. Hasta ahora la
+            # ventana decia lo que pasaba y ahi se acababa: para arreglarlo
+            # habia que abrir una terminal, y la oficina se quedaba parada
+            # hasta que alguien me escribiera. El dialogo que la pide ya
+            # existe -es el mismo del primer arranque- y lo unico que faltaba
+            # era poder volver a el.
             self._bloquear(en_cristiano(err), err)
+            if _es_de_credencial(err):
+                self._ofrecer_cambiar_clave()
             return
         self.motor = motor
 
@@ -2086,6 +2176,25 @@ class Ventana:
 
             # EL PLIEGUE. Empieza cerrado: quien abre esta pantalla viene a ver
             # si su impuesto esta, no como se llama cada real decreto.
+            # ACTUALIZAR LAS NORMAS, SIN TERMINAL. El corpus es una foto y
+            # envejece; quien lo nota es quien consulta, y no tiene por que
+            # abrir una consola para arreglarlo.
+            self._boton_actualizar = ttk.Button(
+                c, text="Actualizar las normas desde el BOE",
+                style="Discreto.TButton", command=self._actualizar_corpus)
+            self._boton_actualizar.pack(anchor="w", padx=RELLENO,
+                                        pady=(AIRE, 0))
+            self._pinchable(self._boton_actualizar)
+            edad = _FR.edad_del_corpus(RAIZ / "datos" / "corpus")
+            if edad.get("dias") is not None:
+                tk.Label(c, text=(
+                    f"   Bajada el {edad['mas_vieja'].strftime('%d/%m/%Y')}"
+                    f"  ·  {edad['dias']} días"), bg=PAPEL2,
+                    fg=(TINTA if edad["dias"] >= _FR.DIAS_SOSPECHOSO
+                        else TINTA3),
+                    font=self.fuente_menuda, anchor="w", padx=RELLENO
+                ).pack(fill="x")
+
             self._normas_abiertas = False
             boton_pliegue = ttk.Button(c, style="Discreto.TButton")
 
@@ -2203,6 +2312,31 @@ class Ventana:
                           font=self.fuente_referencia, anchor="e")
             et.pack(side="right")
             self._estado_fuentes[nombre] = et
+
+            # EL CERTIFICADO, DONDE PASA LA GENTE. Ya existia
+            # `fuente_web.dias_de_certificado`, pero solo lo llamaban los
+            # guiones de consola: la comprobacion solo servia si alguien se
+            # acordaba de ejecutarla, y quien tiene que acordarse suele estar
+            # de viaje justo ese mes. El de PETETE caduca el 26/09.
+            #
+            # SE AVISA CON MARGEN Y SE DICE QUE HACER, no solo que caduca: un
+            # aviso que da una fecha y ningun verbo deja a quien lo lee igual
+            # de parado que sin aviso.
+            try:
+                dias_cert = mod.FW.dias_de_certificado(mod.BASE)
+            except Exception:  # noqa: BLE001 - sin red no se avisa de nada
+                dias_cert = None
+            if dias_cert is not None and dias_cert <= DIAS_AVISO_CERTIFICADO:
+                tk.Label(c, text=(
+                    f"   El certificado de esta web caduca en {dias_cert} "
+                    f"días. Cuando pase, el agente NO podrá ampliar con "
+                    f"criterio nuevo (lo guardado sigue sirviendo). No es "
+                    f"cosa nuestra: lo renueva el organismo. Si el día "
+                    f"llega y no responde, avisa a Emili."),
+                    bg=PAPEL2, fg=TINTA, font=self.fuente_menuda, anchor="w",
+                    justify="left", wraplength=540, padx=RELLENO
+                ).pack(fill="x")
+
         tk.Label(c, text="Las respuestas salen SIEMPRE de la copia local: que "
                          "una fuente no responda no impide consultar, solo "
                          "quiere decir que hoy no se puede ampliar.",
