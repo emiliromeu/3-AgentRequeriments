@@ -45,7 +45,23 @@ def comprobar(que, ok, obtenido=""):
 
 ix, g = fase4.cargar_corpus()
 N = ix.normas
-cache = T.CacheTEAC()
+
+# LO QUE SE AFIRMA VA CONTRA EL FIXTURE, NO CONTRA LA DESPENSA.
+#
+# Esta suite leia `datos/teac`. Se escribio con NUEVE criterios guardados y una
+# de sus comprobaciones era que para una consulta rara no se seleccionara
+# ninguno. La siembra llevo la despensa a NOVECIENTOS NUEVE, entro una
+# resolucion del TEAR de Valencia sobre el articulo 80, y la comprobacion se
+# puso roja sin que nadie tocara el codigo.
+#
+# No fallaba el sistema: hacia lo correcto -sacarla diciendo «coincide el
+# articulo, PERO no se ha comprobado que trate del mismo supuesto»-. Lo que se
+# habia movido eran los datos debajo de la afirmacion.
+#
+# Los ocho del fixture estan COPIADOS de la cache real, con su numero y su
+# texto autenticos. Ver `casos/teac_prueba/LEEME.txt`.
+FIXTURE = RAIZ / "casos" / "teac_asunto"
+cache = T.CacheTEAC(FIXTURE)
 por_id = {c.resolucion: c for c in cache.todas()}
 
 ART80 = "modificacion de la base imponible por creditos incobrables"

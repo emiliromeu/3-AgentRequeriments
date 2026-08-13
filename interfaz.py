@@ -2029,9 +2029,20 @@ class Ventana:
                 n = sum(1 for d in self.ix.docs
                         if d.registro.get("cuerpo_clave") == cuerpo.clave)
                 total += n
+                # LA MATERIA, SIN EL TIPO DE NORMA DELANTE. La del texto
+                # refundido del ITP es «Ley del Impuesto sobre Transmisiones
+                # ...», asi que en crudo salia como un GRUPO APARTE, duplicando
+                # el de su propio impuesto y con un rotulo que empieza por «Ley
+                # del». Se normaliza igual que en `es_materia_de_impuesto`.
+                from agente_fiscal.normas import _solo_la_materia
                 materia = (cuerpo.materia or "").strip()
                 if es_materia_de_impuesto(materia):
-                    clave = f"{materia} ({_acronimo(materia)})"
+                    limpia = _solo_la_materia(materia)
+                    # Se recupera la capitalizacion del original: `limpia` va
+                    # en minusculas y esto es un rotulo de pantalla.
+                    corte = len(materia) - len(limpia)
+                    bonita = materia[corte:] if corte > 0 else materia
+                    clave = f"{bonita} ({_acronimo(materia)})"
                 else:
                     clave = "Normas generales"
                 g = grupos.setdefault(clave, {"n": 0, "normas": []})
@@ -2039,11 +2050,33 @@ class Ventana:
                 nombre = cuerpo.etiqueta.split(",")[0]
                 if nombre not in g["normas"]:
                     g["normas"].append(nombre)
+            # UNA LINEA POR IMPUESTO, CON LO QUE MIRA CADA BOTON.
+            #
+            # Habia DOS tablas -las normas aqui, el criterio mas abajo- y las
+            # dos nombraban los mismos impuestos, una debajo de otra. Con siete
+            # impuestos eso son catorce lineas para contestar dos preguntas que
+            # se leen mejor juntas: «que ley tengo de esto» y «cuanto criterio».
+            # Y las dos CRECEN con cada siembra y cada ingesta, asi que la
+            # pantalla se pasaba de largo sola. Es la cuarta vez que crece; la
+            # respuesta sigue siendo plegar, no subir el tope.
+            # SE EMPAREJA POR CODIGO DE IMPUESTO, no por el nombre que se
+            # pinta: «IVA» no esta dentro de «Impuesto sobre el Valor Añadido»,
+            # y emparejando por texto la cifra se quedaba fuera justo en los
+            # dos impuestos mas grandes.
+            from agente_fiscal import cobertura as _C
+            crudo = _C.resumen(self.ix) if self.ix else {}
+            criterio = {k: v["dgt"] + v["teac"] for k, v in crudo.items()}
             self._detalle_normas = []
             for nombre, g in sorted(grupos.items(),
                                     key=lambda kv: (kv[0] == "Normas generales",
                                                     kv[0])):
-                linea(c, nombre, f"{g['n']} artículos")
+                codigo = (nombre.rsplit("(", 1)[-1].rstrip(")")
+                          if nombre.endswith(")") else "")
+                suyo = criterio.get(codigo)
+                if nombre == "Normas generales":
+                    suyo = criterio.get(_C.GENERAL)
+                linea(c, nombre, f"{g['n']} artículos"
+                      + (f"  ·  {suyo} de criterio" if suyo else ""))
                 sub = tk.Label(c, text="   " + " · ".join(g["normas"]),
                                bg=PAPEL2, fg=TINTA3, font=self.fuente_menuda,
                                anchor="w", justify="left", wraplength=520,
@@ -2120,10 +2153,11 @@ class Ventana:
         if self.ix is not None:
             from agente_fiscal import cobertura as _C
             filas = _C.por_impuesto(self.ix)
-            for nombre, total in filas:
-                linea(c, nombre, f"{total}")
             if not filas:
                 linea(c, "todavía no hay nada guardado")
+            # LOS IMPUESTOS YA ESTAN ARRIBA, uno por linea, con su cifra de
+            # criterio al lado de la de articulos. Repetirlos aqui era decir lo
+            # mismo dos veces y hacer crecer la pantalla el doble de rapido.
             linea(c, "Consultas de la Dirección General de Tributos "
                      "y Doctrina del TEAC y tribunales regionales",
                   f"{consultas} + {len(todas)}")

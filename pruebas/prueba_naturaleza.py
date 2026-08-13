@@ -168,10 +168,18 @@ comprobar("  o sea: manda la señal, no quien gano el puesto 1",
 comprobar("y el primero entra con las dos: esa regla no la toca nadie",
           en(sel_p) and en(sel_f))
 
-# =============================================== 4. LOS 31 DEL BANCO
-print("\n=== 4. LOS 31 CASOS, Y LAS DE PROCEDIMIENTO NI UN PUESTO ===")
+# =============================================== 4. TODO EL BANCO
+print("\n=== 4. TODOS LOS CASOS, Y LAS DE PROCEDIMIENTO NI UN PUESTO ===")
 casos = [c for c in banco.leer_casos(banco.CASOS) if N.resolver(c["norma"])[0]]
-comprobar("el banco tiene los 31 casos", len(casos) == 31, len(casos))
+# EL NUMERO NO SE CLAVA. Aqui ponia «el banco tiene los 31 casos» y se puso
+# rojo al añadir los diez de Sucesiones y Transmisiones, sin que nada estuviera
+# roto. Es la misma podredumbre que la de las suites que leen la despensa: una
+# cifra escrita contra algo que crece a proposito. Lo que importa es que la
+# comprobacion mire TODOS los que haya y que haya suficientes para significar
+# algo.
+comprobar("el banco tiene casos con los que comprobarlo",
+          len(casos) >= 31, len(casos))
+print(f"    {len(casos)} casos, se comprueban todos")
 movidas = []
 for c in casos:
     cuerpo, _m = N.resolver(c["norma"])

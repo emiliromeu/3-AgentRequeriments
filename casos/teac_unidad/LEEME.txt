@@ -1,0 +1,29 @@
+JUEGO DE PRUEBA DE `prueba_unidad`. CRITERIOS REALES, PERO NO ES LA DESPENSA.
+
+Los cuatro ficheros estan COPIADOS TAL CUAL de datos/teac: numero, unidad,
+calificacion y texto autenticos. Ni una linea escrita a mano.
+
+QUE HAY Y PARA QUE
+  00/00144/2024  TEAC · No vinculante   <- el caso que la suite AFIRMA que
+                                           existe: un TEAC que NO invoca el
+                                           239.8 porque no es doctrina.
+  02/00107/2022  TEAR · No vinculante   <- dos regionales con las que
+  02/00348/2015  TEAR · No vinculante      comprobar que su cita no dice
+                                           «Criterio TEAC» y nombra su tribunal.
+  00/00005/2016  TEAC · Doctrina        <- el contraste: peso maximo.
+
+POR QUE ESTA CARPETA
+--------------------
+La suite AFIRMABA sobre la despensa: «en la copia local HAY un TEAC no
+vinculante». Era cierto con nueve criterios y lo sigue siendo con novecientos,
+pero es una afirmacion sobre datos que crecen, y esas se pudren en cada
+siembra: `prueba_asunto` se puso roja exactamente asi.
+
+Lo que se AFIRMA va contra estos cuatro. Lo que sigue leyendo la despensa son
+propiedades UNIVERSALES -«ninguna regional se presenta como criterio del TEAC»,
+«el orden por peso es monotono»-, que no dependen de que haya dentro y que se
+refuerzan cuantos mas documentos haya. Ver la regla en el LEEME del proyecto.
+
+NO SE MEZCLA CON `casos/teac_prueba`, donde viven tres criterios INVENTADOS
+(9001, 9002, 9003). Unos son reales y otros no; en la misma carpeta seria
+cuestion de tiempo que alguien citara el 9001 creyendo que existe.

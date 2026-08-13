@@ -4050,3 +4050,57 @@ el propio corpus, no listas.
 
 No se toca hoy.
 
+
+---
+
+# Una suite que afirma sobre datos que crecen se pudre en cada siembra
+
+`prueba_asunto` estuvo días en rojo sin que nadie tocara el código. Se escribió
+cuando la despensa tenía **nueve** criterios del TEAC, y una de sus
+comprobaciones era que para una consulta rara **no se seleccionara ninguno**.
+La siembra la llevó a **novecientos nueve**, entró una resolución del TEAR de
+Valencia sobre el artículo 80, y la comprobación se puso roja.
+
+**El sistema no estaba fallando.** Hacía justo lo correcto: sacar esa
+resolución diciendo *«coincide el artículo, PERO no se ha comprobado que trate
+del mismo supuesto: compruébalo tú»*. Lo que se había movido eran los datos
+debajo de la afirmación.
+
+> **Lo que se AFIRMA va contra un fixture. La caché real sólo vale para
+> comprobar FORMA, o propiedades universales que no dependen de qué haya
+> dentro.**
+
+## Los tres tipos, que no son lo mismo
+
+| | ejemplo | dónde va |
+|---|---|---|
+| **afirmación sobre contenido** | «no se selecciona ninguno», «existe un TEAC no vinculante» | **fixture** |
+| **propiedad universal** | «ninguna regional se presenta como criterio del TEAC», «el orden por peso es monótono» | caché real: se refuerza con cada documento nuevo |
+| **integridad de la despensa** | «todos los fragmentos guardados son literales en su documento» | caché real, por definición |
+
+`prueba_recorte` es del tercer tipo y por eso **sigue leyendo la despensa**: lo
+que comprueba es que la copia local sea coherente consigo misma. Si un día se
+pone roja, no será podredumbre: será que un documento recién bajado tiene un
+fragmento que no está en su original, que es exactamente lo que queremos saber.
+
+## Y los fixtures se copian, nunca se escriben
+
+Los criterios de `casos/teac_asunto` y `casos/teac_unidad` están **copiados tal
+cual** de `datos/teac`: número, fecha y texto auténticos. Una resolución
+inventada con número de verdad es lo peor que puede entrar en un repositorio
+fiscal.
+
+Por eso mismo cada carpeta lleva un LEEME diciendo con todas las letras que
+**no es la copia de trabajo**: justo porque son auténticos, por dentro no hay
+forma de distinguirlos. Y no se mezclan con `casos/teac_prueba`, donde viven
+tres criterios **inventados** (9001, 9002, 9003): en la misma carpeta sería
+cuestión de tiempo que alguien citara el 9001 creyendo que existe.
+
+## Una cosa más: el fixture se elige para poder AFIRMAR
+
+En `casos/teac_asunto` **no está** la resolución que rompió la suite
+—46/03942/2023—, y no es un descuido. El bloque que comprueba «cuando ninguna
+viene al caso, se avisa en vez de callar» no puede comprobarse con ella dentro,
+porque siempre habría una que sale. **Meter en el fixture justo el documento
+que impide la comprobación sería fijar el accidente en vez del comportamiento.**
+

@@ -1,0 +1,62 @@
+JUEGO DE PRUEBA DEL TEAC. SON CRITERIOS REALES, PERO ESTO NO ES LA DESPENSA.
+
+Los siete ficheros de esta carpeta estan COPIADOS TAL CUAL de datos/teac, asi
+que su numero de resolucion, su fecha y su texto son autenticos. No hay ni una
+linea escrita a mano: una resolucion inventada con numero de verdad es lo peor
+que se puede meter en un repositorio fiscal.
+
+Y POR ESO MISMO HAY QUE DECIR QUE ESTO NO ES LA COPIA DE TRABAJO. Justo porque
+son autenticos, mirandolos por dentro no hay forma de distinguirlos. Quien
+busque criterio para contestar a alguien tiene que ir a datos/teac; aqui hay
+ocho documentos elegidos para que unas pruebas puedan afirmar cosas.
+
+POR QUE EXISTE ESTA CARPETA
+---------------------------
+`prueba_asunto` leia la cache de verdad. Se escribio cuando habia NUEVE
+criterios guardados, y una de sus comprobaciones era que para una consulta rara
+no se seleccionara ninguno. La siembra llevo la despensa a NOVECIENTOS NUEVE, y
+entre ellos entro una resolucion del TEAR de Valencia sobre el articulo 80: la
+comprobacion paso a roja sin que nadie tocara el codigo.
+
+No estaba fallando el sistema -de hecho hacia lo correcto, sacar la resolucion
+diciendo «coincide el articulo, PERO no se ha comprobado que trate del mismo
+supuesto»-. Lo que se habia movido eran los datos debajo de la afirmacion.
+
+Una suite que AFIRMA algo sobre datos que crecen se pudre en cada siembra. Lo
+que se afirma va contra estos ocho; la cache real solo vale para comprobar
+FORMA -que devuelve una lista, que no revienta si esta vacia- porque eso no
+depende de que haya dentro.
+
+QUE HAY AQUI Y PARA QUE
+-----------------------
+  00/01298/2004  IVA a la importacion. Despacho a libre practica.
+                 El caso de MATERIA compatible: es de IVA y tiene que entrar.
+  00/03399/2023  Impuesto sobre la ELECTRICIDAD. Devolucion por impagados.
+  00/05524/2024  Impuesto sobre la ELECTRICIDAD. Devolucion por impagados.
+                 Los dos casos de MATERIA AJENA: citan el articulo 80 de la Ley
+                 del IVA pero son de otro impuesto, y no pueden entrar. Son los
+                 que dieron origen al filtro de materia.
+  00/02189/2021  Las cuatro DEL MISMO ASUNTO que la consulta de credito
+  00/03983/2023  incobrable: las que si vienen al caso.
+  00/05698/2023
+  00/06614/2024
+LA QUE NO ESTA, Y ES LA QUE ROMPIO LA SUITE
+-------------------------------------------
+La resolucion 46/03942/2023 del TEAR de Valencia -sobre el articulo 80- entro
+con la siembra y es la que puso la suite en rojo. NO se copia aqui, y no es un
+descuido: el bloque 7 comprueba que CUANDO NINGUNA VIENE AL CASO se avisa en
+vez de callar, y con ella dentro esa propiedad no se puede comprobar, porque
+siempre habria una que sale.
+
+El fixture se elige para que la suite pueda AFIRMAR sus propiedades. Meter
+dentro justo el documento que las impide seria fijar el accidente en vez del
+comportamiento.
+
+Y POR QUE ESTA CARPETA Y NO `casos/teac_prueba`
+-----------------------------------------------
+Alli viven tres criterios INVENTADOS -numeros 9001, 9002, 9003- que usa
+`prueba_unidad`. Estos siete son AUTENTICOS. Mezclar unos y otros en la misma
+carpeta es pedir que algun dia alguien cite el 9001 creyendo que existe.
+
+Si alguna prueba necesita un criterio mas, se COPIA de datos/teac como estos.
+Nunca se escribe uno.

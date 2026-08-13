@@ -40,7 +40,18 @@ def comprobar(que, ok, obtenido=""):
 
 
 ix, g = fase4.cargar_corpus()
+# LA DESPENSA, SOLO PARA PROPIEDADES UNIVERSALES.
+#
+# «Ninguna regional se presenta como criterio del TEAC» o «el orden por peso es
+# monotono» son ciertas para lo que haya dentro, y cuantos mas documentos haya
+# mas fuerte es la comprobacion. Esas se quedan aqui.
+#
+# Lo que se AFIRMA -«existe un TEAC no vinculante»- va contra fixture: era
+# cierto con nueve criterios y lo sigue siendo con novecientos, pero es una
+# afirmacion sobre datos que crecen, y esas se pudren en cada siembra.
+# `prueba_asunto` se puso roja exactamente asi. Ver `casos/teac_unidad`.
 cache_real = T.CacheTEAC()
+cache_unidad = T.CacheTEAC(RAIZ / "casos" / "teac_unidad")
 por_id = {c.resolucion: c for c in cache_real.todas()}
 
 # La cache de PRUEBA, con criterios inventados. Nunca se mezcla con la de
@@ -73,12 +84,14 @@ comprobar("un TEAR NUNCA se llama «criterio»",
 # en cuanto se siembra otra vez; lo que hay que garantizar es que HAYA alguna
 # con la que probar, y que NINGUNA se presente como criterio del TEAC.
 print("\n  Y las REALES de la copia local, que fueron el defecto:")
+# LA PROPIEDAD se comprueba sobre TODA la despensa -es universal y se refuerza
+# con cada documento nuevo-, pero NO se imprime una linea por criterio: con
+# novecientos, el informe de la suite dejaria de poder leerse.
 regionales = [c for c in cache_real.todas() if not c.es_central]
 comprobar("hay resoluciones regionales con las que comprobarlo",
           len(regionales) >= 2, str(len(regionales)))
-print(f"    {len(regionales)} en la copia; se comprueban todas")
+print(f"    {len(regionales)} en la copia; se comprueban TODAS, sin listarlas")
 for c in regionales:
-    print(f"    {c.resolucion}  [{c.unidad}]  {c.etiqueta}")
     comprobar(f"{c.resolucion}: la cita NO dice «Criterio TEAC»",
               "Criterio TEAC" not in c.cita(), c.cita()[:70])
     comprobar(f"{c.resolucion}: y nombra a SU tribunal",
@@ -108,9 +121,9 @@ comprobar("sin calificacion, NO se le supone ninguna fuerza",
           "no se le supone" in T.fuerza_de("TEAC", ""))
 
 # Y en la copia local de verdad.
-central_no_vinc = [c for c in cache_real.todas()
+central_no_vinc = [c for c in cache_unidad.todas()
                    if c.es_central and c.calificacion.lower().startswith("no vinc")]
-comprobar("en la copia local HAY un TEAC «No vinculante» (no es hipotetico)",
+comprobar("en el fixture HAY un TEAC «No vinculante» (no es hipotetico)",
           bool(central_no_vinc), str(len(central_no_vinc)))
 for c in central_no_vinc:
     comprobar(f"{c.resolucion}: siendo del TEAC, NO invoca el 239.8",
@@ -180,9 +193,7 @@ print("  resolucion, el mismo fragmento y el mismo enlace, valen.")
 print("\n=== 5. PRIMERO EL PESO JURIDICO, DESPUES LA FECHA ===")
 print("  Un TEAR de 2025 no puede adelantar a doctrina del TEAC de 2004.\n")
 mezcla = sorted(cache_real.todas(), key=T.peso)
-for c in mezcla:
-    print(f"    nivel {T.nivel(c)}  {c.resolucion:22s} {str(c.anio):5s} "
-          f"{c.unidad:18s} {c.calificacion[:16]}")
+print(f"    {len(mezcla)} criterios ordenados; se comprueba el orden entero")
 niveles = [T.nivel(c) for c in mezcla]
 comprobar("el orden por peso es monotono", niveles == sorted(niveles),
           str(niveles))

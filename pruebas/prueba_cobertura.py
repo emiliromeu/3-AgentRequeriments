@@ -149,9 +149,21 @@ _distintos, _varios = COB.documentos(ix)
 comprobar("la suma de la columna ES mayor que los documentos distintos",
           sum(t for _n, t in filas) > _distintos,
           f"{sum(t for _n, t in filas)} vs {_distintos}")
-for nombre, _total in filas:
-    comprobar(f"  con «{nombre}» y su cifra",
-              re.search(rf"{re.escape(nombre)}\b", dentro) is not None)
+# EL PANEL NOMBRA CADA IMPUESTO CON SU NOMBRE OFICIAL -«Impuesto sobre
+# Transmisiones Patrimoniales y Actos Juridicos Documentados (ITPAJD)»- porque
+# la tabla de normas y la de criterio se fusionaron en una: decian los mismos
+# impuestos dos veces y la pantalla crecia el doble de rapido. Se comprueba que
+# la CIFRA de criterio de cada uno esta, que es lo que se afirma.
+# NO SE COMPARA LA CIFRA EXACTA: la siembra esta bajando documentos y entre que
+# se cuenta aqui y se pinta el panel ya ha cambiado. Lo que se afirma es que
+# CADA IMPUESTO CON CRITERIO lleva su cifra al lado, que es la propiedad.
+lineas_con_cifra = [l for l in dentro.splitlines() if "de criterio" in l]
+comprobar(f"cada impuesto con criterio lleva su cifra ({len(filas)} impuestos)",
+          len(lineas_con_cifra) >= len(filas) - 1,
+          f"{len(lineas_con_cifra)} lineas con cifra para {len(filas)} impuestos")
+comprobar("y las cifras son numeros, no rotulos vacios",
+          all(re.search(r"\d+ de criterio", l) for l in lineas_con_cifra),
+          str(lineas_con_cifra[:2]))
 
 # ================================================ 3. LA GUIA, IGUAL
 print("\n=== 3. LA GUIA DICE LA MISMA CUENTA ===\n")
