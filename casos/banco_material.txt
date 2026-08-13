@@ -41,5 +41,27 @@ tipo de gravamen en la compraventa de una vivienda usada | ITPAJD | Cataluña | 
 # salvaguarda: garantiza en la recuperacion algo que se pierde antes de llegar
 # al redactor, que es el unico sitio donde importa.
 #
-# No se toca hoy. Cuando se mire, la pregunta es si el umbral de pertinencia
-# tiene que conocer el suelo o si el suelo tiene que aplicarse mas tarde.
+# SE MIRO EL 13/08/2026 Y NO ERA ESO. La pregunta era si el corte deshacia al
+# suelo, y medido resulto que el problema estaba antes: EL SUELO PROMOVIA POR
+# «SER ESTATAL», NO POR «VENIR AL CASO». Cogia los mejores estatales que
+# quedaran, y de siete promociones el corte tiraba cinco -«responsables
+# subsidiarios» en una pregunta sobre reducciones, «actos equiparados a
+# hipotecas» en una sobre el tipo de gravamen-. No eran dos piezas peleandose:
+# era una promocion sin criterio.
+#
+# SE PROBO EL ARREGLO -que el suelo preguntara antes lo mismo que el corte- Y
+# SE REVIRTIO. Medido sobre veinte preguntas: entraban SEIS preceptos nuevos en
+# CUATRO consultas. Dos eran los buenos (el art. 9 del ISD, base imponible; el
+# art. 31 del ITP, documentos notariales) y el resto relleno: «beneficios
+# fiscales» y «beneficios generales» en una pregunta sobre el tipo de gravamen,
+# y arrastrando por remision el art. 67 de la LGT -computo de plazos de
+# prescripcion-, que no pinta nada ahi.
+#
+# Este caso llego a ponerse VERDE con ese arreglo, y por eso se revirtio: se
+# ponia verde porque en el material habia un precepto estatal de ITP, si, pero
+# era «beneficios fiscales», no la base. Un verde por relleno es peor que un
+# rojo honesto.
+#
+# QUEDA ROJO. El motivo verdadero es que para esta pregunta NO HAY BASE ESTATAL
+# PERTINENTE en el corte: los estatales que hay cubren el 40% de lo que cubre
+# el primero, y el corte pide el 70%.

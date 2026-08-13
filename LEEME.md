@@ -4104,3 +4104,53 @@ viene al caso, se avisa en vez de callar» no puede comprobarse con ella dentro,
 porque siempre habría una que sale. **Meter en el fixture justo el documento
 que impide la comprobación sería fijar el accidente en vez del comportamiento.**
 
+
+---
+
+# Una promoción sin criterio, no dos piezas peleándose
+
+El bloque 1B destapó que el suelo de estatales metía la ley del ITP en el corte
+de seis y `seleccionar_material` la descartaba después. Lo escribí como *«una
+salvaguarda que otra pieza deshace»*, y al medirlo **el diagnóstico era otro**.
+
+**El suelo promovía por «ser estatal», no por «venir al caso».** Cogía los
+mejores estatales que quedaran fuera del corte, sin preguntarse si contestaban.
+De siete promociones, el corte tiraba cinco — y lo que metía era relleno:
+«responsables subsidiarios» en una pregunta sobre reducciones, «actos
+equiparados a hipotecas» en una sobre el tipo de gravamen. El corte hacía bien
+su trabajo; el suelo hacía mal el suyo.
+
+## El arreglo evidente, probado y revertido
+
+Que el suelo pregunte antes lo mismo que preguntará el corte. Una línea, y deja
+el sistema coherente consigo mismo. Medido sobre veinte preguntas:
+
+```
+consultas con material extra : 4 de 20  (6 preceptos)
+consultas que pierden algo   : 0
+```
+
+Dos de los seis eran los buenos: el art. 9 del ISD (base imponible) y el art. 31
+del ITP (documentos notariales). **Los otros cuatro, relleno**: «beneficios
+fiscales» y «beneficios generales» en una pregunta sobre el tipo de gravamen, y
+arrastrando por remisión el art. 67 de la LGT —cómputo de plazos de
+prescripción—, que no pinta nada ahí.
+
+Y el caso del bloque 1B **se puso verde con ese relleno**: había un precepto
+estatal de ITP en el material, sí, pero era «beneficios fiscales», no la base.
+
+> **Un verde por relleno es peor que un rojo honesto.** Revertido.
+
+## Lo que queda, y por qué es mejor así
+
+El caso sigue rojo, con el motivo verdadero escrito: para esa pregunta **no hay
+base estatal pertinente** en el corte. Los estatales que hay cubren el 40 % de
+lo que cubre el primero y el corte pide el 70 %. No es que una pieza deshaga a
+la otra: es que esa respuesta, hoy, no tiene base estatal que traer.
+
+Y la lección de método, que es la que se repite: **filtrar por una propiedad
+débil no es filtrar**. La cobertura de términos sirve para descartar lo que no
+comparte nada con la pregunta; no sirve para decidir qué es la base de un
+impuesto. Cambiar el criterio del suelo por otro igual de débil sólo cambia qué
+relleno entra.
+

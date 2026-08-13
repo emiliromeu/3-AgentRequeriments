@@ -321,6 +321,22 @@ que tipo se aplica a la compraventa de una vivienda usada | Real Decreto Legisla
 #
 # Necesita su propio diagnostico: es un problema de ranking dentro del mismo
 # impuesto, no de estatal contra autonomico.
+#
+# DIAGNOSTICADO EL 13/08/2026, Y CON UN MATIZ QUE NO ESPERABA:
+#
+#   consulta del gestor          no sale        · al material: NO
+#   terminos del articulado      puesto 4       · al material: SI
+#   como lo diria el analizador  no sale        · al material: NO
+#
+# Es [PUENTE] por la definicion -con los terminos del articulado llega al
+# redactor- pero SOLO con su redaccion literal. Una formulacion plausible del
+# analizador -«tipo de gravamen transmisiones patrimoniales onerosas cuota
+# tributaria base liquidable»- NO lo saca. Asi que el puente existe, pero no
+# esta claro que el analizador sepa construirlo.
+#
+# Eso lo mide el bloque 5, con el modelo de verdad. Hasta entonces la etiqueta
+# es [PUENTE] con esta reserva escrita, que es mas honesto que darlo por
+# resuelto o que llamarlo [SISTEMA] sin haberlo comprobado.
 
 hay que pagar impuesto por un contrato de alquiler de local | Real Decreto Legislativo 1/1993 | 12 | 3 | ITPAJD | Cataluña
 # art. 12: "La cuota tributaria de los arrendamientos se obtendra aplicando
