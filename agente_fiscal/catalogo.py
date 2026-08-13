@@ -76,8 +76,30 @@ def del_corpus() -> list[dict]:
 
 
 def regenerar() -> list[dict]:
-    """Reescribe la lista desde el corpus. La llama `fase1.py` al ingerir."""
-    normas = del_corpus()
+    """Publica en la lista lo que haya en el corpus. SIN QUITAR NADA.
+
+    LA LISTA SOLO CRECE, y esto no es un detalle: es lo que la hace fiable.
+
+    La primera version reescribia la lista con el corpus local tal cual, y en
+    el despacho funcionaba porque aqui el corpus ES la referencia. En la
+    oficina rompia el arreglo entero: se probo con un equipo de trece, se corto
+    a mitad de ingerir la primera de las tres que faltaban, y la lista se
+    reescribio con las CATORCE de esa maquina. A partir de ahi el equipo se
+    creia completo y las dos que faltaban ya no existian para nadie. El mismo
+    defecto que veniamos a arreglar, ahora por escrito y viajando.
+
+    Uniendo en vez de sustituyendo, una ingesta a medias deja la lista como
+    estaba y la siguiente pasada retoma. Y una norma nueva aqui se publica
+    igual, que era el objetivo.
+
+    Quitar una norma del catalogo es una decision deliberada -se cambia el
+    fichero y se dice por que en el commit-, no algo que deba pasar por el
+    hecho de que un equipo vaya atrasado.
+    """
+    tengo = {n["id"]: n for n in del_disco()}
+    for n in del_corpus():
+        tengo[n["id"]] = n              # el corpus local manda en el CONTENIDO
+    normas = [tengo[i] for i in sorted(tengo)]
     LISTA.write_text(json.dumps(
         {"generado": date.today().isoformat(),
          "de": "datos/corpus/sellos.json — NO SE ESCRIBE A MANO",

@@ -150,6 +150,32 @@ try:
     comprobar("(el defecto viejo) mirando solo lo local, el de trece se cree "
               "completo: por eso manda la lista", not CAT.faltan(),
               str(len(CAT.faltan())))
+
+    # --- LA LISTA SOLO CRECE. Es lo que casi rompe el arreglo entero: la
+    #     ingesta regenera la lista, y si la regenerara CON EL CORPUS LOCAL, un
+    #     equipo atrasado la reescribiria a la baja y se creeria completo. Se
+    #     descubrio cortando una ingesta a mitad en el equipo de trece.
+    print("\n  Y LA REGENERACION NO PUEDE ENCOGER LA LISTA:")
+    d = equipo_con(LAS_13 + [FALTAN_3[0]], LAS_16)   # ingirio una de las tres
+    con_raiz_en(d)
+    quedan = CAT.regenerar()
+    comprobar("tras ingerir UNA de las tres, la lista sigue teniendo 16",
+              len(quedan) == 16, len(quedan))
+    comprobar("  y el equipo sigue sabiendo que le faltan 2",
+              len(CAT.faltan()) == 2, len(CAT.faltan()))
+    comprobar("  (si encogiera, se creeria completo y las 2 dejarian de "
+              "existir para todos)",
+              {n["id"] for n in CAT.faltan()} == set(FALTAN_3[1:]),
+              str([n["id"] for n in CAT.faltan()]))
+
+    # Y AL REVES: una norma nueva aqui SI se publica. Si no, la union seria una
+    # forma elegante de congelar la lista para siempre.
+    d2 = equipo_con(LAS_16 + ["BOE-A-2099-99999"], LAS_16)
+    con_raiz_en(d2)
+    nueva = CAT.regenerar()
+    comprobar("una norma ingerida de nuevas SI aparece sola en la lista",
+              len(nueva) == 17 and any(n["id"] == "BOE-A-2099-99999"
+                                       for n in nueva), len(nueva))
 finally:
     CAT.RAIZ, CAT.LISTA, CAT.CORPUS, CAT.SELLOS = guardado
 
