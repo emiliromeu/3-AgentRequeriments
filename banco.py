@@ -740,7 +740,7 @@ def comparar_analizador(ix, casos, modelos: list[str]) -> int:
 # ------------------------------------------------------------------ bloque 5
 
 
-def casos_en_rojo(ix, casos) -> list[dict]:
+def casos_en_rojo(ix, grafo, casos) -> list[dict]:
     """Los casos que el bloque 1 no recupera dentro de su tope.
 
     Se recalcula aqui, sin depender de que el bloque 1 se haya ejecutado: es
@@ -771,7 +771,7 @@ def casos_en_rojo(ix, casos) -> list[dict]:
     return rojos
 
 
-def bloque_5(reg: Registro, ix, motor, casos) -> None:
+def bloque_5(reg: Registro, ix, grafo, motor, casos) -> None:
     """Los rojos del bloque 1, PERO pasando por el analizador.
 
     Por que existe: el bloque 1 busca con la consulta tal cual, puenteando el
@@ -785,10 +785,20 @@ def bloque_5(reg: Registro, ix, motor, casos) -> None:
     la primera.
 
     Cuesta una llamada por caso en rojo (dos, si el JSON sale mal a la
-    primera): hoy son 2 casos, o sea 2-4 llamadas.
+    primera). Cuantos hay se calcula, no se escribe aqui: la version anterior
+    de esta linea decia «hoy son 2 casos» y hoy son otros.
+
+    ESTE BLOQUE ESTUVO ROTO DESDE QUE SE ESCRIBIO y nadie lo supo, porque
+    necesita el modelo real y nunca se ejecuto. El y `casos_en_rojo` usaban
+    `grafo` sin recibirlo -todos sus vecinos lo llevan en la firma-, asi que
+    reventaban con un NameError en la PRIMERA linea, antes de pedirle nada al
+    modelo: no habria costado dinero, simplemente no habria corrido jamas. Lo cubre `pruebas/prueba_bloque5.py`, que
+    recorre esta misma rama con un motor de mentira: el modelo se llama por un
+    solo sitio y todo lo de despues es determinista, asi que se puede probar
+    entero sin gastar.
     """
     bloque("BLOQUE 5 · LOS ROJOS, DE EXTREMO A EXTREMO  (necesita el modelo)")
-    rojos = casos_en_rojo(ix, casos)
+    rojos = casos_en_rojo(ix, grafo, casos)
     if not rojos:
         print("No hay ningun caso en rojo en el bloque 1: nada que reintentar.\n")
         return
@@ -1089,7 +1099,7 @@ def main(argv: list[str]) -> int:
     # AVISO DE GASTO, antes de la primera llamada. Cuantas van a ser y de que.
     if necesita_modelo and motor.es_modelo_real:
         minimo, maximo = llamadas_previstas(
-            pedidos, len(casos), len(casos_en_rojo(ix, casos))
+            pedidos, len(casos), len(casos_en_rojo(ix, grafo, casos))
         )
         print()
         print("-" * ANCHO)
@@ -1113,7 +1123,7 @@ def main(argv: list[str]) -> int:
     if "4" in pedidos:
         bloque_4(reg, ix, grafo, motor, casos)
     if "5" in pedidos:
-        bloque_5(reg, ix, motor, casos)
+        bloque_5(reg, ix, grafo, motor, casos)
 
     # ------------------------------------------------------------ recuento
     verdes, rojos, omitidos, fallos = (
