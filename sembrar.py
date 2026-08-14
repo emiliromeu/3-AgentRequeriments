@@ -229,6 +229,33 @@ def construir_plan() -> list:
     return filas
 
 
+def descuadre_del_plan() -> tuple:
+    """(planeados, sembrados, perdidos_por_impuesto). Cero si todo cuadra.
+
+    POR QUE EXISTE. `plan_siembra` calculaba 630 articulos y el sembrador hacia
+    553: una tupla escrita a mano en `construir_plan` filtraba por impuesto y
+    tiraba ISD e ITPAJD enteros. La siembra terminaba «bien» -sin error, sin
+    aviso, sin puerta- solo que sin dos impuestos, y por eso los dos estuvieron
+    a CERO consultas sin que nada lo dijera.
+    
+    No para nada: comparar lo planeado con lo hecho es barato y va en el
+    informe de cada tanda. Si mañana otra pieza filtra por su cuenta, se ve a
+    la primera pasada en vez de a los dos meses.
+    """
+    import plan_siembra
+    import fase4
+    por_impuesto = plan_siembra.plan()
+    planeados = sum(len(v) for v in por_impuesto.values())
+    filas = construir_plan()
+    N = fase4.cargar_corpus()[0].normas
+    hechos = Counter(N.impuesto_de_cuerpo(f["cuerpo"]) or "GENERAL"
+                     for f in filas)
+    perdidos = {k: len(v) - hechos.get(k, 0)
+                for k, v in por_impuesto.items()
+                if len(v) - hechos.get(k, 0) != 0}
+    return planeados, len(filas), perdidos
+
+
 def leer_avance() -> dict:
     if AVANCE.is_file():
         try:
@@ -409,6 +436,23 @@ def modo_sembrar(args) -> int:
     if huerfanas:
         apuntar(f"  se olvidan {len(huerfanas)} fallidas de articulos que ya no "
                 f"estan en el plan")
+
+    # EL PLAN CONTRA LO SEMBRADO. Una linea, y es la que faltaba.
+    try:
+        planeados, sembrados, perdidos = descuadre_del_plan()
+        if planeados == sembrados and not perdidos:
+            apuntar(f"  plan: {planeados} articulos, sembrados {sembrados} "
+                    f"(cuadra)")
+        else:
+            apuntar("")
+            apuntar(f"  !! DESCUADRE: el plan dice {planeados} articulos y se "
+                    f"siembran {sembrados}")
+            for k, v in sorted(perdidos.items(), key=lambda x: -abs(x[1])):
+                apuntar(f"       {k:10s} {v:+d}")
+            apuntar("     Alguna pieza esta filtrando por su cuenta. No para la")
+            apuntar("     siembra, pero lo que no entra aqui no existe despues.")
+    except Exception as e:                       # noqa: BLE001
+        apuntar(f"  [AVISO] no se ha podido comparar el plan: {e}")
 
     # SEPARADOS, Y EL AVISO SOLO CUANDO LO ES.
     #

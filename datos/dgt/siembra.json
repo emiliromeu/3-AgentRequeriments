@@ -6316,6 +6316,18 @@
    "hallados": 0,
    "sin_resultados": true,
    "cuando": "2026-08-13T19:09:13Z"
+  },
+  "Reglamento del Impuesto sobre Sucesiones y Donaciones art. 26": {
+   "numeros": [
+    "V0093-26",
+    "V2561-24",
+    "V2562-24",
+    "V0322-24",
+    "V2687-23"
+   ],
+   "hallados": 20,
+   "sin_resultados": false,
+   "cuando": "2026-08-14T19:21:44Z"
   }
  },
  "descargadas": [
@@ -7639,7 +7651,9 @@
   "V0180-10",
   "V1447-26",
   "V0330-26",
-  "V0174-26"
+  "V0174-26",
+  "V0093-26",
+  "V2561-24"
  ],
  "fallidas": {
   "V0888-26": "forma inesperada: el documento vino vacio"
@@ -7671,5 +7685,5 @@
    "motivo": "no contesto en 45 segundos"
   }
  ],
- "actualizado": "2026-08-13T19:30:11Z"
+ "actualizado": "2026-08-14T19:23:00Z"
 }
