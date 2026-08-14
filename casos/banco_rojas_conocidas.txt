@@ -1,0 +1,24 @@
+# LAS ROJAS CONOCIDAS DEL BANCO, por identificador.
+# SE GENERA, NO SE ESCRIBE:
+#     .venv/bin/python comprobar_todo.py --guardar-rojas
+# `comprobar_todo` compara el CONJUNTO contra esto. Si cambia, avisa
+# de cuales se han roto y cuales se han arreglado, que es lo que un
+# recuento no puede ver: con una arreglada y otra rota, el numero no
+# se mueve.
+b1:BOE-A-1987-28141#0:20
+b1:BOE-A-1987-28141#0:24
+b1:BOE-A-1987-28141#0:3
+b1:BOE-A-1987-28141#0:9,13
+b1:BOE-A-1991-14392#0:10
+b1:BOE-A-1991-27678#1:67,68
+b1:BOE-A-1992-28740#0:80
+b1:BOE-A-1992-28740#0:91
+b1:BOE-A-1993-25359#1:10
+b1:BOE-A-1993-25359#1:11
+b1:BOE-A-1993-25359#1:12
+b1:BOE-A-1993-25359#1:31
+b1:BOE-A-1993-25359#1:7
+b1:BOE-A-2003-23186#0:104
+b1:BOE-A-2003-23186#0:122
+b1:BOE-A-2003-23186#0:66
+b1b:ITPAJD:33

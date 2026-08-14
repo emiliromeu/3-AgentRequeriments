@@ -33,11 +33,50 @@ RAIZ = Path(__file__).resolve().parent
 PY = sys.executable
 ANCHO = 72
 
-# LO QUE SE SABE QUE ESTA EN ROJO Y POR QUE. Una prueba roja conocida no es lo
-# mismo que una recien rota: lo que no puede pasar es que cambie el numero sin
-# que nadie se entere. El banco compara ademas contra su propia linea base.
-BANCO_ESPERADO = 16
-BANCO_TOTAL = 19
+# LO QUE SE SABE QUE ESTA EN ROJO. Una roja conocida no es lo mismo que una
+# recien rota, y lo que no puede pasar es que cambie sin que nadie se entere.
+#
+# SE COMPARA EL CONJUNTO, NO EL RECUENTO, Y ESO ES EL ARREGLO DEL 14/08/2026.
+# Aqui habia dos numeros escritos a mano -«16 de 19»- de cuando el banco tenia
+# diecinueve casos. Con cuarenta y cuatro, el guion llevaba dias diciendo «el
+# banco da 27 y se esperaban 16» sin que eso significara nada: la novena lista
+# escrita a mano del proyecto, en forma de numero.
+#
+# Y ademas medía lo que no dice medir. Dos lineas mas abajo el propio guion
+# avisa: «no se juzga por cero rojas, se juzga por que sean LAS MISMAS». Un
+# recuento no puede ver eso: si una roja se arregla y otra se rompe, el numero
+# no se mueve y el guion da verde.
+#
+# LA LINEA BASE SE GENERA, NO SE ESCRIBE. Sale del propio JSON del banco:
+#
+#     .venv/bin/python comprobar_todo.py --guardar-rojas
+#
+# y se commitea. Cambiarla es una decision deliberada que queda en el diff, que
+# es justo lo que un numero a mano no dejaba ver.
+ROJAS_CONOCIDAS = RAIZ / "casos" / "banco_rojas_conocidas.txt"
+
+
+def rojas_del_ultimo_banco() -> set:
+    """Los identificadores de las pruebas en rojo de la ultima pasada."""
+    import json
+    pasadas = sorted((RAIZ / "datos" / "banco").glob("banco_*.json"))
+    if not pasadas:
+        return set()
+    d = json.loads(pasadas[-1].read_text(encoding="utf-8"))
+    # LA CONSTANTE, NO LA CADENA. Escribi "rojo" en minusculas y no cazaba
+    # ninguna: la linea base habria salido vacia y el guion en verde para
+    # siempre. Preguntandole al banco no se puede fallar.
+    sys.path.insert(0, str(RAIZ))
+    import banco
+    return {p["id"] for p in d.get("pruebas", [])
+            if p.get("veredicto") == banco.ROJO}
+
+
+def leer_rojas_conocidas() -> set:
+    if not ROJAS_CONOCIDAS.is_file():
+        return set()
+    return {l.strip() for l in ROJAS_CONOCIDAS.read_text(encoding="utf-8")
+            .splitlines() if l.strip() and not l.startswith("#")}
 
 
 def titulo(t: str) -> None:
@@ -101,22 +140,31 @@ def main() -> int:
     codigo, salida, seg = correr(["banco.py"], "banco")
     total = [l for l in salida.splitlines() if "TOTAL:" in l]
     linea = total[-1].strip() if total else ""
-    verdes = 0
-    for trozo in linea.replace("·", " ").split():
-        if trozo.isdigit() and verdes == 0:
-            verdes = int(trozo)
-            break
-    igual = verdes == BANCO_ESPERADO
-    cambio = [l for l in salida.splitlines() if "veredicto" in l.lower()]
+
+    ahora = rojas_del_ultimo_banco()
+    conocidas = leer_rojas_conocidas()
+    nuevas = sorted(ahora - conocidas)
+    arregladas = sorted(conocidas - ahora)
+    igual = not nuevas and not arregladas
+
     print(f"  {'[VERDE]' if igual else '[ROJO ]'} {linea[:60]}   ({seg:.1f}s)")
-    print(f"          esperado {BANCO_ESPERADO}/{BANCO_TOTAL}"
-          + (f" · {cambio[-1].strip()}" if cambio else ""))
+    print(f"          rojas conocidas: {len(conocidas)} · ahora: {len(ahora)}")
+    if nuevas:
+        print(f"          SE HAN ROTO {len(nuevas)}:")
+        for i in nuevas[:8]:
+            print(f"            + {i[:64]}")
+    if arregladas:
+        print(f"          SE HAN ARREGLADO {len(arregladas)} "
+              f"(enhorabuena, y actualiza la linea base):")
+        for i in arregladas[:8]:
+            print(f"            - {i[:64]}")
     if not igual:
-        rotos.append(f"el banco da {verdes}/{BANCO_TOTAL} y se esperaban "
-                     f"{BANCO_ESPERADO}: mira si las rojas son otras")
-    for l in salida.splitlines():
-        if l.strip().startswith("[ROJO"):
-            print(f"          roja conocida: {l.strip()[8:70]}")
+        rotos.append(
+            f"el conjunto de rojas del banco ha cambiado: "
+            f"{len(nuevas)} nueva(s), {len(arregladas)} arreglada(s). "
+            f"Si es a mejor: comprobar_todo.py --guardar-rojas")
+    elif conocidas:
+        print("          las mismas de siempre, ni una nueva")
 
     # -------------------------------------------------- guia y ventana
     titulo("4. LA GUIA Y LA VENTANA DICEN LO MISMO")
@@ -166,7 +214,11 @@ def main() -> int:
         "se vuelve a pagar. Son 0,03 centimos: no se construyo reanudacion.",
         "El criterio de la DGT y del TEAC solo cubre IVA. Renta y Sociedades "
         "van solo con la ley.",
-        "Las 3 rojas del banco son conocidas y no han cambiado de veredicto.",
+        # EL NUMERO SALE DE LA LINEA BASE, no escrito: decia «las 3 rojas»
+        # cuando hay diecisiete. Es el mismo defecto que se acaba de quitar
+        # doce lineas mas arriba, y estaba a dos dedos.
+        f"Las {len(leer_rojas_conocidas())} rojas del banco estan en "
+        f"{ROJAS_CONOCIDAS.name} con su motivo al lado en el fichero de casos.",
     ]
 
     if rotos:
@@ -183,5 +235,38 @@ def main() -> int:
     return 1 if rotos else 0
 
 
+def guardar_rojas() -> int:
+    """Reescribe la linea base con las rojas de la ULTIMA pasada del banco.
+
+    NO CORRE EL BANCO: lee su JSON. Asi la linea base sale de una pasada que
+    alguien ha mirado, y no de una que se lanza justo para hacerla cuadrar.
+    """
+    rojas = rojas_del_ultimo_banco()
+    if not rojas:
+        print("No hay ninguna pasada del banco guardada. Corre antes:")
+        print("    .venv/bin/python banco.py")
+        return 1
+    antes = leer_rojas_conocidas()
+    ROJAS_CONOCIDAS.parent.mkdir(parents=True, exist_ok=True)
+    ROJAS_CONOCIDAS.write_text(
+        "# LAS ROJAS CONOCIDAS DEL BANCO, por identificador.\n"
+        "# SE GENERA, NO SE ESCRIBE:\n"
+        "#     .venv/bin/python comprobar_todo.py --guardar-rojas\n"
+        "# `comprobar_todo` compara el CONJUNTO contra esto. Si cambia, avisa\n"
+        "# de cuales se han roto y cuales se han arreglado, que es lo que un\n"
+        "# recuento no puede ver: con una arreglada y otra rota, el numero no\n"
+        "# se mueve.\n"
+        + "\n".join(sorted(rojas)) + "\n", encoding="utf-8")
+    print(f"  linea base: {len(antes)} -> {len(rojas)} rojas")
+    for i in sorted(rojas - antes):
+        print(f"    + {i}")
+    for i in sorted(antes - rojas):
+        print(f"    - {i}")
+    print(f"  guardada en {ROJAS_CONOCIDAS.relative_to(RAIZ)}")
+    return 0
+
+
 if __name__ == "__main__":
+    if "--guardar-rojas" in sys.argv:
+        sys.exit(guardar_rojas())
     sys.exit(main())

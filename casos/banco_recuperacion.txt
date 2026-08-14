@@ -368,8 +368,38 @@ por que importe se declara lo heredado, se pueden restar las deudas | Ley 29/198
 en que fecha nace la obligacion de pagar una herencia | Ley 29/1987 | 24 | 3 | ISD | Cataluña
 # art. 24: "Devengo" - el dia del fallecimiento del causante.
 
-cuanto plazo hay para presentar el impuesto de una herencia | Ley 29/1987 | 31 | 3 | ISD | Cataluña
-# art. 31: "Declaracion y liquidacion".
+cuanto plazo hay para presentar el impuesto de una herencia | Reglamento del ISD | 67, 68 | 3 | ISD | Cataluña
+# CAMBIADA EL 14/08/2026, de «Ley 29/1987 art. 31» a «Reglamento del ISD arts.
+# 67 y 68», Y LA EVIDENCIA ES DEL CORPUS, no de que el sistema los saque.
+#
+# El art. 31 de la Ley NO CONTIENE EL PLAZO. Dice, literalmente: «Los sujetos
+# pasivos vendran obligados a presentar una declaracion tributaria [...] EN LOS
+# PLAZOS Y EN LA FORMA QUE REGLAMENTARIAMENTE SE FIJEN». Es una remision. Con
+# esa expectativa, la unica forma de aprobar el caso era llevar al redactor un
+# articulo que le dice «mira en otro sitio», y eso no es contestar.
+#
+# El plazo esta en el Reglamento (RD 1629/1991), que hasta hoy NO ESTABA EN EL
+# CORPUS -rebotaba porque titula «Art 1»-:
+#   art. 67 "Plazos de presentacion": seis meses desde el fallecimiento para
+#           las adquisiciones por causa de muerte.
+#   art. 68 "Prorroga de los plazos de presentacion".
+#
+# SE COMPROBO ANTES DE CAMBIAR NADA, buscando «seis meses» junto a sucesion,
+# herencia, fallecimiento o causante en las DIECISEIS normas de entonces:
+# ningun precepto del corpus daba ese plazo. O sea que el caso no estaba mal
+# rankeado, estaba sin norma.
+#
+# SE ACEPTAN LOS DOS porque contestan dos mitades -el plazo y su prorroga-,
+# igual que el «9, 13» de mas arriba. Y NO se acepta el 31: sigue siendo una
+# remision aunque ahora exista a donde remite.
+#
+# SIGUE ROJO EN EL BLOQUE 1, Y ES [PUENTE] LIMPIO. Medido el 14/08/2026:
+#   pregunta cruda            fuera de los 10   · al material: NO
+#   terminos del analizador   PUESTO 1          · al material: SI
+# El bloque 1 puentea el analizador a proposito, asi que su rojo dice «el
+# buscador solo no llega», que es verdad y es lo que tiene que decir. Cambiar
+# la expectativa no lo pone verde ahi, y esta bien que no lo ponga: lo que
+# cambia es que ahora apunta a un articulo que CONTIENE la respuesta.
 
 
 # ------------------------------ RDLeg 1/1993 · TRANSMISIONES Y ACTOS JURIDICOS
