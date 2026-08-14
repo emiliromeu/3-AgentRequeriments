@@ -296,6 +296,18 @@ class Registro:
             for c in cuerpos_de_norma(titulos[norma_id], norma_id, maximo + 1):
                 self.cuerpos[c.clave] = c
 
+        # QUE ARTICULOS TIENE CADA CUERPO. Sale de los mismos `docs` que todo
+        # lo demas -no es un mapa escrito- y sirve para una sola cosa: saber si
+        # una cita cae en un cuerpo que ni siquiera tiene ese articulo.
+        self._articulos: dict[str, set] = {}
+        for d in docs:
+            r = d.registro
+            if r.get("tipo") != "articulo":
+                continue
+            num = str(r.get("numero_norm") or r.get("numero") or "").strip()
+            if num:
+                self._articulos.setdefault(r["cuerpo_clave"], set()).add(num)
+
         # Se deja calculada la lista de materias de impuesto para no rehacerla
         # en cada llamada; `materia_dominante` desaparece porque con dos
         # impuestos dentro la pregunta «cual domina» ya no significa nada.
@@ -378,6 +390,46 @@ class Registro:
             if (c.materia or "").strip().lower() in propias:
                 return self.IMPUESTO
         return self.GENERAL
+
+    def tiene_articulo(self, clave_cuerpo: str, numero: str) -> bool:
+        """¿Existe ese articulo en ese cuerpo? Leido del corpus."""
+        return str(numero).strip() in self._articulos.get(clave_cuerpo, set())
+
+    def cuerpo_hermano_con(self, clave_cuerpo: str, numero: str) -> str:
+        """El cuerpo HERMANO que si tiene ese articulo, o "" si no procede.
+
+        POR QUE EXISTE. Un documento del BOE puede traer dos articulados: el
+        del Real Decreto que aprueba -uno o seis articulos- y el del Reglamento
+        aprobado -ciento y pico-. Cuando la fuente escribe «Real Decreto
+        939/2005 art. 82», la designacion resuelve limpiamente al DECRETO, que
+        tiene un solo articulo; el 82 es del Reglamento General de Recaudacion.
+        La regla de unanimidad no lo ve porque no hay empate: hay una sola
+        norma resuelta, y es la equivocada. Medido el 14/08/2026: NOVENTA Y DOS
+        preceptos de la despensa estaban asi, dados por buenos.
+
+        LAS CONDICIONES SON DE CONTENCION, y cada una quita un modo de fallar:
+
+          · SOLO ENTRE CUERPOS DEL MISMO DOCUMENTO. No cruza a otras normas:
+            eso ya no seria corregir una ambiguedad de cuerpo, seria buscar
+            donde encaje, que es como se atribuye un articulo a quien no lo
+            dijo.
+          · SI EL CUERPO RESUELTO YA LO TIENE, no se toca. La correccion solo
+            mira citas que hoy apuntan a un sitio donde ese articulo no existe.
+          · SI NINGUNO LO TIENE, no se toca. Puede ser una errata de la fuente
+            o una version antigua, y se queda como esta -o se declina- en vez
+            de inventarle un sitio.
+          · SI LO TIENEN VARIOS, no se corrige. Ante la duda, nada.
+        """
+        num = str(numero).strip()
+        if not clave_cuerpo or not num:
+            return ""
+        if self.tiene_articulo(clave_cuerpo, num):
+            return ""                       # donde esta ya es un sitio posible
+        documento = clave_cuerpo.split("#")[0]
+        hermanos = [c for c in self.cuerpos
+                    if c != clave_cuerpo and c.split("#")[0] == documento
+                    and self.tiene_articulo(c, num)]
+        return hermanos[0] if len(hermanos) == 1 else ""
 
     def impuesto_de_cuerpo(self, clave_cuerpo: str) -> str:
         """De que impuesto es este cuerpo. Cadena vacia = de ninguno.

@@ -41,7 +41,23 @@ from agente_fiscal import dgt as DGT  # noqa: E402
 
 LGT = "BOE-A-2003-23186#0"
 LIVA = "BOE-A-1992-28740#0"
-RGAT = "BOE-A-2007-15984#0"
+# EL REGLAMENTO ES EL #1, NO EL #0, Y ESTO ESTUVO MAL DESDE SIEMPRE.
+#
+# El documento BOE-A-2007-15984 trae dos articulados: el Real Decreto
+# 1065/2007 que aprueba -UN articulo, el «unico»- y el Reglamento General de
+# las actuaciones, que tiene 233. La constante se llamaba RGAT y apuntaba al
+# decreto, asi que los casos esperaban el articulo 88, el 107, el 131 y el
+# «54 ter» en un cuerpo que no tiene ninguno.
+#
+# Pasaban porque el sistema resolvia igual de mal: la designacion «Real Decreto
+# 1065/2007» resuelve limpiamente al decreto y nadie comprobaba que el articulo
+# existiera alli. La suite y el codigo estaban equivocados EN EL MISMO SENTIDO,
+# que es como un error se queda años.
+#
+# Corregido el 14/08/2026 con la comprobacion de existencia. La evidencia es
+# del corpus: los siete articulos de estos casos estan en el #1 y ninguno en el
+# #0. Mismo caso que el «Real Decreto Legislativo 1/1993» del banco.
+RGAT = "BOE-A-2007-15984#1"
 LIRPF = "BOE-A-2006-20764#0"
 LIS = "BOE-A-2014-12328#0"
 IP = "BOE-A-1991-14392#0"

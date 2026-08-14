@@ -116,6 +116,10 @@ class Precepto:
     cuerpo: str = ""        # clave del cuerpo, si la norma esta cargada
     norma_bruta: str = ""   # como venia escrita
     estado: str = "sin_norma"   # cargada | externa | sin_norma
+    # DE DONDE VENIA SI SE CORRIGIO DE CUERPO. Vacio si no se toco. Se guarda
+    # para poder auditarlo: una correccion silenciosa es indistinguible de un
+    # acierto por casualidad, y esta cambia a que norma se atribuye una cita.
+    corregido_desde: str = ""
 
     @property
     def comparable(self) -> bool:
@@ -370,18 +374,16 @@ def analizar_normativa(texto: str, normas=None) -> Normativa:
             for desig, nums in _lista_tras_guion(trozo):
                 cuerpo_g, estado_g = _resolver_designacion(desig, normas)
                 for n in nums:
-                    salida.preceptos.append(Precepto(
-                        numero=n, cuerpo=cuerpo_g, norma_bruta=desig,
-                        estado=estado_g))
+                    salida.preceptos.append(
+                        _precepto(n, cuerpo_g, desig, estado_g, normas))
             if _lista_tras_guion(trozo):
                 continue
 
         cuerpo, estado = _resolver_designacion(designacion, normas)
 
         for n in numeros:
-            salida.preceptos.append(Precepto(numero=n, cuerpo=cuerpo,
-                                             norma_bruta=designacion,
-                                             estado=estado))
+            salida.preceptos.append(
+                _precepto(n, cuerpo, designacion, estado, normas))
         if m and _RE_QUEDA_NUMERO.search(resto):
             salida.sin_reconocer.append(
                 f"«{trozo.strip()}»: se leyeron {numeros or 'ningun articulo'} "
@@ -412,6 +414,27 @@ def pares_de_normativa(texto: str, normas=None) -> list:
 _RE_NORMA_EXPLICITA = re.compile(
     r"\b(?:Ley\s+Org[aá]nica|Ley|Real\s+Decreto(?:-ley)?|RD|Reglamento|"
     r"Decreto|Orden|Directiva)\s+\d+/\d{2,4}", re.IGNORECASE)
+
+
+def _precepto(numero: str, cuerpo: str, designacion: str, estado: str,
+              normas=None) -> "Precepto":
+    """Construye el Precepto APLICANDO la correccion de cuerpo.
+
+    VA AQUI Y NO EN `_resolver_designacion` porque la correccion necesita el
+    NUMERO del articulo, y la designacion se resuelve una vez para toda la
+    lista: «Real Decreto 939/2005 arts. 82, 3» puede tener que corregir uno y
+    el otro no. Y va en UNA funcion porque hay dos sitios que construyen
+    Preceptos -la forma normal y la lista tras guion- y una regla que solo se
+    aplica en uno de ellos es una regla que no se aplica.
+    """
+    if normas is not None and estado == "cargada" and cuerpo:
+        hermano = normas.cuerpo_hermano_con(cuerpo, numero)
+        if hermano:
+            return Precepto(numero=numero, cuerpo=hermano,
+                            norma_bruta=designacion, estado=estado,
+                            corregido_desde=cuerpo)
+    return Precepto(numero=numero, cuerpo=cuerpo, norma_bruta=designacion,
+                    estado=estado)
 
 
 def _resolver_designacion(designacion: str, normas=None) -> tuple:
