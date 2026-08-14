@@ -1,5 +1,5 @@
 {
- "generado": "2026-08-13",
+ "generado": "2026-08-14",
  "de": "datos/corpus/sellos.json — NO SE ESCRIBE A MANO",
  "normas": [
   {
@@ -11,6 +11,11 @@
    "id": "BOE-A-1991-14392",
    "nombre": "Ley 19/1991",
    "titulo": "Ley 19/1991, de 6 de junio, del Impuesto sobre el Patrimonio."
+  },
+  {
+   "id": "BOE-A-1991-27678",
+   "nombre": "Real Decreto 1629/1991",
+   "titulo": "Real Decreto 1629/1991, de 8 de noviembre, por el que se aprueba el Reglamento del Impuesto sobre Sucesiones y Donaciones."
   },
   {
    "id": "BOE-A-1992-28740",

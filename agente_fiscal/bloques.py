@@ -116,10 +116,29 @@ SUFIJOS_CONOCIDOS = frozenset(
 # SOLO EL GUION, no el punto: «articulo 1.2» es el apartado 2 del articulo 1,
 # no un articulo llamado «1.2», y admitir el punto partiria en dos preceptos lo
 # que es uno.
+# EL ROTULO SE ABREVIA, Y NO SIEMPRE IGUAL.
+#
+# «Articulo 1» es como lo escribe el BOE estatal moderno, pero no es la unica
+# forma. El Reglamento del ISD (RD 1629/1991) titula «Art. 1» y a veces «Art 1»,
+# sin punto; hay normas antiguas con «Arts. 1 a 5». Con el rotulo escrito
+# entero, 105 de sus 180 bloques se quedaban SIN RECONOCER y la puerta de la
+# ingesta rechazaba la norma -bien rechazada: una norma medio leida da
+# respuestas peores sin dar error-.
+#
+# SE ARREGLA COMO PROPIEDAD DEL ROTULO, NO COMO UN CASO PARA ESTA NORMA: se
+# admite la abreviatura con punto y sin el, en singular y en plural. Un `if`
+# por norma seria la enesima lista escrita a mano, y la siguiente norma con
+# «Art 1» volveria a rebotar.
+#
+# NO SE TRAGA CUALQUIER COSA QUE EMPIECE POR «art»: detras del rotulo tiene que
+# venir un espacio y un numero, asi que «Artes», «Artesania» o «Articulacion»
+# no entran -lo comprueba `prueba_rotulo`-.
+_ROTULO = r"art(?:iculo)?s?\.?"
+
 _RE_ARTICULO = re.compile(
-    r"^articulos?\s+(?P<num>\d+(?:-\d+)*)(?P<suf>(?:\s+[a-z]+){0,2})\s*\.?\s*$"
+    r"^" + _ROTULO + r"\s+(?P<num>\d+(?:-\d+)*)(?P<suf>(?:\s+[a-z]+){0,2})\s*\.?\s*$"
 )
-_RE_RANGO_ARTICULOS = re.compile(r"^articulos\s+.+\s+a\s+.+")
+_RE_RANGO_ARTICULOS = re.compile(r"^art(?:iculo)?s\.?\s+.+\s+a\s+.+")
 # UN ARTICULO PUEDE IR NOMBRADO CON PALABRA EN VEZ DE CON CIFRA.
 #
 # «Articulo unico» es lo normal en un real decreto aprobatorio, cuyo articulado
@@ -132,7 +151,7 @@ _RE_RANGO_ARTICULOS = re.compile(r"^articulos\s+.+\s+a\s+.+")
 # -«Disposicion adicional unica»- porque es el mismo problema: el BOE nombra en
 # palabras lo que no numera.
 _RE_ARTICULO_ORDINAL = re.compile(
-    r"^articulo\s+(?P<ord>unic[ao]|[a-z]+)\s*\.?\s*$")
+    r"^art(?:iculo)?\.?\s+(?P<ord>unic[ao]|[a-z]+)\s*\.?\s*$")
 _RE_DISPOSICION = re.compile(
     r"^disposicion\s+(?P<clase>adicional|transitoria|derogatoria|final)"
     r"(?:\s+(?P<ord>[\w\s]+?))?\s*\.?$"

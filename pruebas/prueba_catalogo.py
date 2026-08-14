@@ -121,33 +121,38 @@ def con_raiz_en(d):
                               d / "datos" / "corpus" / "sellos.json")
 
 
+# LOS NUMEROS SALEN DE LA LISTA, NO ESCRITOS. La primera version llevaba «16»
+# y «17» a mano y se puso roja el dia que entro el Reglamento del ISD: la
+# suite media el tamaño del corpus en vez de medir el mecanismo. Lo que se
+# prueba es «faltan TRES», no «hay dieciseis».
 REALES = [n["id"] for n in de_disco]
-LAS_16, LAS_13 = REALES, REALES[:-3]
+TODAS, MENOS_TRES = REALES, REALES[:-3]
 FALTAN_3 = REALES[-3:]
+N = len(TODAS)
 
 guardado = (CAT.RAIZ, CAT.LISTA, CAT.CORPUS, CAT.SELLOS)
 try:
     # --- el equipo de la oficina: trece ingeridas, dieciseis en la lista
-    con_raiz_en(equipo_con(LAS_13, LAS_16))
+    con_raiz_en(equipo_con(MENOS_TRES, TODAS))
     faltan = CAT.faltan()
-    print(f"    equipo con {len(LAS_13)} normas y lista de {len(LAS_16)}")
+    print(f"    equipo con {len(MENOS_TRES)} normas y lista de {N}")
     comprobar("descubre que le faltan exactamente 3", len(faltan) == 3,
               len(faltan))
     comprobar("  y son las que son, no otras",
               {n["id"] for n in faltan} == set(FALTAN_3),
               str([n["id"] for n in faltan]))
     comprobar("  y NO pide re-ingerir las trece que ya tiene",
-              all(n["id"] not in LAS_13 for n in faltan))
+              all(n["id"] not in MENOS_TRES for n in faltan))
 
     # --- el equipo al dia: no vuelve a ingerir nada
-    con_raiz_en(equipo_con(LAS_16, LAS_16))
-    comprobar("un equipo con las 16 no ingiere NADA", not CAT.faltan(),
+    con_raiz_en(equipo_con(TODAS, TODAS))
+    comprobar(f"un equipo con las {N} no ingiere NADA", not CAT.faltan(),
               str([n["id"] for n in CAT.faltan()]))
 
     # --- EL DEFECTO DE ANTES, para que se vea la diferencia: mirandose a si
     #     mismo, el equipo de trece se encuentra completo.
-    con_raiz_en(equipo_con(LAS_13, LAS_13))
-    comprobar("(el defecto viejo) mirando solo lo local, el de trece se cree "
+    con_raiz_en(equipo_con(MENOS_TRES, MENOS_TRES))
+    comprobar("(el defecto viejo) mirando solo lo local, el corto se cree "
               "completo: por eso manda la lista", not CAT.faltan(),
               str(len(CAT.faltan())))
 
@@ -156,11 +161,11 @@ try:
     #     equipo atrasado la reescribiria a la baja y se creeria completo. Se
     #     descubrio cortando una ingesta a mitad en el equipo de trece.
     print("\n  Y LA REGENERACION NO PUEDE ENCOGER LA LISTA:")
-    d = equipo_con(LAS_13 + [FALTAN_3[0]], LAS_16)   # ingirio una de las tres
+    d = equipo_con(MENOS_TRES + [FALTAN_3[0]], TODAS)   # ingirio una de las tres
     con_raiz_en(d)
     quedan = CAT.regenerar()
-    comprobar("tras ingerir UNA de las tres, la lista sigue teniendo 16",
-              len(quedan) == 16, len(quedan))
+    comprobar(f"tras ingerir UNA de las tres, la lista sigue teniendo {N}",
+              len(quedan) == N, len(quedan))
     comprobar("  y el equipo sigue sabiendo que le faltan 2",
               len(CAT.faltan()) == 2, len(CAT.faltan()))
     comprobar("  (si encogiera, se creeria completo y las 2 dejarian de "
@@ -170,12 +175,12 @@ try:
 
     # Y AL REVES: una norma nueva aqui SI se publica. Si no, la union seria una
     # forma elegante de congelar la lista para siempre.
-    d2 = equipo_con(LAS_16 + ["BOE-A-2099-99999"], LAS_16)
+    d2 = equipo_con(TODAS + ["BOE-A-2099-99999"], TODAS)
     con_raiz_en(d2)
     nueva = CAT.regenerar()
     comprobar("una norma ingerida de nuevas SI aparece sola en la lista",
-              len(nueva) == 17 and any(n["id"] == "BOE-A-2099-99999"
-                                       for n in nueva), len(nueva))
+              len(nueva) == N + 1 and any(n["id"] == "BOE-A-2099-99999"
+                                          for n in nueva), len(nueva))
 finally:
     CAT.RAIZ, CAT.LISTA, CAT.CORPUS, CAT.SELLOS = guardado
 
@@ -210,10 +215,10 @@ print("  lista viaje, y que nadie la lleve escrita.\n")
 # (a) LA LISTA DEJA DE VIAJAR
 guardado = (CAT.RAIZ, CAT.LISTA, CAT.CORPUS, CAT.SELLOS)
 try:
-    d = equipo_con(LAS_13, LAS_16)
+    d = equipo_con(MENOS_TRES, TODAS)
     con_raiz_en(d)
     (d / "normas_del_corpus.json").unlink()      # como si no viajara
-    comprobar("(a) sin lista, el equipo de trece NO descubre las tres: es el "
+    comprobar("(a) sin lista, el equipo corto NO descubre las tres: es el "
               "defecto original, y el bloque 3 lo caza",
               len(CAT.faltan()) == 0, len(CAT.faltan()))
 finally:
