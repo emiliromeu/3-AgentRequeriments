@@ -7,6 +7,14 @@
 #   impuesto" en la Ley y "Supuestos de aplicacion" en el Reglamento. Se
 #   admite cualquier nombre que el sistema sepa resolver: "Ley 37/1992",
 #   "Ley del IVA", "Reglamento del IVA", "Reglamento del Impuesto".
+#   CUIDADO CON LAS NORMAS QUE APRUEBAN OTRA NORMA. El Real Decreto
+#   Legislativo 1/1993 trae DOS cuerpos: el decreto que aprueba -que tiene UN
+#   articulo, el "unico"- y el Texto refundido del ITPAJD, que tiene los 59 de
+#   verdad. Cinco casos decian "Real Decreto Legislativo 1/1993" y por tanto
+#   esperaban el articulo 7, 10, 11, 12 o 31 en un cuerpo que solo tiene el
+#   "unico": eran ROJOS IMPOSIBLES DE APROBAR, hiciera lo que hiciera el
+#   buscador. Se corrigieron el 14/08/2026 a "Texto refundido del ITPAJD".
+#   Lo mismo pasa con el RD 1624/1992 y su Reglamento del IVA.
 # - "articulos aceptables": basta con que salga UNO. Sin la palabra "Articulo".
 # - "puesto maximo": en que posicion como muy tarde tiene que aparecer.
 #
@@ -184,6 +192,39 @@ como se amortiza el inmovilizado de una sociedad y con que tablas | Ley 27/2014 
 #              roto: falta el puente de vocabulario, que es justo para lo que
 #              existe la llamada 1. El bloque 5 los repite con el analizador.
 #
+# ═══ EL BLOQUE 5, EJECUTADO POR PRIMERA VEZ EL 14/08/2026 ═══
+#
+# Hasta hoy las etiquetas [PUENTE] eran una SUPOSICION: se ponian midiendo con
+# los terminos del articulado, o peor, con una formulacion que me imaginaba yo.
+# El bloque 5 las mide con el modelo de verdad. Quince rojos, quince llamadas,
+# 0,15 EUR. Esto es lo que salio, y ya no es opinion:
+#
+#   [PUENTE] CONFIRMADO — el analizador SI construye el puente
+#     art.  7  TR ITPAJD  puesto 2   compra de piso de segunda mano
+#     art. 11  TR ITPAJD  puesto 3   tipo en compraventa de vivienda usada
+#     art. 10  TR ITPAJD  puesto 3   sobre que valor se calcula
+#     (y los siete que ya salian verdes: IVA 80, IVA 91, LGT 104, IP 10,
+#      LGT 66, ISD 9/13, ISD 24)
+#
+#   [PUENTE] CONFIRMADO POR LA VARA BUENA, pero fuera del liston del fichero
+#     art. 12  TR ITPAJD  puesto 4   alquiler de local      -> AL MATERIAL: SI
+#     art. 31  TR ITPAJD  puesto 5   obra nueva             -> AL MATERIAL: SI
+#     Llegan al redactor, que es la vara de la etiqueta; no llegan al puesto 3,
+#     que es el liston de este fichero. Las dos cosas son verdad a la vez y por
+#     eso se escriben las dos.
+#
+#   [SISTEMA] — el analizador propone buen vocabulario y AUN ASI no llega
+#     art. 122 IRPF   autoliquidacion complementaria  -> al material: NO
+#     art.   3 ISD    donacion de dinero de padre a hijo -> al material: NO
+#     art.  31 ISD    plazo de presentacion de la herencia -> al material: NO
+#     Estos son los que importan: los terminos que propuso son CORRECTOS
+#     -«autoliquidacion complementaria», «declaracion extemporanea sin
+#     requerimiento previo», «plazo de presentacion»- y el articulo no sale.
+#     No falta puente: falta recuperacion. Aqui hay algo que arreglar.
+#
+# EL RESULTADO EN UNA LINEA: 10 de 15. Con la pregunta cruda ninguno llegaba;
+# con el analizador llegan diez. Eso es lo que aporta la llamada 1, medido.
+#
 # LA VARA ES «LLEGA AL MATERIAL», NO «EN QUE PUESTO SALE», y esto costo dos
 # etiquetas mal puestas el 13/08/2026. Se clasificaron dos casos como
 # [SISTEMA] porque con los terminos del articulado salian en el puesto 4 y el
@@ -298,11 +339,11 @@ cuanto plazo hay para presentar el impuesto de una herencia | Ley 29/1987 | 31 |
 
 # ------------------------------ RDLeg 1/1993 · TRANSMISIONES Y ACTOS JURIDICOS
 
-compra de un piso de segunda mano entre particulares, que impuesto se paga | Real Decreto Legislativo 1/1993 | 7 | 3 | ITPAJD | Cataluña
+compra de un piso de segunda mano entre particulares, que impuesto se paga | Texto refundido del ITPAJD | 7 | 3 | ITPAJD | Cataluña
 # art. 7: "Son transmisiones patrimoniales sujetas: A) Las transmisiones
 # onerosas por actos inter vivos de toda clase de bienes y derechos".
 
-que tipo se aplica a la compraventa de una vivienda usada | Real Decreto Legislativo 1/1993 | 11 | 3 | ITPAJD | Cataluña
+que tipo se aplica a la compraventa de una vivienda usada | Texto refundido del ITPAJD | 11 | 3 | ITPAJD | Cataluña
 # art. 11: "La cuota tributaria se obtendra aplicando sobre la base liquidable
 # los siguientes tipos". La autonomica fija el suyo; el estatal es supletorio.
 #
@@ -328,24 +369,37 @@ que tipo se aplica a la compraventa de una vivienda usada | Real Decreto Legisla
 #   terminos del articulado      puesto 4       · al material: SI
 #   como lo diria el analizador  no sale        · al material: NO
 #
-# Es [PUENTE] por la definicion -con los terminos del articulado llega al
-# redactor- pero SOLO con su redaccion literal. Una formulacion plausible del
-# analizador -«tipo de gravamen transmisiones patrimoniales onerosas cuota
-# tributaria base liquidable»- NO lo saca. Asi que el puente existe, pero no
-# esta claro que el analizador sepa construirlo.
+# La ultima linea la escribi YO imaginando como hablaria el analizador
+# -«tipo de gravamen transmisiones patrimoniales onerosas cuota tributaria
+# base liquidable»- y con eso no salia. De ahi la reserva: el puente existia,
+# pero no estaba claro que el analizador supiera construirlo.
 #
-# Eso lo mide el bloque 5, con el modelo de verdad. Hasta entonces la etiqueta
-# es [PUENTE] con esta reserva escrita, que es mas honesto que darlo por
-# resuelto o que llamarlo [SISTEMA] sin haberlo comprobado.
+# RESUELTO EL 14/08/2026 CON EL BLOQUE 5, primera vez que se ejecuta. Los
+# terminos que propone el modelo DE VERDAD no son los que yo supuse:
+#
+#   transmision patrimonial onerosa, tipo de gravamen bien inmueble, segunda
+#   transmision de edificacion, base imponible valor de referencia,
+#   transmision de vivienda, cuota tributaria
+#
+# Con esos, el articulo 11 sale en el PUESTO 3, dentro del liston. La reserva
+# se levanta: es [PUENTE] CONFIRMADO, y confirmado por medicion, no por una
+# formulacion que me inventara yo. Que la mia fallara y la suya funcione es
+# justo el motivo por el que existe la llamada 1.
+#
+# Y HABIA UN SEGUNDO PROBLEMA DEBAJO, que solo se vio al correr el bloque 5:
+# este caso decia «Real Decreto Legislativo 1/1993», que es el decreto que
+# APRUEBA -un solo articulo, el «unico»-, no el Texto refundido donde estan
+# los 59. Esperaba el articulo 11 en un cuerpo que no lo tiene: era un rojo
+# IMPOSIBLE DE APROBAR. Corregido aqui y en los otros cuatro casos de ITPAJD.
 
-hay que pagar impuesto por un contrato de alquiler de local | Real Decreto Legislativo 1/1993 | 12 | 3 | ITPAJD | Cataluña
+hay que pagar impuesto por un contrato de alquiler de local | Texto refundido del ITPAJD | 12 | 3 | ITPAJD | Cataluña
 # art. 12: "La cuota tributaria de los arrendamientos se obtendra aplicando
 # sobre la base liquidable la tarifa que fije la Comunidad Autonoma".
 
-escritura de declaracion de obra nueva, que se paga por actos juridicos documentados | Real Decreto Legislativo 1/1993 | 31 | 3 | ITPAJD | Cataluña
+escritura de declaracion de obra nueva, que se paga por actos juridicos documentados | Texto refundido del ITPAJD | 31 | 3 | ITPAJD | Cataluña
 # art. 31: "Las matrices y las copias de las escrituras y actas notariales..."
 # - es el gravamen de documentos notariales, gradual y de cuota fija.
 
-sobre que valor se calcula el impuesto de una compraventa de inmueble | Real Decreto Legislativo 1/1993 | 10 | 3 | ITPAJD | Cataluña
+sobre que valor se calcula el impuesto de una compraventa de inmueble | Texto refundido del ITPAJD | 10 | 3 | ITPAJD | Cataluña
 # art. 10: "La base imponible esta constituida por el valor del bien
 # transmitido o del derecho que se constituya o ceda".

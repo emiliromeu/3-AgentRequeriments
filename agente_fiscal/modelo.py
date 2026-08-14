@@ -162,13 +162,26 @@ class Motor:
 
     # --------------------------------------------------------------- topes
 
-    def reiniciar_reloj(self) -> None:
-        """El tiempo se cuenta por CONSULTA, no por vida del motor.
+    def empezar_consulta(self) -> None:
+        """Los topes se cuentan por CONSULTA, no por vida del motor.
 
-        El banco reutiliza el mismo motor para varias consultas seguidas; sin
-        esto, la quinta se pasaria de tiempo por culpa de las cuatro anteriores.
+        EL RELOJ YA SE REINICIABA AQUI; EL CONTADOR DE LLAMADAS NO, Y ESE ERA
+        EL FALLO. La ventana prepara UN motor al abrirse y lo reutiliza para
+        todas las preguntas del dia, asi que las llamadas se iban sumando entre
+        consultas distintas: con el tope en 6 y dos o tres llamadas por
+        pregunta, a partir de la tercera el agente dejaba de responder -«tope de
+        6 llamadas en esta consulta», diciendo «esta consulta» cuando eran
+        todas las anteriores- y no se recuperaba hasta cerrar y volver a abrir.
+
+        Se veia poco porque hacen falta varias preguntas seguidas en la misma
+        sesion para llegar; o sea que aparecia justo en un dia de trabajo de
+        verdad y no en las pruebas de dos consultas.
+
+        Lo que NO se reinicia es `consumo`: los tokens son de la sesion entera y
+        de ahi salen los totales del banco y de la traza.
         """
         self.arranque = time.monotonic()
+        self.llamadas = 0
         self.motivo_parada = ""
 
     @property

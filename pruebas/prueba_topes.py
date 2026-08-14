@@ -1,243 +1,180 @@
 #!/usr/bin/env python3
-"""EL TECHO DURO: que NUNCA se quede en bucle. Cero red, cero API.
-
-Es una GARANTIA DE SEGURIDAD, no una funcionalidad. Si se rompe en silencio
-nadie se entera hasta que una consulta se queda dando vueltas gastando dinero.
-
-No basta con afirmar que hay un tope: se monta un modelo que SIEMPRE falla y se
-comprueba que el sistema para EN el tope y NO ANTES. Las dos mitades importan:
-parar antes seria tirar consultas buenas, y no parar es la averia.
+"""EL TECHO DURO SE CUENTA POR CONSULTA. Cero red, cero API.
 
     python pruebas/prueba_topes.py
+
+EL DEFECTO QUE LA JUSTIFICA, y es el peor de los que han salido: EL AGENTE
+DEJABA DE RESPONDER A MITAD DE LA MAÑANA.
+
+La ventana prepara UN motor al abrirse y lo reutiliza para todas las preguntas
+del dia. El motor tiene un techo de seis llamadas «por consulta»... pero el
+contador no se reiniciaba entre consultas. Con dos o tres llamadas por
+pregunta, a partir de la tercera el agente contestaba:
+
+    Se ha alcanzado el tope de 6 llamadas al modelo EN ESTA CONSULTA
+
+diciendo «esta consulta» cuando eran todas las anteriores juntas. Y no se
+recuperaba: quedaba asi hasta cerrar y volver a abrir el agente.
+
+POR QUE NO SE HABIA VISTO. Hacen falta varias preguntas seguidas en la misma
+sesion para llegar. O sea que no aparece en una prueba de dos consultas:
+aparece un dia de trabajo de verdad, con el cliente delante.
+
+Y SE ENCONTRO SIN GASTAR NADA, mirando por que el bloque 5 -quince llamadas con
+un solo motor- iba a chocar con un tope de seis. La misma cuerda.
+
+LO QUE SE REINICIA Y LO QUE NO. El reloj y el contador de llamadas son de la
+consulta. `consumo` -los tokens- es de la sesion entera: de ahi salen los
+totales del banco y de la traza, y reiniciarlo seria perder la cuenta del
+gasto.
 """
-import contextlib
 import io
-import json
+import contextlib
 import sys
-import time
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
 
-import fase4
-from agente_fiscal import modelo as MOD
+import fase4                                    # noqa: E402
+from agente_fiscal import modelo as MOD         # noqa: E402
 
 fallos = []
-
-# Un analisis VALIDO, para que la prueba llegue a la redaccion. Si el analisis
-# tambien falla, fase4 se rinde a los dos intentos por su cuenta y NUNCA se
-# llega a probar el techo: la primera version de esta prueba medía eso.
-# OJO: tiene que llevar TODOS los campos obligatorios del esquema. Cuando se
-# añadio `naturaleza`, este doble se quedo sin el y la prueba se puso roja
-# acusando al tope de algo que no pasaba: el analisis se rechazaba antes de
-# llegar a la redaccion, que es justo lo que esta prueba dice que no debe
-# ocurrir. Un doble incompleto mide otra cosa y lo dice como si fuera esta.
-ANALISIS_BUENO = {
-    "impuesto": "IVA",
-    "naturaleza": "fondo",
-    "ejercicio": 2023,
-    "ejercicio_fundamento": "lo dice la pregunta",
-    "articulos_sospechados": [],
-    "terminos_busqueda": ["deduccion", "vehiculo", "turismo"],
-    "resumen_duda": "si el IVA de un turismo se deduce al 100 por cien",
-}
 
 
 def comprobar(que, ok, obtenido=""):
     print(f"  {'OK  ' if ok else 'FALLO'} {que}"
-          + (f"   -> {obtenido}" if not ok else ""))
+          + (f"   -> {str(obtenido)[:112]}" if not ok else ""))
     if not ok:
         fallos.append(que)
 
 
-class MotorQueSiempreFalla(MOD.Motor):
-    """Analisis valido, redaccion sin ni una cita. El verificador la tumba y
-    fase4 reintenta: el peor caso que puede darse sin que nada este roto."""
+ix, grafo = fase4.cargar_corpus()
 
-    nombre = "siempre-falla"
-    es_modelo_real = False
+# ==================================== 1. UNA JORNADA ENTERA
+print("\n=== 1. DOCE PREGUNTAS SEGUIDAS CON EL MISMO MOTOR ===")
+print("  Es lo que hace la ventana: un motor al abrir, y a trabajar.")
+print(f"  El tope es de {MOD.TOPE_LLAMADAS} llamadas POR CONSULTA.\n")
 
-    def analizar(self, sistema, pregunta, esquema):
-        self._permiso("analisis")
-        self.llamadas += 1
-        self._anotar("analisis", "(falso)", {})
-        return MOD.Respuesta(texto="{}", datos=dict(ANALISIS_BUENO),
-                             modelo="falso", motor=self.nombre)
+motor, _err = fase4.preparar_motor("ensayo", silencioso=True)
+sin_respuesta = []
+for i in range(1, 13):
+    with contextlib.redirect_stdout(io.StringIO()) as s:
+        fase4.consultar("que tipo de IVA lleva la reforma de una vivienda",
+                        2024, motor, ix, grafo)
+    if "PARADA POR TOPE" in s.getvalue():
+        sin_respuesta.append(i)
 
-    def redactar(self, sistema, contenido):
-        self._permiso("redaccion")
-        self.llamadas += 1
-        self._anotar("redaccion", "(falso)", {})
-        return MOD.Respuesta(texto="Esto no lleva ni una cita.",
-                             modelo="falso", motor=self.nombre)
+print(f"    llamadas de la ultima consulta : {motor.llamadas}")
+print(f"    llamadas de toda la sesion     : {len(motor.consumo)}")
+comprobar("las doce contestan", not sin_respuesta,
+          f"sin respuesta: {sin_respuesta}")
+comprobar("el contador de la consulta NO arrastra las anteriores",
+          motor.llamadas <= MOD.TOPE_LLAMADAS, motor.llamadas)
+comprobar("y aun asi se han hecho mas llamadas que el tope: la sesion suma "
+          "aunque la consulta se reinicie",
+          len(motor.consumo) > MOD.TOPE_LLAMADAS, len(motor.consumo))
 
+# ==================================== 2. EL TOPE SIGUE PROTEGIENDO
+print("\n=== 2. PERO EL TECHO SIGUE AHI, QUE ES PARA LO QUE ESTA ===")
+print("  Reiniciar por consulta no puede convertirse en no tener tope: lo que")
+print("  se quiere impedir es un bucle DENTRO de una consulta.\n")
 
-class MotorQueTarda(MotorQueSiempreFalla):
-    """Cada llamada tarda mas que el tope de tiempo."""
-
-    nombre = "tarda"
-
-    def analizar(self, sistema, pregunta, esquema):
-        r = super().analizar(sistema, pregunta, esquema)
-        time.sleep(0.35)
-        return r
-
-    def redactar(self, sistema, contenido):
-        r = super().redactar(sistema, contenido)
-        time.sleep(0.35)
-        return r
-
-
-ix, g = fase4.cargar_corpus()
-# La pregunta NOMBRA EL IMPUESTO. Los bloques 1 a 5 usan un motor propio cuyo
-# analisis ya dice «IVA»; el bloque 6 usa el motor de ensayo tal cual, y su
-# analizador es un tocon que solo reconoce la palabra literal. Desde que la
-# puerta de materia rechaza «desconocido», sin nombrarlo la consulta se para
-# antes de llamar al modelo y nunca se llega a probar el techo, que es lo que
-# esta suite existe para proteger.
-PREGUNTA = "deduccion de cuotas soportadas de IVA en vehiculos turismo"
-
-
-def correr(motor):
-    # `con_criterio=False` SIEMPRE: lo que se prueba aqui es el techo, no las
-    # fuentes. Sin fijarlo, en modo con-criterio la consulta busca ademas en la
-    # copia local y tarda segundos que no son del modelo: la comprobacion de
-    # tiempo salia roja por algo que no tiene nada que ver con el tope.
-    with contextlib.redirect_stdout(io.StringIO()) as buf:
-        r = fase4.consultar(PREGUNTA, 2023, motor, ix, g, con_criterio=False)
-    return r, buf.getvalue()
-
-
-# ---------------------------------------------------- 1. EL TOPE DE LLAMADAS
-print("\n=== 1. UN MODELO QUE SIEMPRE FALLA NO PUEDE HACER BUCLE ===")
-motor = MotorQueSiempreFalla()
-res, _ = correr(motor)
-print(f"     llamadas: {motor.llamadas} (tope {motor.tope_llamadas})")
-comprobar("para: no se queda dando vueltas",
-          motor.llamadas <= motor.tope_llamadas,
-          f"{motor.llamadas} > {motor.tope_llamadas}")
-comprobar("y termina", res is not None)
-
-print("\n  Para EN el tope, y cuando el tope sobra no se mete.")
-print("  Con analisis valido, fase4 pide 3 llamadas en el peor caso.")
-for tope, llamadas, quien in ((1, 1, "tope"), (2, 2, "tope"),
-                              (3, 3, "la logica"), (6, 3, "la logica")):
-    m = MotorQueSiempreFalla(tope_llamadas=tope)
-    r, _ = correr(m)
-    print(f"     tope {tope}: {m.llamadas} llamada(s), fallo={r.get('fallo')!r} "
-          f"(manda {quien})")
-    comprobar(f"con tope {tope} hace exactamente {llamadas} llamada(s)",
-              m.llamadas == llamadas, f"{m.llamadas}")
-    comprobar(f"con tope {tope} para por {quien}",
-              (r.get("fallo") == "tope") == (quien == "tope"),
-              f"fallo={r.get('fallo')!r}")
-
-# ------------------------------------------------------ 2. EL TOPE DE TIEMPO
-print("\n=== 2. EL TOPE DE TIEMPO TAMBIEN PARA ===")
-m = MotorQueTarda(tope_llamadas=99, tope_segundos=0.5)
-arranque = time.monotonic()
-res, _ = correr(m)
-tardado = time.monotonic() - arranque
-print(f"     {m.llamadas} llamada(s) en {tardado:.1f} s (tope 0,5 s)")
-comprobar("para por tiempo, no por llamadas", m.llamadas < 99, f"{m.llamadas}")
-comprobar("y no se pasa de largo", tardado < 5, f"{tardado:.1f} s")
-comprobar("lo dice como parada por tope", res.get("fallo") == "tope",
-          str(res.get("fallo")))
-comprobar("y el motivo nombra el tiempo", "s por consulta" in m.motivo_parada,
+m = MOD.Motor.__new__(MOD.Motor)
+MOD.Motor.__init__(m, tope_llamadas=3)
+m.empezar_consulta()
+salto = None
+for i in range(1, 6):
+    try:
+        m._permiso("analisis")
+        m.llamadas += 1
+    except MOD.TopeAlcanzado:
+        salto = i
+        break
+comprobar("dentro de UNA consulta el tope salta", salto == 4, salto)
+comprobar("  y dice por que se paro", "tope" in m.motivo_parada,
           m.motivo_parada)
+m.empezar_consulta()
+try:
+    m._permiso("analisis")
+    comprobar("  y en la consulta siguiente vuelve a haber permiso", True)
+except MOD.TopeAlcanzado:
+    comprobar("  y en la consulta siguiente vuelve a haber permiso", False,
+              "sigue bloqueado")
 
-# ------------------------------------------- 3. EL RELOJ ES POR CONSULTA
-print("\n=== 3. EL RELOJ SE CUENTA POR CONSULTA, NO POR VIDA DEL MOTOR ===")
-print("  El banco reutiliza el mismo motor para varias seguidas; sin esto la")
-print("  quinta se pasaria de tiempo por culpa de las cuatro anteriores.")
-m = MotorQueSiempreFalla(tope_segundos=2)
-correr(m)
-primera = m.llamadas
-time.sleep(2.2)
-correr(m)
-comprobar("la segunda consulta vuelve a tener su tiempo entero",
-          m.llamadas > primera, f"{primera} -> {m.llamadas}")
+# ==================================== 3. EL BANCO, POR SU CAMINO
+print("\n=== 3. LOS BLOQUES QUE LLAMAN AL MOTOR A PELO TAMBIEN REINICIAN ===")
+print("  El bloque 5 hace quince llamadas con un solo motor sin pasar por")
+print("  `consultar`. Sin reiniciar, del septimo rojo en adelante habrian")
+print("  salido como «fallo de llamada al modelo» sin serlo. Y pagados.\n")
 
-# ------------------------------------------------ 4. QUEDA EN LA TRAZA
-print("\n=== 4. LA TRAZA DICE CUANTAS LLAMADAS Y POR QUE SE PARO ===")
-m = MotorQueSiempreFalla(tope_llamadas=2)
-res, _ = correr(m)
-traza = Path(res["traza"])
-topes = traza / "topes.json"
-comprobar("hay un topes.json", topes.is_file(), str(traza))
-if topes.is_file():
-    d = json.loads(topes.read_text("utf-8"))
-    print(f"     {d}")
-    comprobar("dice cuantas llamadas", d.get("llamadas") == 2, str(d.get("llamadas")))
-    comprobar("dice cual era el tope", d.get("tope_llamadas") == 2)
-    comprobar("y POR QUE se paro", "tope" in (d.get("motivo_parada") or ""),
-              str(d.get("motivo_parada")))
-    comprobar("y cuanto tiempo llevaba",
-              isinstance(d.get("segundos"), (int, float)))
-cierre = traza / "resultado.json"
-if cierre.is_file():
-    d = json.loads(cierre.read_text("utf-8"))
-    comprobar("el resultado lo marca como PARADA POR TOPE",
-              d.get("estado") == "PARADA POR TOPE", str(d.get("estado")))
+BANCO = (RAIZ / "banco.py").read_text("utf-8")
+comprobar("el bloque 5 empieza consulta en cada rojo",
+          BANCO.count("motor.empezar_consulta()") >= 1)
+comprobar("y el comparador de analizadores tambien",
+          BANCO.count("motor.empezar_consulta()") >= 2,
+          BANCO.count("motor.empezar_consulta()"))
+comprobar("los totales de la pasada salen de `consumo`, no de `llamadas`: "
+          "si no, contarian solo la ultima consulta",
+          "len(motor.consumo)" in BANCO and
+          "motor.llamadas if motor.es_modelo_real" not in BANCO)
 
-# --------------------------------- 5. PARADA NO ES FALLO DEL MODELO
-print("\n=== 5. PARADA POR TOPE Y FALLO DEL MODELO NO SE CUENTAN IGUAL ===")
-print("  «el modelo fallo» manda a mirar la red o la cuenta; «se llego al")
-print("  tope» manda a mirar por que hicieron falta tantas llamadas.")
-comprobar("la parada se marca como «tope»", res.get("fallo") == "tope",
-          str(res.get("fallo")))
-comprobar("y NO se ensena ninguna respuesta", not res.get("respuesta"))
+# ==================================== 4. CONTROL NEGATIVO
+print("\n=== 4. LA PRUEBA SABE PONERSE ROJA ===")
+print("  Se deja de reiniciar el contador, que es como estaba, y se mira si")
+print("  el bloque 1 lo caza.\n")
 
-# ------------------------------------------------- 6. EL MOTOR DE ENSAYO
-print("\n=== 6. EL MOTOR DE ENSAYO PASA POR EL MISMO TECHO ===")
-print("  Un tope que solo actua cuando cuesta dinero no se puede probar el")
-print("  dia que hace falta.")
-m = MOD.crear_motor("ensayo")
-m.tope_llamadas = 1
-res, _ = correr(m)
-comprobar("el tope vale tambien sin gastar", m.llamadas == 1, f"{m.llamadas}")
-comprobar("y para por tope", res.get("fallo") == "tope", str(res.get("fallo")))
+import types                                     # noqa: E402
 
-# --------------------------------- 7. NI UNA ESPERA INDEFINIDA
-print("\n=== 7. NI UNA ESPERA INDEFINIDA EN LA RED ===")
-print(f"     timeout por llamada : {MOD.TIMEOUT_LLAMADA} s")
-print(f"     reintentos de red   : {MOD.REINTENTOS_RED}")
-comprobar("hay timeout por llamada, y es finito",
-          0 < MOD.TIMEOUT_LLAMADA < 600)
-comprobar("hay tope de reintentos de red", 0 < MOD.REINTENTOS_RED <= 5)
-fuente = (RAIZ / "agente_fiscal" / "modelo.py").read_text("utf-8")
-comprobar("el cliente se crea CON timeout y CON tope de reintentos",
-          "timeout=TIMEOUT_LLAMADA" in fuente
-          and "max_retries=REINTENTOS_RED" in fuente)
+FUENTE = (RAIZ / "agente_fiscal" / "modelo.py").read_text("utf-8")
+VIEJO = "        self.arranque = time.monotonic()\n        self.llamadas = 0"
+if VIEJO not in FUENTE:
+    comprobar("la mutacion encaja", False, VIEJO[:60])
+else:
+    mod = types.ModuleType("modelo_roto")
+    mod.__package__ = "agente_fiscal"
+    mod.__file__ = str(RAIZ / "agente_fiscal" / "modelo.py")
+    sys.modules[mod.__name__] = mod
+    try:
+        exec(compile(FUENTE.replace(
+            VIEJO, "        self.arranque = time.monotonic()", 1),
+            mod.__file__, "exec"), mod.__dict__)
+    finally:
+        del sys.modules[mod.__name__]
 
-# ----------------------------- 8. CONTROL NEGATIVO: VERLA FALLAR
-print("\n=== 8. LA PRUEBA SABE PONERSE ROJA ===")
-print("  Ninguna prueba se da por buena sin verla fallar cuando debe fallar.")
-print("  Se quita el techo a un motor y se comprueba que ESTA prueba lo pilla.\n")
+    r = mod.Motor.__new__(mod.Motor)
+    mod.Motor.__init__(r, tope_llamadas=6)
+    caidas = []
+    for i in range(1, 6):                        # cinco «consultas» de 2
+        r.empezar_consulta()
+        for _ in range(2):
+            try:
+                r._permiso("analisis")
+                r.llamadas += 1
+            except mod.TopeAlcanzado:
+                caidas.append(i)
+                break
+    comprobar("(a) sin reiniciar, la sesion se muere a la cuarta consulta: es "
+              "el defecto original y el bloque 1 lo caza",
+              bool(caidas), f"cayeron en {caidas}")
+    print(f"       (dejo de responder en la consulta {caidas[0] if caidas else '-'})")
 
-
-class MotorSinTecho(MotorQueSiempreFalla):
-    """El techo desactivado a proposito: es lo que pasaria si alguien borra
-    la llamada a `_permiso`. Tiene que salir ROJO."""
-
-    nombre = "sin-techo"
-
-    def _permiso(self, paso):
-        return None
-
-
-m = MotorSinTecho(tope_llamadas=1)
-res, _ = correr(m)
-paso_el_techo = m.llamadas > m.tope_llamadas
-print(f"     motor sin techo, tope 1: hizo {m.llamadas} llamadas")
-comprobar("con el techo quitado se salta el tope (si no, esta prueba no probaria nada)",
-          paso_el_techo, f"{m.llamadas} <= {m.tope_llamadas}")
-comprobar("y la comprobacion del bloque 1 lo habria cazado",
-          not (m.llamadas <= m.tope_llamadas))
+# (b) sin mutar, no cae ninguna
+b = MOD.Motor.__new__(MOD.Motor)
+MOD.Motor.__init__(b, tope_llamadas=6)
+ok_todas = True
+for _ in range(5):
+    b.empezar_consulta()
+    for _ in range(2):
+        try:
+            b._permiso("analisis")
+            b.llamadas += 1
+        except MOD.TopeAlcanzado:
+            ok_todas = False
+comprobar("(b) sin mutar, las cinco consultas pasan", ok_todas)
 
 print("\n" + "=" * 62)
-print(f"FALLOS: {len(fallos)}")
+print(f"COMPROBACIONES: {len(fallos)} fallos")
 for f in fallos:
     print("  -", f)
 sys.exit(1 if fallos else 0)

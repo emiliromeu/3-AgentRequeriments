@@ -67,6 +67,14 @@ class MotorFalso:
     def __init__(self, terminos):
         self.terminos = terminos
         self.veces = 0
+        self.consultas = 0
+
+    def empezar_consulta(self):
+        # El bloque 5 tiene que abrir consulta por cada rojo: el tope de
+        # llamadas del motor se cuenta por consulta y son quince con un solo
+        # motor. Si el doble no lo tuviera, la suite pasaria verde sobre un
+        # motor que no se parece al de verdad.
+        self.consultas += 1
 
     def analizar(self, _sistema, consulta, _esquema):
         self.veces += 1
@@ -113,6 +121,9 @@ else:
     comprobar("pide UNA llamada por caso en rojo, ni una mas",
               motor.veces == len(rojos), f"{motor.veces} para {len(rojos)}")
     anotadas = [f for f in reg.pruebas if f["bloque"] == "5"]
+    comprobar("abre una consulta por cada rojo: el tope es POR CONSULTA y "
+              "son 15 con un solo motor",
+              motor.consultas == len(rojos), motor.consultas)
     comprobar("y anota un resultado por cada rojo",
               len(anotadas) == len(rojos), f"{len(anotadas)}")
     comprobar("ninguno queda sin veredicto",
@@ -124,6 +135,9 @@ print("\n=== 2. SIN MODELO REAL SE OMITE, NO SE DA POR BUENO ===")
 
 class MotorEnsayo:
     es_modelo_real = False
+
+    def empezar_consulta(self):
+        pass
 
     def analizar(self, *a, **k):
         raise AssertionError("no deberia llamarse con motor de ensayo")

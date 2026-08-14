@@ -622,6 +622,7 @@ def comparar_analizador(ix, casos, modelos: list[str]) -> int:
         filas = []
         for caso in casos:
             pregunta = caso["consulta"] + " (ejercicio 2023)"
+            motor.empezar_consulta()     # cada caso cuenta como su consulta
             try:
                 resp = motor.analizar(AN.SISTEMA, pregunta, AN.esquema_de(ix.normas))
             except MOD.ErrorModelo as e:
@@ -819,6 +820,13 @@ def bloque_5(reg: Registro, ix, grafo, motor, casos) -> None:
         ident = f"b5:{caso['cuerpo']}:{','.join(caso['aceptables'])}"
         esperado = (f"art. {' o '.join(caso['aceptables'])} entre los "
                     f"{caso['tope']} primeros con los terminos del analizador")
+        # CADA ROJO ES UNA CONSULTA APARTE, y hay que decirlo: el tope de
+        # llamadas del motor se cuenta POR CONSULTA, y quien lo reinicia es
+        # `fase4.consultar`. Aqui se llama al motor a pelo -no se redacta-, asi
+        # que sin esto los quince rojos comparten el tope de seis y del septimo
+        # en adelante saldrian como «fallo de llamada al modelo» sin haberlo
+        # sido. Habria dado una medicion peor de la real, y pagada.
+        motor.empezar_consulta()
         try:
             resp = motor.analizar(AN.SISTEMA, caso["consulta"] + " (ejercicio 2023)",
                                   AN.esquema_de(ix.normas))
@@ -1096,6 +1104,14 @@ def main(argv: list[str]) -> int:
         return 1
     print(f"corpus : {args.casos} con {len(casos)} casos de recuperacion")
 
+    # EL CORPUS SE CARGA ANTES DEL AVISO, y el orden importa: el aviso del
+    # bloque 5 necesita saber cuantos casos estan en rojo, y eso se calcula
+    # recuperando -o sea con el corpus cargado-. Estaba al reves y reventaba
+    # con un UnboundLocalError nada mas empezar. No se habia visto porque solo
+    # pasa por ahi `--bloques 5` con modelo real, que nunca se habia lanzado.
+    # Cargar el corpus no llama a nadie ni cuesta nada.
+    ix, grafo = fase4.cargar_corpus()
+
     # AVISO DE GASTO, antes de la primera llamada. Cuantas van a ser y de que.
     if necesita_modelo and motor.es_modelo_real:
         minimo, maximo = llamadas_previstas(
@@ -1110,7 +1126,6 @@ def main(argv: list[str]) -> int:
         print("  Para no gastar: python banco.py   (bloque 1, cero llamadas)")
         print("-" * ANCHO)
 
-    ix, grafo = fase4.cargar_corpus()
     reg = Registro()
 
     if "1" in pedidos:
@@ -1137,7 +1152,9 @@ def main(argv: list[str]) -> int:
         "motor": args.motor,
         "modelo": getattr(motor, "modelo", "(ninguno)"),
         "bloques": sorted(pedidos),
-        "llamadas_al_modelo": motor.llamadas if motor.es_modelo_real else 0,
+        # `llamadas` se reinicia en cada consulta; el total de la pasada es
+        # `consumo`, que acumula una linea por llamada y no se reinicia.
+        "llamadas_al_modelo": len(motor.consumo) if motor.es_modelo_real else 0,
         "consumo": motor.totales() if motor.es_modelo_real else {},
         "consumo_por_llamada": motor.consumo if motor.es_modelo_real else [],
         "segundos": round(duracion, 1),
@@ -1159,7 +1176,7 @@ def main(argv: list[str]) -> int:
     print(f"\n  TOTAL: {verdes} VERDE · {rojos} ROJO · {fallos} FALLO DEL MODELO "
           f"· {omitidos} OMITIDO (de {total})")
     print(f"  llamadas al modelo: "
-          f"{motor.llamadas if motor.es_modelo_real else 0}")
+          f"{len(motor.consumo) if motor.es_modelo_real else 0}")
     print(f"  duracion: {duracion:.1f} s")
 
     if motor.es_modelo_real and motor.consumo:

@@ -287,11 +287,12 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         "consumo": {},
     }
 
-    # EL TECHO DURO EMPIEZA AQUI. El motor cuenta llamadas y tiempo por
-    # consulta; el banco reutiliza el mismo motor para varias seguidas, asi que
-    # sin esto la quinta se pasaria de tiempo por culpa de las cuatro de antes.
-    if hasattr(motor, "reiniciar_reloj"):
-        motor.reiniciar_reloj()
+    # EL TECHO DURO EMPIEZA AQUI, Y SE REINICIA POR CONSULTA. El motor cuenta
+    # llamadas y tiempo, y los cuenta POR CONSULTA: tanto el banco como la
+    # ventana reutilizan el mismo motor para muchas seguidas. Sin esto, las
+    # llamadas de las preguntas anteriores agotaban el tope de la siguiente.
+    if hasattr(motor, "empezar_consulta"):
+        motor.empezar_consulta()
 
     # UN FALLO DE DISCO NO TIRA LA CONSULTA, PERO NO PASA EN SILENCIO. Ver
     # `Traza`: el expediente se apunta como roto y sigue. Lo que no puede
