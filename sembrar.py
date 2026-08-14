@@ -186,8 +186,23 @@ def construir_plan() -> list:
     ix, _g = fase4.cargar_corpus()
     N = ix.normas
     por_impuesto = plan_siembra.plan()
-    listas = [por_impuesto.get(k) or [] for k in
-              ("IVA", "IRPF", "IS", "IP", "GENERAL")]
+
+    # LOS IMPUESTOS SALEN DEL PLAN, NO ESCRITOS AQUI.
+    #
+    # Esta linea decia («IVA», «IRPF», «IS», «IP», «GENERAL»), y era de cuando
+    # el corpus no tenia Sucesiones ni Transmisiones. Al ingerirlos, el plan
+    # empezo a calcular su cuota -46 articulos de ISD y 31 de ITPAJD- y ESTA
+    # LISTA LOS TIRABA: 553 filas sembradas de 630 calculadas. Por eso los dos
+    # impuestos tenian CERO consultas en la despensa y nada avisaba: la siembra
+    # terminaba «bien», solo que sin ellos.
+    #
+    # Es la enesima lista escrita a mano del proyecto y tiene el mismo final
+    # que todas: el dia que entre otro impuesto, tampoco estaria. Se ordenan
+    # por tamaño para que el intercalado reparta parejo, y el orden sale de los
+    # datos igual que la lista.
+    listas = [por_impuesto[k] for k in
+              sorted(por_impuesto, key=lambda k: -len(por_impuesto[k]))
+              if por_impuesto.get(k)]
     largo = max((len(x) for x in listas), default=0)
     filas = []
     for i in range(largo):
