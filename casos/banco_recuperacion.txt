@@ -269,10 +269,45 @@ me han sancionado por no atender un requerimiento sobre las facturas de IVA | Le
 cuantos años puede Hacienda revisar la declaracion de la renta de mi cliente | Ley 58/2003 | 66 | 3 | IRPF
 mi cliente olvido incluir unos rendimientos en la renta, como se corrige | Ley 58/2003 | 122 | 3 | IRPF
 #
+# ¿DEBERIA EL 122 ACEPTAR TAMBIEN EL 27? MIRADO EL 14/08/2026: NO, Y NO POR
+# ESTRECHEZ. El bloque 5 dejo el 27 en el PUESTO 1 con los terminos del
+# analizador, asi que aceptarlo pondria este caso verde al instante. Por eso
+# hay que mirarlo despacio y no por el resultado.
+#
+# A FAVOR. Este fichero YA admite alternativas cuando la pregunta tiene dos
+# mitades: «por que importe se declara lo heredado, se pueden restar las
+# deudas» acepta «9, 13» -base imponible y deudas deducibles-. Y aqui las dos
+# contestan cosas distintas de la misma duda: el 122 dice COMO se corrige
+# -autoliquidacion complementaria- y el 27 dice QUE CUESTA hacerlo tarde.
+#
+# EN CONTRA, Y PESA MAS: EL ARTICULO 27 YA ES LA EXPECTATIVA DE OTRO CASO, seis
+# lineas mas arriba —«me he retrasado en presentar el modelo 303 y nadie me lo
+# ha reclamado, que recargo me toca»—. El fichero separa a proposito las dos
+# preguntas: una es el COSTE de llegar tarde y la otra el MECANISMO de
+# corregir. Si el caso del mecanismo se da por bueno con el articulo del coste,
+# deja de medir lo suyo, y ademas quedan dos casos que aprueban con el mismo
+# articulo sin que ninguno vigile ya el 122.
+#
+# Y LA DIFERENCIA CON EL PRECEDENTE del «9, 13» es real, no una excusa: alli la
+# PREGUNTA tiene dos mitades escritas -«por que importe» y «se pueden restar
+# las deudas»- y ninguno de los dos articulos es la expectativa de otro caso.
+# Aqui la pregunta es una sola -«como se corrige»- y su respuesta es una: la
+# complementaria. El recargo es la consecuencia, no la correccion.
+#
+# ASI QUE SE QUEDA EN «122» A SECAS, y el rojo sigue diciendo algo verdadero:
+# que a la pregunta por el mecanismo, el sistema contesta con el coste.
+#
 # LAS DOS DE RENTA ROJAS SON [PUENTE], NO AHOGAMIENTO. Importa no confundirlo:
 #
 #   «cuantos años puede Hacienda revisar la declaracion de la renta»  -> LGT 66
 #   «mi cliente olvido incluir unos rendimientos en la renta»         -> LGT 122
+#
+# CORREGIDO EL 14/08/2026: DIJE QUE «LA PUERTA LO EXCLUYE» Y NO ES LO QUE PASO.
+# La liga de FONDO si excluye las generales, pero el analizador NO dijo fondo:
+# se reprodujo el top-6 guardado por el bloque 5 y solo encaja con
+# «impuesto=IRPF, naturaleza=procedimiento». O sea que la clasificacion fue
+# CORRECTA y la puerta hizo bien su trabajo -dejo competir a la LGT-. El 122
+# se queda en el puesto 11 con la liga bien compuesta: es ranking, no puerta.
 #
 # Medido: NO SALEN NI SIN FILTRAR NADA, ni con el corpus entero compitiendo. No
 # es que las generales las ahoguen; es que no comparten ni una palabra con su

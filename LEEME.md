@@ -4073,6 +4073,79 @@ señalando a uno; y un término que no aparece en **ningún título ni rúbrica*
 ninguna norma difícilmente es del asunto. Las dos son propiedades medibles sobre
 el propio corpus, no listas.
 
+## ISD art. 3: pocos términos exclusivos pierden contra muchos compartidos
+
+**Va aquí porque es la otra cara de lo mismo**: aquel caso era un término
+rarísimo que se lleva una pregunta que no es suya; éste es un artículo que dice
+justo lo que se pregunta y pierde por cubrir *poco*. Los dos son sobre qué
+premia BM25F cuando se le da una consulta larga.
+
+**Es la primera evidencia MEDIDA de esto**, y por eso se anota aunque no se
+ataque hoy. Hasta ahora era una sospecha razonable; el bloque 5 del 14/08/2026
+la convirtió en números.
+
+«Un padre quiere donar dinero a su hijo, ¿tributa?». El analizador propone siete
+grupos de términos —donación, adquisición lucrativa inter vivos, sujeto pasivo
+donatario, base imponible donación metálico, reducción parentesco descendiente,
+devengo, reducción autonómica—, que son **diecisiete raíces**. Y son buenos: no
+hay ninguna que no esté en el corpus.
+
+| | toca | de | puntos | rúbrica |
+|---|---|---|---|---|
+| art. 20 | 13 | 17 | 21,66 | Base liquidable. |
+| art. 5 | 8 | 17 | 19,46 | Sujetos pasivos. |
+| **art. 3** | **4** | **17** | **7,32** | Hecho imponible. |
+
+**El art. 3 contiene la respuesta literal** —«la adquisición de bienes y derechos
+por donación o cualquier otro negocio jurídico a título gratuito, intervivos»—
+y se queda en el 34% del primero, puesto 15 de 50.
+
+Lo que le pasa es que **los siete grupos describen el camino entero de la
+respuesta** y el art. 3 sólo cubre el primer tramo, el «qué se grava». Cada
+tramo restante —quién paga, sobre qué base, qué reducción— tiene su propio
+artículo, y cada uno de ésos cubre más raíces que él.
+
+**Dos sospechas descartadas con datos**, que es lo que hace que esto sirva:
+
+- **No es la longitud.** Con `b=0,75` ser corto **multiplica**: el art. 3, con 60
+  tokens contra 168 de media, cobra ×1,93 por término, mientras un rival de 290
+  cobra ×0,65. Los cortos ya están favorecidos. Tocar la normalización iría en
+  la dirección contraria a la que parece.
+- **No es el suelo de estatales.** Los seis primeros son todos de la propia Ley
+  29/1987: la competencia es dentro del mismo impuesto y no hay ninguna
+  autonómica que desplazar.
+
+**Lo que sí se confirmó**: la rúbrica. «Hecho imponible.» comparte **una sola**
+raíz con la consulta, y el título pesa 4,0 —el máximo de los tres campos—, así
+que no aparecer ahí se paga caro.
+
+> Si algún día se ataca, la pregunta es si **cubrir pocas raíces pero exclusivas**
+> debería valer tanto como cubrir muchas compartidas. Hoy no vale, y ésta es la
+> primera vez que hay un caso medido para discutirlo.
+
+---
+
+# Pendiente: ISD art. 31 depende de ingerir el Reglamento del ISD
+
+**No es un problema de recuperación y conviene que no se trate como tal.**
+
+«¿Cuánto plazo hay para presentar el impuesto de una herencia?». El artículo que
+el banco espera —Ley 29/1987 art. 31— **no tiene la respuesta**. Dice:
+
+> …en los plazos y en la forma que **reglamentariamente se fijen**.
+
+Los seis meses están en el **Reglamento del ISD (RD 1629/1991)**, que **no está
+en el corpus**: se quedó fuera porque titula sus artículos «Art 1» y el troceador
+no lo reconoce. Se comprobó buscando «seis meses» junto a sucesión, herencia,
+fallecimiento o causante en las dieciséis normas: **ningún precepto del corpus da
+ese plazo**.
+
+Subir el art. 31 al puesto 1 no arreglaría nada — llevaría al redactor a una
+remisión. **Este caso se desbloquea ingiriendo el Reglamento, no tocando el
+buscador**, y hasta entonces su rojo es honesto: dice que falta una norma.
+
+Queda emparejado con el pendiente del troceador y la numeración «Art 1».
+
 No se toca hoy.
 
 
