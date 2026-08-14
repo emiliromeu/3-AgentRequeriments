@@ -116,9 +116,19 @@ CASOS = [
     # riesgo es de construccion y no de muestra: en cuanto la DGT escriba un
     # campo con esta forma, la guarda floja cuelga articulos del ITP de la Ley
     # del IVA. Ante la duda, nada.
-    ("ADVERSARIO  delante hay norma, aunque no la reconozca: NO se mira detras",
+    # ACTUALIZADO EL 14/08/2026, y lo que vigila NO ha cambiado: que el 45 no
+    # se cuelgue de la norma de DETRAS. Lo que ha cambiado es que la de delante
+    # ya se lee: hasta hoy «RDLeg 1/1993» no resolvia -era la deuda de la
+    # abreviatura, 68 consultas de 128- y el caso esperaba "" porque no habia
+    # nada mejor. Ahora resuelve al Texto refundido, que es de donde ES el
+    # articulo 45; se comprobo contra el corpus antes de tocar esto: el 45
+    # esta en el #1 y no en el decreto.
+    #
+    # Sigue siendo adversario: si la guarda se aflojara, el 45 se iria a la Ley
+    # 37/1992, que es lo que no puede pasar y lo que se comprueba.
+    ("ADVERSARIO  delante hay norma: se resuelve CON ELLA, nunca con la de detras",
      "RDLeg 1/1993 art. 45 Ley 37/1992",
-     [("45", "")]),
+     [("45", "BOE-A-1993-25359#1")]),
     ("POSITIVO  el mismo texto, pero sin nada delante: ahi si se mira",
      "art. 45 Ley 37/1992",
      [("45", LIVA)]),
@@ -181,6 +191,23 @@ CASOS = [
     ("ADVERSARIO D  sin marca delante no hay nada que separar",
      "Real Decreto 1007/2023, de 5 de diciembre, RIVA RD 1624/1992 art. 62-6",
      [("62", RIVA1)]),
+    # AÑADIDO EL 14/08/2026 PORQUE EL CONTROL SE HABIA QUEDADO SIN CASO. Al
+    # abrir la abreviatura `RD`, el de arriba dejo de ver la mutacion (h): la
+    # mutacion sigue partiendo mal, pero el trozo de detras ahora resuelve por
+    # expansion al MISMO cuerpo, asi que el resultado no cambia y el caso no se
+    # entera. Una mutacion que ya no se ve es un control perdido.
+    #
+    # Este campo es REAL -la V2689-23, copiado tal cual, faltas incluidas- y se
+    # busco barriendo la despensa: de 1.263 campos distintos, solo DOS siguen
+    # delatando esa mutacion. Sin la guarda, el articulo 148 se cuelga de la
+    # Ley 37/1992, que es la norma de DETRAS.
+    #
+    # Que el 148 salga sin resolver no es un acierto: el campo esta mal escrito
+    # -el punto y coma se come el 32 y el 33- y es una de las causas conocidas.
+    # Lo que fija el caso es que ante eso NO se adivina.
+    ("ADVERSARIO D  con dos normas y una marca, no se cuelga de la de detras",
+     "Arts. 31; 32 y 33 Real Decreto 1065/2007 Ley 37/1992 art. 148 y siguentes",
+     [("31", ""), ("148", "")]),
 
     # ---- 5. EL GUION, QUE YA SIGNIFICA TRES COSAS
     #
@@ -273,8 +300,8 @@ MUTACIONES = [
     ("(b) la guarda se afloja a «ninguna norma que yo reconozca»",
      "            if not designacion.strip():",
      "            if not _RE_NORMA_EXPLICITA.search(designacion):",
-     ["ADVERSARIO  delante hay norma, aunque no la reconozca: "
-      "NO se mira detras"]),
+     ["ADVERSARIO  delante hay norma: se resuelve CON ELLA, nunca con la "
+      "de detras"]),
 
     ("(c) se deja de exigir que la norma vaya PEGADA a los numeros",
      "                primera = _RE_NORMA_EXPLICITA.match(detras)",
@@ -311,7 +338,8 @@ MUTACIONES = [
      "        marca = _RE_MARCA_ART.search(trozo, desde, m.start())\n"
      "        if not marca:\n            continue",
      "        marca = _RE_MARCA_ART.search(trozo, desde, m.start()) or m",
-     ["ADVERSARIO D  sin marca delante no hay nada que separar"]),
+     ["ADVERSARIO D  con dos normas y una marca, no se cuelga de la de "
+      "detras"]),
 
     ("(e) el corte busca la otra norma desde el indice 1, dentro de si misma",
      "                    otra = _RE_NORMA_EXPLICITA.search(detras, primera.end())",

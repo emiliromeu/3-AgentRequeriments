@@ -120,6 +120,9 @@ class Precepto:
     # para poder auditarlo: una correccion silenciosa es indistinguible de un
     # acierto por casualidad, y esta cambia a que norma se atribuye una cita.
     corregido_desde: str = ""
+    # Si la norma se identifico ABRIENDO la abreviatura. Tambien para auditar:
+    # es una conjetura nuestra, no lo que escribio la fuente.
+    expandido: bool = False
 
     @property
     def comparable(self) -> bool:
@@ -416,6 +419,26 @@ _RE_NORMA_EXPLICITA = re.compile(
     r"Decreto|Orden|Directiva)\s+\d+/\d{2,4}", re.IGNORECASE)
 
 
+# LA ABREVIATURA DEL REAL DECRETO, QUE ERA LA MAYOR DEUDA DEL CAMPO.
+#
+# La fuente escribe «RD 439/2007» y «RDLeg 1/1993», y el resolutor solo conocia
+# el nombre entero. Eran 68 consultas de 128 sin poder encontrarse.
+#
+# NO SE TRAGA LO QUE SE LE PAREZCA, y la diferencia no es cosmetica: «RDL» y
+# «RD-ley» son el Real Decreto-LEY, que es OTRA norma con su propia numeracion.
+# Expandir «RDL 8/2020» a «Real Decreto 8/2020» seria atribuirle articulos a
+# quien no los dijo. Detras del rotulo tiene que venir el numero, y «Leg» se
+# escribe entero.
+_RE_ABREV_RDLEG = re.compile(r"\bRD\s*-?\s*Leg\.?\s*(\d+/\d{4})", re.IGNORECASE)
+_RE_ABREV_RD = re.compile(r"\bRD\.?\s+(\d+/\d{4})", re.IGNORECASE)
+
+
+def _expandir_abreviatura(designacion: str) -> str:
+    """«RD 439/2007» -> «Real Decreto 439/2007». Deja lo demas igual."""
+    d = _RE_ABREV_RDLEG.sub(r"Real Decreto Legislativo \1", designacion or "")
+    return _RE_ABREV_RD.sub(r"Real Decreto \1", d)
+
+
 def _precepto(numero: str, cuerpo: str, designacion: str, estado: str,
               normas=None) -> "Precepto":
     """Construye el Precepto APLICANDO la correccion de cuerpo.
@@ -433,6 +456,32 @@ def _precepto(numero: str, cuerpo: str, designacion: str, estado: str,
             return Precepto(numero=numero, cuerpo=hermano,
                             norma_bruta=designacion, estado=estado,
                             corregido_desde=cuerpo)
+        return Precepto(numero=numero, cuerpo=cuerpo,
+                        norma_bruta=designacion, estado=estado)
+
+    # LA ABREVIATURA, SOLO SI TAL CUAL NO HA RESUELTO. Se prueba lo que escribio
+    # la fuente ANTES que lo que nosotros interpretamos, asi que abrir la
+    # abreviatura no puede mover ni una cita que ya resolvia: solo llega a las
+    # que se perdian.
+    #
+    # Y SE DECLINA SI EL ARTICULO NO EXISTE DONDE ATERRIZA. Esta es la
+    # contencion propia de la expansion, y es distinta de la del hermano: ahi
+    # respetamos lo que la fuente escribio aunque el articulo no exista -no
+    # inventamos-, pero aqui la designacion la hemos interpretado NOSOTROS, y
+    # una conjetura que no se puede corroborar no se queda. Medido: sin esto
+    # entraban TRES citas a articulos que no existen en ninguno de los dos
+    # cuerpos -«RD 1619/2012 art. 201», y ese reglamento tiene 27-.
+    if normas is not None and estado != "cargada":
+        abierta = _expandir_abreviatura(designacion)
+        if abierta != designacion:
+            c2, e2 = _resolver_designacion(abierta, normas)
+            if e2 == "cargada" and c2:
+                c2 = normas.cuerpo_hermano_con(c2, numero) or c2
+                if normas.tiene_articulo(c2, numero):
+                    return Precepto(numero=numero, cuerpo=c2,
+                                    norma_bruta=designacion, estado="cargada",
+                                    expandido=True)
+
     return Precepto(numero=numero, cuerpo=cuerpo, norma_bruta=designacion,
                     estado=estado)
 

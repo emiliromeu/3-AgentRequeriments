@@ -124,6 +124,49 @@ comprobar("la regla solo mira hermanos del MISMO documento",
 comprobar("  y devuelve vacio si el cuerpo ya tiene el articulo",
           N.cuerpo_hermano_con("BOE-A-2005-14803#1", "82") == "")
 
+# ============ 2 bis. LA ABREVIATURA: SE ABRE, PERO NO CUALQUIERA
+print("\n=== 2bis. «RD 439/2007» SE ABRE; «RDL 8/2020» NO ===")
+print("  Era la mayor deuda del campo: 68 consultas de 128 sin poder")
+print("  encontrarse. Y la mitad que importa es la de abajo: «RDL» es el Real")
+print("  Decreto-LEY, otra norma con su propia numeracion.\n")
+
+# --- EL POSITIVO: se abre y resuelve
+ps = leer("RD 439/2007 art. 22")
+comprobar("«RD 439/2007 art. 22» se lee", len(ps) == 1, len(ps))
+if ps:
+    p = ps[0]
+    comprobar("  resuelve al Reglamento del IRPF",
+              p.cuerpo == "BOE-A-2007-6820#1", p.cuerpo)
+    comprobar("  y queda marcado como EXPANDIDO, que es conjetura nuestra",
+              p.expandido, p.expandido)
+    comprobar("  con el articulo existiendo de verdad ahi",
+              N.tiene_articulo(p.cuerpo, p.numero))
+
+ps = leer("RDLeg 1/1993 art. 11")
+comprobar("«RDLeg 1/1993» tambien se abre", len(ps) == 1 and ps[0].expandido,
+          f"{len(ps)} {ps[0].cuerpo if ps else ''}")
+if ps:
+    comprobar("  y va al Texto refundido, no al decreto que aprueba",
+              ps[0].cuerpo == "BOE-A-1993-25359#1", ps[0].cuerpo)
+
+# --- EL ADVERSARIO: se parece y NO se abre
+for campo, porque in (
+        ("RDL 8/2020 art. 1", "«RDL» es Real Decreto-ley, otra norma"),
+        ("RD-ley 8/2020 art. 1", "escrito con guion, tambien es decreto-ley")):
+    ps = leer(campo)
+    expandido = any(getattr(x, "expandido", False) for x in ps)
+    comprobar(f"«{campo.split(' art')[0]}» NO se expande: {porque}",
+              not expandido, [x.cuerpo for x in ps])
+
+# Y LA CONTENCION PROPIA DE LA EXPANSION: si el articulo no existe donde
+# aterriza, se declina. Sin esto entraban tres citas a articulos inexistentes.
+ps = leer("RD 1619/2012 art. 201")
+comprobar("«RD 1619/2012 art. 201» NO entra: ese reglamento tiene 27 "
+          "articulos", not any(x.comparable for x in ps),
+          [(x.cuerpo, x.expandido) for x in ps])
+comprobar("  (control) el mismo con un articulo que SI existe, entra",
+          any(x.comparable and x.expandido for x in leer("RD 1619/2012 art. 6")))
+
 # ==================================== 3. LA DESPENSA, DE INTEGRIDAD
 print("\n=== 3. NINGUNA CITA APUNTA A UN CUERPO SIN ESE ARTICULO ===")
 print("  Es el invariante de verdad, y se mide sobre la despensa entera.\n")
@@ -142,8 +185,11 @@ for c in D.CacheDGT().todas():
         if not N.tiene_articulo(p.cuerpo, p.numero):
             malos.append((c.numero, p.norma_bruta, p.numero, p.cuerpo))
 
+expandidos = sum(1 for c in D.CacheDGT().todas() for p in c.preceptos(N)
+                 if p.comparable and p.expandido)
 print(f"    preceptos comparables : {comparables}")
 print(f"    corregidos de cuerpo  : {corregidos}")
+print(f"    resueltos por expansion: {expandidos}")
 print(f"    apuntan a un cuerpo sin ese articulo: {len(malos)}")
 for x in malos[:5]:
     print(f"      {x[0]} «{x[1][:40]}» art.{x[2]}")
@@ -154,6 +200,12 @@ for x in malos[:5]:
 sin_arreglo = [x for x in malos if N.cuerpo_hermano_con(x[3], x[2])]
 comprobar("lo que queda sin corregir es SOLO lo que ningun hermano tiene",
           not sin_arreglo, str(sin_arreglo[:3]))
+malos_exp = [x for x in malos
+             if any(p.expandido for c in D.CacheDGT().todas()
+                    for p in c.preceptos(N)
+                    if c.numero == x[0] and p.numero == x[2])]
+comprobar("y NINGUNA de las resueltas por expansion apunta a un articulo que "
+          "no existe", not malos_exp, str(malos_exp[:3]))
 comprobar("y ninguna correccion ha movido una cita que ya estaba bien",
           all(not N.tiene_articulo(p.corregido_desde, p.numero)
               for c in D.CacheDGT().todas()
