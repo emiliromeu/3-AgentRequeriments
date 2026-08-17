@@ -169,6 +169,45 @@ def falta_tkinter() -> bool:
     return False
 
 
+def corpus_no_cuadra() -> list:
+    """Las normas cuyo `.jsonl` no coincide con su sello. Vacia = todo bien.
+
+    POR QUE ESTO SI BLOQUEA, cuando la guia y la despensa no.
+    
+    La regla de este proyecto es que un DERIVADO que falta se rehace y se sigue
+    -la guia se regenera sola, la despensa se avisa y el agente abre igual-,
+    pero una PROMESA rota se para. Y el corpus es una promesa: el agente dice
+    que contesta con el texto oficial del BOE. Media ley no se regenera sola, y
+    lo peor es que no da error: da respuestas peores, en silencio, con la misma
+    cara de seguridad que las buenas.
+
+    ESTUVO MEDIDO Y SIN EXIGIR VARIOS DIAS a proposito: `sellos.comprobar`
+    existia y solo se usaba para pintar «Que hay dentro». No se conecto entonces
+    porque las compañeras estaban a punto de usar el agente y meter un bloqueo
+    nuevo la vispera es como se rompe una instalacion que funcionaba.
+
+    SIN FICHERO DE SELLOS NO SE BLOQUEA: un corpus sin sellar no esta corrupto,
+    esta sin sellar -es el estado de cualquier corpus de prueba en un directorio
+    temporal-. Lo decide `sellos.comprobar`, que ya lo distingue.
+    """
+    rutas = sorted(CORPUS.glob("*.jsonl"))
+    rutas = [r for r in rutas if not r.name.endswith(".descartados.jsonl")]
+    if not rutas:
+        return []
+    # EL IMPORT VA DENTRO DEL `try`, y no es un detalle de estilo: estaba fuera
+    # y un `agente_fiscal` sin `sellos` -el mundo de mentira de
+    # `prueba_instalador`- reventaba con ImportError y BLOQUEABA EL ARRANQUE.
+    # O sea, lo contrario de lo que dice el comentario de abajo: se paraba el
+    # agente por un fallo nuestro. Lo cazo la suite del instalador.
+    try:
+        from agente_fiscal import sellos as SL
+        return SL.comprobar(rutas)
+    except Exception:                            # noqa: BLE001
+        # Si la comprobacion misma no se puede hacer, NO se bloquea: parar el
+        # agente por un fallo nuestro es peor que no comprobar.
+        return []
+
+
 def que_falta() -> list:
     """La lista de lo que hay que hacer, en orden. Vacia = todo listo."""
     pendiente = []
@@ -178,6 +217,10 @@ def que_falta() -> list:
         pendiente.append("clave")
     if falta_corpus():
         pendiente.append("corpus")
+    elif corpus_no_cuadra():
+        # SOLO SI NO FALTA: si falta, primero se baja; comprobar sellos de algo
+        # que aun no esta seria decir dos cosas a la vez.
+        pendiente.append("corpus_roto")
     # LA DESPENSA NO SE INSTALA, SE TRAE. No se puede sembrar aqui -son horas
     # contra un servicio publico- asi que si falta no hay ningun paso que
     # ejecutar: hay que decirlo y seguir. El agente funciona sin ella, solo
@@ -581,6 +624,17 @@ def main(argv: list) -> int:
         paso(n, total, "Falta el texto de las normas.")
         if ingerir_corpus(falta_corpus()):
             return 1
+
+    if "corpus_roto" in pendiente:
+        problemas = corpus_no_cuadra()
+        return parar(
+            "La copia de las normas de este equipo NO es la que dice ser.",
+            "\n".join(problemas[:6])
+            + ("\n... y " + str(len(problemas) - 6) + " mas"
+               if len(problemas) > 6 else "")
+            + "\n\nEl agente no abre con las normas a medias: contestaria "
+              "igual de seguro\ncon media ley dentro, y eso no se ve en la "
+              "respuesta.")
 
     avisar_de_la_despensa()
     regenerar_la_guia()

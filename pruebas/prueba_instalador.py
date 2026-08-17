@@ -124,6 +124,11 @@ def preparar(nombre, con_venv=True, con_env=True, env_vacio=False,
     # como se descubrio que faltaba-.
     shutil.copy2(RAIZ / "agente_fiscal" / "catalogo.py",
                  destino / "agente_fiscal" / "catalogo.py")
+    # Y `sellos`, por el mismo motivo que el catalogo: el instalador lo usa
+    # para exigir que el corpus sea el que dice ser. Sin el, el mundo de
+    # mentira no se parece al de verdad justo en lo que se acaba de añadir.
+    shutil.copy2(RAIZ / "agente_fiscal" / "sellos.py",
+                 destino / "agente_fiscal" / "sellos.py")
 
     if con_venv:
         subprocess.run([sys.executable, "-m", "venv", str(destino / ".venv")],

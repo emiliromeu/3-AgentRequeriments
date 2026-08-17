@@ -210,8 +210,11 @@ comprobar("  y el desdoblado de verdad NO lo toca, que es la diferencia",
           D._desdoblar_marca("art. 70-2") == "art. 70-2")
 
 # (b) se quita el «Legislativo» del patron
-m2 = roto(r'r"\b(?:Ley\s+Org[aá]nica|Ley|Real\s+Decreto(?:\s+Legislativo|-ley)?|RD|"',
-          r'r"\b(?:Ley\s+Org[aá]nica|Ley|Real\s+Decreto(?:-ley)?|RD|"')
+# La mutacion apunta a la linea TAL COMO ESTA hoy. Se actualizo el 17/08 al
+# ampliar el patron con la abreviatura: una mutacion que ya no encaja no es un
+# control, es una excepcion al arrancar la suite.
+m2 = roto(r'r"\b(?:Ley\s+Org[aá]nica|Ley|Real\s+Decreto(?:\s+Legislativo|-ley)?|"',
+          r'r"\b(?:Ley\s+Org[aá]nica|Ley|Real\s+Decreto(?:-ley)?|"')
 comprobar("(b) sin «Legislativo», el ITPAJD con sigla deja de resolver y el "
           "bloque 1 lo caza",
           not [p for p in m2.pares_de_normativa(campo_ok, N) if p.comparable])
