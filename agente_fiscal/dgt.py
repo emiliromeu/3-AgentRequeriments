@@ -450,11 +450,28 @@ def pares_de_normativa(texto: str, normas=None) -> list:
 # Una designacion explicita: rango + numero/año. Es la forma que NO admite dos
 # lecturas, y por eso es la que se busca cuando el trozo entero no resuelve.
 _RE_NORMA_EXPLICITA = re.compile(
-    r"\b(?:Ley\s+Org[aá]nica|Ley|Real\s+Decreto(?:\s+Legislativo|-ley)?|RD|"
+    r"\b(?:Ley\s+Org[aá]nica|Ley|Real\s+Decreto(?:\s+Legislativo|-ley)?|"
+    r"RD\s*-?\s*Leg\.?|RDL(?![a-z])|RD|"
     r"Reglamento|"
     r"Decreto|Orden|Directiva)\s+\d+/\d{2,4}", re.IGNORECASE)
-# El «Legislativo» va en el patron de arriba, en la alternativa del Real
-# Decreto. Sin el, «Real Decreto Legislativo 1/1993» NO se extraia, y eso
+# EL PATRON LO USAN OCHO SITIOS EN TRES MODULOS, y esa es la razon de que la
+# abreviatura vaya AQUI y no en cada uno.
+#
+# El 17/08 se le puso «Legislativo» pensando en el RESOLUTOR, y se quedo fuera
+# el TROCEADOR -que usa el mismo patron para decidir donde cortar el campo-.
+# Resultado: «TRLRHL RD Leg. 2/2004 Articulo 63. Ley 58/2003 Articulo 35» no se
+# partia, porque el troceador exige que el trozo de delante traiga su propia
+# designacion y no reconocia «RD Leg. 2/2004». Se perdia entera la parte que SI
+# tenemos. Trece consultas.
+#
+# Asi que ahora el patron conoce tambien la abreviatura, con sus grafias: «RD
+# Leg.», «RDLeg», «RD-Leg». Y `RDL` va aparte con un `(?![a-z])` que le impide
+# comerse «RDLeg»: son normas distintas -el Real Decreto-LEY frente al
+# Legislativo- y aqui solo se trata de RECONOCER que ahi se nombra una norma;
+# quien decide CUAL es `_resolver_designacion`, que sigue sin expandir «RDL».
+#
+# El «Legislativo» sin abreviar sigue haciendo falta: sin el, «Real Decreto
+# Legislativo 1/1993» NO se extraia, y eso
 # tumbaba la abreviatura entera en cuanto llevaba sigla delante: «RDLeg
 # 1/1993» a secas se resuelve por la cadena completa, pero «TRLITPAJD RDLeg
 # 1/1993» -que es como la DGT escribe SIEMPRE el ITPAJD- no tenia ninguna

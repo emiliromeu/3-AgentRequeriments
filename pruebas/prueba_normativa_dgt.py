@@ -129,6 +129,24 @@ CASOS = [
     ("ADVERSARIO  delante hay norma: se resuelve CON ELLA, nunca con la de detras",
      "RDLeg 1/1993 art. 45 Ley 37/1992",
      [("45", "BOE-A-1993-25359#1")]),
+    # AÑADIDO EL 17/08/2026 PORQUE EL CONTROL VOLVIO A CADUCAR. Al enseñarle al
+    # patron la abreviatura «RD Leg.», el caso de arriba dejo de ver la
+    # mutacion (b): la guarda mutada -«delante hay una norma QUE YO
+    # RECONOZCA»- pasa a comportarse igual que la buena en cuanto el patron
+    # reconoce «RDLeg». Es la segunda vez que pasa lo mismo, y la leccion es la
+    # misma: al ampliar un patron hay que mirar que control se queda ciego.
+    #
+    # Este campo es REAL -la V0190-07, copiado tal cual- y se busco barriendo la
+    # despensa: de 1.430 campos distintos, SIETE delatan esa mutacion. Y este
+    # enseña por que la guarda existe: sin ella, el articulo 831 del CODIGO
+    # CIVIL se cuelga de la Ley del ISD.
+    #
+    # Que solo salgan dos preceptos de un campo con ocho articulos es otra
+    # forma, ya anotada: la lista se corta en el parentesis de «3-1-a)».
+    ("ADVERSARIO  el Codigo Civil no se cuelga de la norma de detras",
+     "Código Civil, art. 831, Ley 29/1987 arts. 3-1-a), 5-a), 20, 21, 22, 24 y 25\n\n"
+     " RISD RD 1629/1991 art. 44-4 y 54-8",
+     [("831", ""), ("44", "BOE-A-1991-27678#1")]),
     ("POSITIVO  el mismo texto, pero sin nada delante: ahi si se mira",
      "art. 45 Ley 37/1992",
      [("45", LIVA)]),
@@ -300,8 +318,7 @@ MUTACIONES = [
     ("(b) la guarda se afloja a «ninguna norma que yo reconozca»",
      "            if not designacion.strip():",
      "            if not _RE_NORMA_EXPLICITA.search(designacion):",
-     ["ADVERSARIO  delante hay norma: se resuelve CON ELLA, nunca con la "
-      "de detras"]),
+     ["ADVERSARIO  el Codigo Civil no se cuelga de la norma de detras"]),
 
     ("(c) se deja de exigir que la norma vaya PEGADA a los numeros",
      "                primera = _RE_NORMA_EXPLICITA.match(detras)",
@@ -332,7 +349,12 @@ MUTACIONES = [
       "POSITIVO  el mismo texto, pero sin nada delante: ahi si se mira",
       "ADVERSARIO  la norma de detras no esta pegada a los numeros",
       "ADVERSARIO  detras hay dos normas: se corta en la primera",
-      "PAREJA  una norma que no tenemos y otra que si, en el mismo campo"]),
+      "PAREJA  una norma que no tenemos y otra que si, en el mismo campo",
+      # El caso del Codigo Civil delata DOS mutaciones, la (b) y esta, y las
+      # dos por el mismo motivo: sin la guarda que sea, el articulo 831 acaba
+      # colgando de la Ley del ISD. Que lo vean dos es señal de que la guarda
+      # importa por dos caminos, no de que sobre una.
+      "ADVERSARIO  el Codigo Civil no se cuelga de la norma de detras"]),
 
     ("(h) se parte sin exigir marca de articulo delante",
      "        marca = _RE_MARCA_ART.search(trozo, desde, m.start())\n"

@@ -81,6 +81,47 @@ comprobar("y por eso «TRLITPAJD RDLeg 1/1993 arts. 6, 7 y 8» resuelve",
           arts("TRLITPAJD RDLeg 1/1993 arts. 6, 7 y 8") == ["6", "7", "8"],
           arts("TRLITPAJD RDLeg 1/1993 arts. 6, 7 y 8"))
 
+# ============ 1 bis. EL TROCEADOR TAMBIEN CONOCE LA ABREVIATURA
+print("\n=== 1bis. EL PATRON LO USAN OCHO SITIOS: TAMBIEN EL TROCEADOR ===")
+print("  Al ponerle «Legislativo» se penso en el resolutor y se quedo fuera el")
+print("  troceador, que usa el MISMO patron para decidir donde cortar.\n")
+
+# EL POSITIVO: dos normas, una ajena y otra nuestra, cada una con sus
+# articulos. Sin la abreviatura en el patron no se parte, y se pierde entera la
+# parte que SI tenemos.
+campo = "TRLRHL RD Leg. 2/2004 Artículo 63. Ley 58/2003 Artículo 35."
+got = [(p.numero, p.cuerpo or p.estado)
+       for p in D.pares_de_normativa(campo, N)]
+print(f"    {got}")
+comprobar("la parte de la LGT se recupera aunque la otra norma no la tengamos",
+          ("35", "BOE-A-2003-23186#0") in got, got)
+comprobar("  y el articulo de la norma ajena se queda en «externa», no se "
+          "cuelga de la nuestra",
+          ("63", "externa") in got, got)
+
+for grafia in ("RD Leg. 2/2004", "RDLeg 2/2004", "RD-Leg 2/2004"):
+    comprobar(f"«{grafia}» se reconoce como designacion de norma",
+              D._RE_NORMA_EXPLICITA.findall(grafia) == [grafia], grafia)
+
+# EL ADVERSARIO: se parece y es OTRA norma. «RDL» es el Real Decreto-ley.
+# Reconocerlo como designacion esta bien -ahi SE NOMBRA una norma- pero no
+# puede acabar resolviendo al Real Decreto Legislativo.
+comprobar("«RDL 8/2020» se reconoce como norma nombrada",
+          D._RE_NORMA_EXPLICITA.findall("RDL 8/2020") == ["RDL 8/2020"])
+comprobar("  pero NO se expande: sigue sin resolver",
+          D._expandir_abreviatura("RDL 8/2020") == "RDL 8/2020")
+comprobar("  y «RDLeg 8/2020» SI se expande, que es la diferencia",
+          D._expandir_abreviatura("RDLeg 8/2020")
+          == "Real Decreto Legislativo 8/2020")
+comprobar("  el `RDL` no se come el `RDLeg`",
+          D._RE_NORMA_EXPLICITA.findall("RDLeg 1/1993") == ["RDLeg 1/1993"])
+
+# Y QUE NO SE HA ROTO EL REDACTOR, que es el tercer modulo que usa el patron.
+from agente_fiscal import redactor as _R          # noqa: E402
+comprobar("el redactor sigue usando el MISMO patron, no una copia",
+          "_D._RE_NORMA_EXPLICITA" in
+          (RAIZ / "agente_fiscal" / "redactor.py").read_text("utf-8"))
+
 # ==================================== 2. EL ADVERSARIO: ES UN APARTADO
 print("\n=== 2. LO QUE PARECE DOBLADO Y ES UN APARTADO ===")
 print("  «art. 70-2» es el 70 apartado 2. Partirlo inventa un articulo 2.\n")
