@@ -62,19 +62,62 @@ _RE_MEZCLA = re.compile(
 _RE_APARTADO = re.compile(r"\b\d+\.\d")
 
 
-def causa(normativa: str, numeros_cargados: set) -> str:
+def _resuelve(normativa: str, normas) -> bool:
+    """¿El lector de HOY saca algun precepto comparable de este campo?"""
+    if normas is None:
+        return False
+    from . import dgt as _D
+    try:
+        return any(p.comparable
+                   for p in _D.pares_de_normativa(normativa or "", normas))
+    except Exception:                            # noqa: BLE001
+        return False
+
+
+def causa(normativa: str, numeros_cargados: set, normas=None) -> str:
     """Por que no se puede encontrar esta consulta. Cadena vacia = no se sabe.
 
     `numeros_cargados` son los numeros de las normas del corpus -«37/1992»,
     «29/1987»...-, que salen del propio corpus y no de una lista escrita.
+
+    CADA CAUSA SE COMPRUEBA, NO SE PARECE. Y esto es un arreglo, no un adorno:
+    hasta el 17/08/2026 se etiquetaba por parecido de texto, asi que bastaba
+    que en el campo apareciera «RDLeg» para llamarlo «abreviatura no
+    reconocida» AUNQUE LA ABREVIATURA YA SE LEYERA. Veintiuna consultas de la
+    ultima tanda llevaban esa etiqueta y ninguna fallaba por eso: fallaban por
+    dos formas que nadie habia diagnosticado.
+    
+    Una etiqueta que no se puede desmentir no clasifica: decora. Y aqui decorar
+    es caro, porque la puerta de la cadena decide con esto: lo que tiene causa
+    conocida no la para, y lo que no la tiene si.
+
+    Asi que se pasa `normas` y se comprueba de verdad. Sin `normas` no se puede
+    comprobar nada, y entonces NO SE CLASIFICA -se devuelve "" y para la
+    puerta-, que es la unica respuesta honesta cuando no se ha mirado.
     """
     t = " ".join((normativa or "").split())
     if not t:
         return SIN_ARTICULOS
+
+    # LA COMPROBACION QUE MANDA SOBRE TODAS. Si con el lector de hoy el campo
+    # resuelve, NO HAY CAUSA DE FALLO QUE VALGA: lo que hubiera que arreglar ya
+    # se arreglo. Devolver una causa aqui seria justo el defecto que se corrige.
+    if normas is not None and _resuelve(t, normas):
+        return ""
+
+    # Y SIN PODER COMPROBAR, NO SE ETIQUETA. Ver la cabecera.
+    if normas is None:
+        return ""
+
     if _RE_SIN_MARCA.search(t):
         return SIN_MARCA
     if _RE_ABREV.search(t):
-        return ABREVIATURA
+        # SE COMPRUEBA: se abre la abreviatura y se mira si sigue sin resolver.
+        # Si al abrirla resuelve, la abreviatura NO es su causa -aunque el
+        # texto la lleve- y hay que seguir buscando cual es.
+        from . import dgt as _D
+        if not _resuelve(_D._expandir_abreviatura(t), normas):
+            return ABREVIATURA
     citadas = set(_RE_NUMERO_NORMA.findall(t))
     if citadas and not (citadas & numeros_cargados):
         return AJENA
@@ -111,5 +154,5 @@ def clasificar(consultas, normas) -> dict:
     numeros = numeros_de(normas)
     fuera: dict = {}
     for c in consultas:
-        fuera.setdefault(causa(c.normativa, numeros), []).append(c)
+        fuera.setdefault(causa(c.normativa, numeros, normas), []).append(c)
     return fuera

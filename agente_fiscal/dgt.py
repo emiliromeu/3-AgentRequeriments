@@ -284,6 +284,10 @@ def analizar_normativa(texto: str, normas=None) -> Normativa:
     from . import referencias as R
 
     salida = Normativa()
+    # La marca doblada se deshace ANTES de trocear: si se dejara para despues,
+    # el troceo ya habria decidido donde acaba la designacion mirando una marca
+    # que no es la buena.
+    texto = _desdoblar_marca(texto)
     troceado = [sub
                 for bruto in _RE_SEPARADOR_NORMA.split(texto or "")
                 for sub in _partir_por_designaciones(bruto)]
@@ -394,6 +398,37 @@ def analizar_normativa(texto: str, normas=None) -> Normativa:
     return salida
 
 
+# LA MARCA DE ARTICULO, ESCRITA DOS VECES.
+#
+#     «TRLITPAJD RDLeg 1/1993 arts. Arts- 7, 31-2 y 57»
+#     «RITPAJD RD 828/1995 art. Art 70»
+#     «Ley 29/1987 arts. - 3, 4 y 30»
+#
+# La plantilla pone el rotulo -«arts.»- y encima el redactor escribe el suyo.
+# El lector consume la primera marca y se encuentra una palabra donde esperaba
+# un numero, asi que pierde la lista entera. Se ve sobre todo en documentos de
+# 2025 y 2026: parece plantilla nueva.
+#
+# Y AQUI ESTA EL CUIDADO, que es todo el problema: «art. 70-2» es el articulo
+# 70 apartado 2, y «art. 7-1-A)» tambien. Un patron que se coma un guion detras
+# de la marca se lleva por delante el apartado y convierte el 70-2 en el 70 y
+# el 2, que son DOS articulos que nadie cito.
+#
+# Por eso la segunda marca tiene que ser UNA PALABRA «art» de verdad, no
+# cualquier cosa: se exige `art`/`arts` completo. Lo unico que se admite sin
+# segunda palabra es el guion suelto pegado al rotulo -«arts. - 3»-, y ahi el
+# guion va SEGUIDO DE ESPACIO, que es lo que lo distingue de «70-2».
+_RE_MARCA_DOBLE = re.compile(
+    r"\b(arts?\.?)\s*[:.]?\s+(?:arts?)\b\.?\s*-?\s*", re.IGNORECASE)
+_RE_MARCA_GUION = re.compile(r"\b(arts?\.)\s+-\s+(?=\d)", re.IGNORECASE)
+
+
+def _desdoblar_marca(texto: str) -> str:
+    """«arts. Arts- 7» -> «arts. 7». Deja «art. 70-2» intacto."""
+    t = _RE_MARCA_DOBLE.sub(r"\1 ", texto or "")
+    return _RE_MARCA_GUION.sub(r"\1 ", t)
+
+
 def pares_de_normativa(texto: str, normas=None) -> list:
     """«Ley 37/1992 arts. 75, 78, 80-cuatro, 89» -> cuatro Preceptos de la LIVA.
 
@@ -415,8 +450,16 @@ def pares_de_normativa(texto: str, normas=None) -> list:
 # Una designacion explicita: rango + numero/año. Es la forma que NO admite dos
 # lecturas, y por eso es la que se busca cuando el trozo entero no resuelve.
 _RE_NORMA_EXPLICITA = re.compile(
-    r"\b(?:Ley\s+Org[aá]nica|Ley|Real\s+Decreto(?:-ley)?|RD|Reglamento|"
+    r"\b(?:Ley\s+Org[aá]nica|Ley|Real\s+Decreto(?:\s+Legislativo|-ley)?|RD|"
+    r"Reglamento|"
     r"Decreto|Orden|Directiva)\s+\d+/\d{2,4}", re.IGNORECASE)
+# El «Legislativo» va en el patron de arriba, en la alternativa del Real
+# Decreto. Sin el, «Real Decreto Legislativo 1/1993» NO se extraia, y eso
+# tumbaba la abreviatura entera en cuanto llevaba sigla delante: «RDLeg
+# 1/1993» a secas se resuelve por la cadena completa, pero «TRLITPAJD RDLeg
+# 1/1993» -que es como la DGT escribe SIEMPRE el ITPAJD- no tenia ninguna
+# candidata que resolviera. Por eso ITPAJD e ISD eran los peores del campo: sus
+# normas solo se nombran abreviadas.
 
 
 # LA ABREVIATURA DEL REAL DECRETO, QUE ERA LA MAYOR DEUDA DEL CAMPO.
