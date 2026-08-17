@@ -1,0 +1,15 @@
+{
+  "numero": "V0630-05",
+  "fecha": "15/04/2005",
+  "organo": "SG de Tributos",
+  "normativa": "Ley 58/2003, art. 135; R.D. 828/1995, arts. 120 y 121",
+  "cuestion_planteada": "Momento o plazo de que dispone el obligado tributario para proceder al nombramiento\n de un perito.\n\n Plazo en el que el perito del obligado tributario debe elaborar y presentar su valoración.",
+  "descripcion_hechos": "El consultante va a tener que valorar un bien inmueble a precio de mercado a efectos\n de una declaración del Impuesto sobre Sociedades. En caso de que posteriormente surgiesen\n discrepancias con la Administración por la valoración efectuada, podría plantearse\n una tasación pericial contradictoria.",
+  "contestacion": "La tasación pericial contradictoria se encuentra regulada en el artículo 135 de la\n Ley 58/2003, de 17 de diciembre, General Tributaria. Esta materia será objeto de una\n mayor regulación en el futuro desarrollo reglamentario del título III de dicha ley.\n\n Mientras no se apruebe dicha norma, la regulación reglamentaria más reciente de la\n cuestión es la prevista en los artículos 120 y 121 del Reglamento del Impuesto sobre\n Transmisiones Patrimoniales y Actos Jurídicos Documentados, aprobado por Real Decreto\n 828/1995, de 29 de mayo. \n\n De acuerdo con dicha regulación y siempre que no contravenga lo previsto en la Ley\n General Tributaria, si se solicitase la tasación pericial contradictoria la Administración\n concederá al obligado tributario un plazo de quince días para que nombre a un perito.\n\n Una vez designado, se entregará al perito del obligado una relación de los bienes\n y derechos a valorar para que en el plazo de quince días formule la hoja de aprecio,\n que deberá estar debidamente fundamentada.",
+  "doc_id": "22372",
+  "tab": "2",
+  "url_navegador": "https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V0630-05",
+  "descargado": "2026-08-15T09:50:05Z",
+  "sha256_crudo": "bb36b412a8b5361bba71412693a8b7fdfc4beecbea3cd3332db2afdfb658dbc0",
+  "crudo": "datos/dgt/crudo/V0630-05.html"
+}
