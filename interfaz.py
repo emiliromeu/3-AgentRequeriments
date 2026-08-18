@@ -490,6 +490,8 @@ class Ventana:
         self.avisos: "queue.Queue[tuple]" = queue.Queue()
         self.trabajando = False
         self.respuesta_actual = ""
+        self.traza_actual = ""
+        self.ejercicio_usado = None
         self.con_criterio = False
         self.ix = None
         self.grafo = None
@@ -968,14 +970,32 @@ class Ventana:
             font=self.fuente_rotulo, anchor="e")
         self.eco_expediente.grid(row=0, column=2, sticky="e", padx=(HUECO, 0))
 
+        # ESCRIBIRLO PARA EL CLIENTE. Nace apagado y solo se enciende cuando
+        # hay una respuesta ACEPTADA en pantalla: si la consulta acabo en no
+        # encontrado no hay nada que reescribir, y un boton encendido sobre
+        # nada es una promesa que no se puede cumplir.
+        #
+        # UNA SOLA FORMA, la que pidio el departamento. Empezar con tres
+        # -«resumelo», «alargalo», «para el cliente»- seria decidir por ellos
+        # que formas quieren antes de que lo hayan usado.
+        #
+        # El rotulo dice QUE HACE, no como funciona: quien lo lee no tiene por
+        # que saber que hay una segunda redaccion ni un verificador detras.
+        self.boton_cliente = ttk.Button(
+            barra_alta, text="Escribirlo para el cliente",
+            style="Discreto.TButton", command=self._escribir_para_cliente,
+            state="disabled")
+        self.boton_cliente.grid(row=0, column=3, sticky="e", padx=(0, AIRE))
+        self._pinchable(self.boton_cliente)
+
         self.boton_copiar = ttk.Button(barra_alta, text="Copiar respuesta",
                                        style="Discreto.TButton",
                                        command=self._copiar, state="disabled")
-        self.boton_copiar.grid(row=0, column=3, sticky="e")
+        self.boton_copiar.grid(row=0, column=4, sticky="e")
         self._pinchable(self.boton_copiar)
         self.copiado = tk.Label(barra_alta, text="", bg=PAPEL,
                                 fg=LILA, font=self.fuente_menuda)
-        self.copiado.grid(row=0, column=4, sticky="e", padx=(AIRE, 0))
+        self.copiado.grid(row=0, column=5, sticky="e", padx=(AIRE, 0))
 
         # --- lo que se lee ---
         #
@@ -2120,6 +2140,8 @@ class Ventana:
                     self._terminar(dato)
                 elif clase == "roto":
                     self._terminar_roto(dato)
+                elif clase == "cliente":
+                    self._llego_para_cliente(dato)
         except queue.Empty:
             pass
         self.raiz.after(80, self._vaciar_avisos)
@@ -2134,6 +2156,70 @@ class Ventana:
             self.boton_criterio.configure(text=BOTON_CRITERIO)
         self._revisar_boton()
 
+    def _escribir_para_cliente(self) -> None:
+        """La misma respuesta, escrita para mandarsela al cliente.
+
+        Va en un hilo porque es una llamada al modelo y la ventana no se puede
+        quedar congelada. Mientras tanto el boton se apaga: dos pulsaciones
+        seguidas serian dos llamadas para lo mismo.
+
+        SI EL VERIFICADOR LA RECHAZA NO ES UNA AVERIA, ES LA SALVAGUARDA
+        FUNCIONANDO, y tiene que leerse asi. La respuesta buena SIGUE EN
+        PANTALLA y no se ha perdido nada: lo unico que ha pasado es que la
+        version bonita cambiaba una cita, y por eso no se enseña. Un mensaje de
+        error aqui haria pensar que algo esta roto cuando lo que ha ocurrido es
+        justo lo que tiene que ocurrir.
+        """
+        import threading
+
+        if self.trabajando or not getattr(self, "traza_actual", ""):
+            return
+        self.trabajando = True
+        self.boton_cliente.configure(state="disabled",
+                                     text="Escribiendo...")
+        self.mostrar_cinta("Escribiendo la misma respuesta para el cliente. "
+                           "La de ahora no se pierde.")
+
+        def trabajar() -> None:
+            try:
+                r = fase4.otra_forma(self.traza_actual, self.ejercicio_usado,
+                                     self.motor, self.ix)
+            except Exception as e:               # noqa: BLE001
+                r = {"respuesta": "", "motivo": f"{type(e).__name__}: {e}",
+                     "veredicto": ""}
+            # POR LA COLA, NO POR `after`. Aqui habia `self.raiz.after(0, ...)`
+            # llamado DESDE EL HILO, y tkinter no lo admite: revienta con «main
+            # thread is not in main loop», el aviso nunca llega y el boton se
+            # queda en «Escribiendo...» para siempre. La reescritura si se
+            # hacia y se guardaba; lo que no volvia era la respuesta.
+            #
+            # La ventana ya tiene una cola para esto -`self.avisos`, que vacia
+            # el bucle principal cada 80 ms- y es por lo que existe. Se usa esa.
+            self.avisos.put(("cliente", r))
+
+        threading.Thread(target=trabajar, daemon=True).start()
+
+    def _llego_para_cliente(self, r: dict) -> None:
+        self.trabajando = False
+        self.boton_cliente.configure(text="Escribirlo para el cliente",
+                                     state="normal")
+        if r.get("respuesta"):
+            self.respuesta_actual = r["respuesta"]
+            self._escribir_texto([
+                ("Escrito para el cliente\n", "titulo"),
+                ("Misma respuesta y mismas citas, en otro tono. Comprobada "
+                 "igual que la anterior.\n\n", "apagado"),
+                (r["respuesta"], "cuerpo"),
+            ])
+            self.mostrar_cinta("Listo. «Copiar respuesta» se lleva esta.")
+            return
+
+        # RECHAZADA: la de antes sigue ahi, y se dice como lo que es.
+        self.mostrar_cinta(
+            "La versión para el cliente cambiaba una cita al reescribirla, "
+            "así que no se enseña. La respuesta que tienes delante sigue "
+            "siendo la buena y no se ha perdido nada.")
+
     def _sin_nada_que_copiar(self) -> None:
         """Deja el portapapeles fuera de juego. Se llama SIEMPRE que no hay
         texto verificado en pantalla.
@@ -2144,7 +2230,14 @@ class Ventana:
         alguien se acuerde de limpiar en otro sitio. Copiar es ensenar.
         """
         self.respuesta_actual = ""
+        self.traza_actual = ""
+        self.ejercicio_usado = None
         self.boton_copiar.configure(state="disabled")
+        # Y EL DE REESCRIBIR CON EL, porque dependen de lo mismo: que haya una
+        # respuesta aceptada delante. Si no hay que copiar, no hay que
+        # reescribir.
+        if getattr(self, "boton_cliente", None) is not None:
+            self.boton_cliente.configure(state="disabled")
         self.copiado.configure(text="")
 
     def _terminar_roto(self, frase: str) -> None:
@@ -2539,6 +2632,16 @@ class Ventana:
             self.respuesta_actual = res["respuesta"]
             self._escribir_respuesta(res["respuesta"], res)
             self.boton_copiar.configure(state="normal")
+            # La traza es lo unico que hace falta para reescribir: el material
+            # esta dentro. Se guarda aqui, con la respuesta aceptada delante.
+            self.traza_actual = res.get("traza") or ""
+            # EL EJERCICIO QUE SE USO, no el que haya ahora en la caja: el
+            # gestor puede haberlo cambiado mientras leia, y la reescritura
+            # tiene que verificarse contra la MISMA version de la ley que la
+            # respuesta que reescribe.
+            self.ejercicio_usado = res.get("ejercicio")
+            if self.traza_actual:
+                self.boton_cliente.configure(state="normal")
         else:
             self._sin_nada_que_copiar()
             self._escribir_sin_respaldo(res)

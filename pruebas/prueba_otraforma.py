@@ -215,6 +215,121 @@ else:
     finally:
         shutil.rmtree(d, ignore_errors=True)
 
+# ==================================== 5. EL BOTON DE LA VENTANA
+print("\n=== 5. EL BOTON: SOLO CON UNA RESPUESTA ACEPTADA DELANTE ===")
+print("  Si la consulta acabo en no encontrado no hay nada que reescribir, y")
+print("  un boton encendido sobre nada es una promesa que no se cumple.\n")
+
+import tkinter as tk                             # noqa: E402
+import time                                      # noqa: E402
+import interfaz                                  # noqa: E402
+
+
+def ventana():
+    raiz = tk.Tk()
+    raiz.withdraw()
+    v = interfaz.Ventana(raiz, "ensayo")
+    fin = time.time() + 3
+    while time.time() < fin:
+        raiz.update()
+        raiz.update_idletasks()
+        time.sleep(0.02)
+    return raiz, v
+
+
+raiz, v = ventana()
+try:
+    comprobar("el boton existe y se llama en cristiano",
+              "cliente" in str(v.boton_cliente.cget("text")).lower(),
+              v.boton_cliente.cget("text"))
+    comprobar("  y dice QUE HACE, no como funciona",
+              "reescrib" not in str(v.boton_cliente.cget("text")).lower()
+              and "verific" not in str(v.boton_cliente.cget("text")).lower(),
+              v.boton_cliente.cget("text"))
+    comprobar("nace apagado", str(v.boton_cliente.cget("state")) == "disabled")
+
+    # --- CON UNA RESPUESTA ACEPTADA: aparece
+    d = expediente_de_mentira()
+    try:
+        v._pintar(({"respuesta": "una respuesta cualquiera",
+                    "traza": str(d), "ejercicio": 2023, "estado": "claro"}
+                   if hasattr(v, "_pintar") else None))
+    except Exception:                            # noqa: BLE001
+        # Si la ventana no expone `_pintar`, se hace lo que hace ella.
+        v.respuesta_actual = "una respuesta cualquiera"
+        v.traza_actual = str(d)
+        v.ejercicio_usado = 2023
+        v.boton_copiar.configure(state="normal")
+        v.boton_cliente.configure(state="normal")
+    comprobar("con una respuesta aceptada, SE ENCIENDE",
+              str(v.boton_cliente.cget("state")) == "normal",
+              v.boton_cliente.cget("state"))
+
+    # --- LA REESCRITURA BUENA queda en el MISMO expediente
+    v.motor = motor_que_escribe(BIEN)
+    v.ix = ix
+    v.trabajando = False
+    v._escribir_para_cliente()
+    fin = time.time() + 3
+    while time.time() < fin and v.trabajando:
+        raiz.update()
+        time.sleep(0.02)
+    raiz.update()
+    comprobar("la reescritura queda en el MISMO expediente",
+              (d / "redaccion_para_cliente_1.txt").is_file(),
+              [f.name for f in d.iterdir()])
+    comprobar("  y se enseña en pantalla",
+              "cliente" in v.texto.get("1.0", "end").lower(),
+              v.texto.get("1.0", "end")[:60])
+    comprobar("  y el boton vuelve a su rotulo",
+              "Escribirlo" in str(v.boton_cliente.cget("text")),
+              v.boton_cliente.cget("text"))
+
+    # --- CON LA REESCRITURA RECHAZADA: se queda la de antes, y se dice
+    antes = v.texto.get("1.0", "end")
+    v.motor = motor_que_escribe(ROTA)
+    v.trabajando = False
+    v._escribir_para_cliente()
+    fin = time.time() + 3
+    while time.time() < fin and v.trabajando:
+        raiz.update()
+        time.sleep(0.02)
+    raiz.update()
+    comprobar("rechazada: el texto de antes SIGUE en pantalla",
+              v.texto.get("1.0", "end") == antes,
+              v.texto.get("1.0", "end")[:60])
+    cinta = str(v.aviso_motor.cget("text"))
+    comprobar("  y se dice que no se ha perdido nada",
+              "no se ha perdido" in cinta, cinta[:100])
+    comprobar("  SIN mensaje de averia: ha funcionado la salvaguarda",
+              not any(x in cinta.lower()
+                      for x in ("error", "fallo", "avería", "averia")),
+              cinta[:100])
+finally:
+    shutil.rmtree(d, ignore_errors=True)
+    raiz.destroy()
+
+# --- CON NO ENCONTRADO: no aparece
+raiz2, v2 = ventana()
+try:
+    v2._sin_nada_que_copiar()
+    comprobar("con no encontrado, el boton NO aparece encendido",
+              str(v2.boton_cliente.cget("state")) == "disabled",
+              v2.boton_cliente.cget("state"))
+    comprobar("  y se apaga junto al de copiar, que dependen de lo mismo",
+              str(v2.boton_copiar.cget("state")) == "disabled")
+finally:
+    raiz2.destroy()
+
+# --- UNA SOLA FORMA, la que se pidio
+FUENTE_I = (RAIZ / "interfaz.py").read_text("utf-8")
+# Se cuenta el BOTON, no las palabras: «resumelo» aparece en el comentario que
+# explica por que NO se hicieron tres opciones, y buscarla ahi hacia que la
+# prueba fallara por su propia explicacion.
+comprobar("hay UN solo boton de reescritura, no un menu de opciones",
+          FUENTE_I.count("boton_cliente = ttk.Button") == 1,
+          FUENTE_I.count("boton_cliente = ttk.Button"))
+
 print("\n" + "=" * 62)
 print(f"COMPROBACIONES: {len(fallos)} fallos")
 for f in fallos:
