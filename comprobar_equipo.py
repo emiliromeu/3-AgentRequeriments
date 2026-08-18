@@ -334,19 +334,22 @@ def ficha() -> None:
     print()
 
     # --- en que version esta el equipo
+    #
+    # LO LEE `agente_fiscal.version`, QUE ES EL MISMO QUE ESCRIBE LA TRAZA. Aqui
+    # estaba escrito a mano, y entonces la ficha y los expedientes podian decir
+    # cosas distintas del mismo equipo: dos lecturas del mismo dato es como se
+    # acaba discutiendo cual de las dos vale.
     commit = "(no es un repositorio git)"
     sucio = ""
     try:
-        r = subprocess.run(["git", "log", "-1", "--format=%h %ad %s",
-                            "--date=short"], cwd=str(RAIZ),
-                           capture_output=True, text=True, timeout=20)
-        if r.returncode == 0 and r.stdout.strip():
-            commit = r.stdout.strip()[:70]
-        r2 = subprocess.run(["git", "status", "--porcelain"], cwd=str(RAIZ),
-                            capture_output=True, text=True, timeout=20)
-        if r2.returncode == 0 and r2.stdout.strip():
-            n = len(r2.stdout.strip().splitlines())
-            sucio = f"  <-- {n} fichero(s) sin guardar: el pull pudo quedarse a medias"
+        sys.path.insert(0, str(RAIZ))
+        from agente_fiscal import version as _V
+        v = _V.actual()
+        if v.get("commit") != _V.DESCONOCIDA:
+            commit = f"{v['commit']} {v.get('fecha', '')[:10]} {v.get('asunto', '')}"[:70]
+        if v.get("sucio"):
+            sucio = (f"  <-- {v['sucio']} fichero(s) sin guardar: el pull pudo "
+                     f"quedarse a medias")
     except Exception:                            # noqa: BLE001
         pass
     print(f"  version   : {commit}{sucio}")

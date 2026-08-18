@@ -35,6 +35,8 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent
 sys.path.insert(0, str(RAIZ))
 
+from agente_fiscal import version as VER       # noqa: E402
+
 TRAZAS = RAIZ / "datos" / "trazas"
 ANCHO = 78
 
@@ -122,7 +124,7 @@ def clases_de(informe) -> list[str]:
         if "ninguna cita" in str(informe.get("motivo_global")) else [])
 
 
-def main() -> int:
+def main(desde: str = "") -> int:
     if not TRAZAS.is_dir():
         print("\n  No hay trazas. Nada que medir.")
         return 1
@@ -130,6 +132,28 @@ def main() -> int:
              if t]
     con_dos = [t for t in todas if len(t["informes"]) >= 2]
 
+    # DE CUANTAS VERSIONES DEL CODIGO ES LA MUESTRA. Va ANTES que cualquier
+    # media, porque si abarca cuatro versiones la media no describe ninguna.
+    print("=" * ANCHO)
+    print("0 · ¿DE QUE VERSION DEL CODIGO ES CADA CONSULTA?")
+    print("=" * ANCHO)
+    rep = VER.reparto([t["dir"] for t in con_dos])
+    for etiqueta, n in rep.items():
+        marca = ("   <- expedientes viejos: no lo guardaban. Se cuentan"
+                 " aparte, que es mas honesto que suponer"
+                 if etiqueta == VER.DESCONOCIDA else "")
+        print(f"  {n:>3}  {etiqueta}{marca}")
+    if len(rep) > 1:
+        print(f"\n  LA MUESTRA ABARCA {len(rep)} VERSIONES. Cualquier media de")
+        print("  aqui mezcla sistemas distintos. Con --desde <commit> se mira")
+        print("  solo de uno en adelante.")
+    if desde:
+        antes = len(con_dos)
+        con_dos = [t for t in con_dos
+                   if VER.de_expediente(t["dir"]).get("commit") == desde]
+        print(f"\n  FILTRADO por --desde {desde}: {len(con_dos)} de {antes}")
+
+    print()
     print("=" * ANCHO)
     print("1 · ¿CUANTAS LLEGAN AL SEGUNDO INTENTO, Y CUANTAS LO PASAN?")
     print("=" * ANCHO)
@@ -223,4 +247,9 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    import argparse
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--desde", default="",
+                    help="solo las trazas generadas con ese commit. Los "
+                         "expedientes viejos no lo guardan y quedan fuera.")
+    sys.exit(main(ap.parse_args().desde))

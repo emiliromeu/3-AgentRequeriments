@@ -4510,6 +4510,64 @@ cada vuelta contra `RED.SISTEMA` — tienen que ser idénticos.
   pregunta va dentro del material, así que el redactor ya lo sabe; no hay nada
   que decidir aparte.
 
+## Medir sobre un histórico mientras el código cambia
+
+**Describe un sistema que ya no existe.** Ha pasado tres veces, y las tres han
+costado lo mismo: un diagnóstico entero apuntando a algo ya arreglado.
+
+**1 · «320 artículos con criterio de 630», y luego 830.** Dos mediciones con el
+mismo numerador aparente y distinto denominador, porque entre una y otra había
+crecido la despensa. Un número que cambia de base entre dos mediciones es
+exactamente lo que hace tomar decisiones malas.
+
+**2 · Las cinco pruebas de ITPAJD en rojo imposible.** El banco las nombraba con
+el cuerpo `#0` —un artículo— cuando el material estaba en el `#1` —cincuenta y
+nueve—. Las expectativas describían un corpus anterior. Y la suite
+`prueba_normativa_dgt` tenía la misma constante mal: suite y código equivocados
+en la misma dirección durante meses.
+
+**3 · Las tres consultas que «no decían de qué norma es».** Fallaban las tres, y
+las tres volvían a fallar en el reintento. Parecía un defecto vivo y daba pie a
+rehacer media rama del sistema. Son de la noche del 5 de agosto, **antes de las
+23:19**, y a esa hora entró el commit que hace que la ficha diga el nombre del
+cuerpo en vez del título del BOE — el arreglo que las causaba. Se descubrió
+comparando a mano la hora de las carpetas con `git log`.
+
+### Lo que lo habría evitado, y ahora está puesto
+
+**Cada expediente guarda con qué versión se generó.** `version.json`, escrito al
+**crear** la traza y no al cerrarla: una consulta que revienta a la mitad también
+tiene que poder decir de qué versión es, porque si no, la única que falta es
+justo la de la consulta que reventó.
+
+Lleva el hash, la fecha y **cuántos ficheros había sin guardar**. Sin ese último
+dato, una traza generada con cambios locales encima diría ser de un commit que no
+contiene lo que de verdad corrió — y en mi Mac eso es casi siempre.
+
+**Las mediciones lo usan.** `medir_reintento.py`, `medir_no_encontrado.py` y
+`medir_hilo.py` imprimen de cuántas versiones es la muestra antes de cualquier
+media, porque si abarca cuatro versiones la media no describe ninguna de ellas.
+`medir_reintento.py` además filtra: `--desde <commit>`.
+
+**Los expedientes viejos no lo llevan, y no pasa nada.** Cuentan como *versión
+desconocida*, en su propia fila. Suponer que son de la versión de hoy es
+exactamente el error que esto viene a impedir. Un `version.json` ilegible también
+cuenta como desconocida, no como un error.
+
+**Y no puede tumbar una consulta.** Sin git, con git lento o con el repositorio a
+medias, se apunta «desconocida» y se sigue. Un expediente sin versión es malo; un
+expediente que no existe porque git tardó veinte segundos es mucho peor.
+
+**Una sola implementación.** La lectura del commit ya estaba escrita a mano
+dentro de `comprobar_equipo`; ahora hay una en `agente_fiscal/version.py` y la
+usan la ficha del equipo y las tres mediciones. La suite comprueba que no queda
+ninguna lectura suelta — es la séptima vez que un arreglo se queda a medias por
+vivir en un solo sitio.
+
+Los tres controles negativos están en `pruebas/prueba_version.py`: si la traza
+deja de escribirla, si los viejos se suponen de hoy, o si el fallo de git deja de
+estar envuelto, la suite se cae.
+
 ## La rama del verificador: lo que se midió, y por qué no se toca
 
 La otra forma de acabar sin respuesta —el verificador rechazó— se dejó fuera de

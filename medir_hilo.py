@@ -48,6 +48,8 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent
 sys.path.insert(0, str(RAIZ))
 
+from agente_fiscal import version as VER       # noqa: E402
+
 TRAZAS = RAIZ / "datos" / "trazas"
 # Dos consultas de la misma sesion. Quince minutos: mas que eso ya es otra cosa
 # que se pregunta, no la misma reescrita.
@@ -162,6 +164,9 @@ def main() -> int:
         print("  cuando el departamento lleve unas semanas usandolo.")
         return 0
     print(f"  de {filas[0]['cuando']:%d/%m} a {filas[-1]['cuando']:%d/%m}")
+    rep = VER.reparto([f["dir"] for f in filas])
+    print(f"  y de {len(rep)} version(es) del codigo: "
+          + ", ".join(f"{n}x {e}" for e, n in rep.items()))
 
     seguidos = reformulaciones = 0
     tras_sin_criterio = 0

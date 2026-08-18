@@ -45,6 +45,7 @@ RAIZ = Path(__file__).resolve().parent
 sys.path.insert(0, str(RAIZ))
 
 from agente_fiscal import modelo as MOD          # noqa: E402
+from agente_fiscal import version as VER         # noqa: E402
 
 TRAZAS = RAIZ / "datos" / "trazas"
 ANCHO = 78
@@ -129,6 +130,14 @@ def main() -> int:
     print(f"  consultas hechas con el modelo de verdad : {len(todas)}")
     if not todas:
         return 1
+    # DE CUANTAS VERSIONES DEL CODIGO. Va antes que ninguna media: si la
+    # muestra abarca varias, la media no describe ninguna de ellas.
+    rep = VER.reparto([t["dir"] for t in todas])
+    print(f"  y son de {len(rep)} version(es) del codigo:")
+    for etiqueta, n in rep.items():
+        cola = ("  <- expedientes viejos, no lo guardaban; aparte, que es mas "
+                "honesto que suponer" if etiqueta == VER.DESCONOCIDA else "")
+        print(f"     {n:>3}  {etiqueta}{cola}")
 
     por_estado = defaultdict(list)
     for t in todas:

@@ -71,6 +71,19 @@ class Traza:
         # aqui, en el expediente, y no deducirse.
         self.seleccion: dict | None = None
         self.escribir("pregunta.txt", pregunta)
+        # CON QUE VERSION DEL CODIGO SE GENERO ESTO, y se escribe AQUI, lo
+        # primero, no al cerrar: un expediente que se queda a medias tambien
+        # tiene que poder decir de que version es. Si no, la unica traza que
+        # falta es justo la de la consulta que reviento.
+        #
+        # Ver `version.py`: esto existe porque tres consultas parecian un
+        # defecto vivo y eran anteriores al arreglo que las causaba, y hubo que
+        # descubrirlo comparando horas de carpetas con `git log` a mano.
+        try:
+            from . import version as _V
+            self.json("version.json", _V.actual())
+        except Exception:                        # noqa: BLE001
+            pass          # nunca puede tumbar una consulta por no saber el hash
 
     # --------------------------------------------------------------- basico
 
