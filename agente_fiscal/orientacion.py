@@ -80,9 +80,13 @@ se pregunta. Tu trabajo AHORA NO ES CONTESTAR LA PREGUNTA. Es orientar.
 ESCRIBE TRES COSAS, EN ESTE ORDEN:
 
 1. QUE SE HA ENCONTRADO Y POR QUE NO BASTA.
-   Di que preceptos han salido y de que tratan, CITANDOLOS como siempre
-   -fragmento literal entrecomillado, articulo y norma-, y explica por que no
-   resuelven este caso concreto.
+   LOS DOS PRECEPTOS MAS CERCANOS A LO QUE SE PREGUNTA, NO TODOS. Citalos como
+   siempre -fragmento literal entrecomillado, articulo y norma- y di por que no
+   resuelven este caso. Los demas, si acaso, en una linea y sin citarlos.
+
+   Explicar cinco preceptos que no valen es un recorrido por lo que no sirve, y
+   lo que hace falta esta en los puntos 2 y 3. Si ninguno de los recuperados se
+   acerca, dilo en una frase y pasa al 2.
 
 2. DONDE VIVE LA RESPUESTA, SIN DECIR CUAL ES.
    De que impuesto o de que norma parece ser la pregunta; de que dato depende;
@@ -116,6 +120,9 @@ Prohibido, aunque lo sepas y aunque sea verdad:
 Lo que escribas se comprueba entero, igual que una respuesta. Una orientacion
 con una cifra puesta de memoria no se enseña: se tira y quien pregunta se queda
 sin nada. Mas vale corta y util que larga y con una cifra inventada.
+
+Y CORTA DE VERDAD: el trabajo esta en el 2 y en el 3. El 1 es para que se vea
+que se ha mirado, no para repasar el corpus.
 """
 
 # ------------------------------------------------------- el tercer candado

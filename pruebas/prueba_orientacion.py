@@ -122,6 +122,11 @@ comprobar("prohibe un articulo que no venga del material",
 comprobar("pide las TRES cosas", "que se ha encontrado" in prompt
           and "donde vive la respuesta" in prompt
           and "que dato falta" in prompt)
+# EL PUNTO 1 ACOTADO. Medido: la orientacion ocupaba el 81% de una respuesta
+# completa, y la longitud venia de recorrer cuatro preceptos con su cita cada
+# uno. Explicar lo que no vale no es el trabajo; el trabajo esta en el 2 y el 3.
+comprobar("y el punto 1 pide SOLO los dos mas cercanos, no todos",
+          "los dos preceptos mas cercanos" in prompt and "no todos" in prompt)
 comprobar("y NO relaja las reglas de citacion: se añade al sistema de siempre",
           OR.ORIENTAR.strip() not in RED.SISTEMA
           and "fragmento literal" in prompt)
