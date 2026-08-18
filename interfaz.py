@@ -1813,6 +1813,36 @@ class Ventana:
     # ------------------------------------------------------------ arranque
 
     def _arrancar_motor(self) -> None:
+        """Carga corpus y motor, y PASE LO QUE PASE lo dice.
+
+        Envuelve a `_arrancar` entero. Lo de dentro ya explicaba sus fallos
+        conocidos -corpus, credencial, tkinter-, pero cualquier OTRA excepcion
+        salia por `raiz.after`, Tk imprimia la traza y la ventana se quedaba
+        abierta, con los dos botones grises y sin una palabra.
+
+        Y EN WINDOWS NI LA TRAZA: se abre con `pythonw.exe`, que no tiene
+        consola ni stderr. Por eso el mismo fallo se veia en el Mac -en la
+        terminal- y era invisible en la oficina. La asimetria no estaba en el
+        codigo: estaba en quien podia leer el error.
+        """
+        try:
+            self._arrancar()
+        except Exception as e:                   # noqa: BLE001
+            self._bloquear(
+                "El agente no ha podido prepararse. Haz doble clic en "
+                "«comprobar_equipo» y enséñale a Emili lo que salga.",
+                f"{type(e).__name__}: {e}")
+            # Y AL DISCO, que es lo unico que se puede leer despues cuando la
+            # ventana se abre sin consola.
+            try:
+                import traceback
+                fallo = RAIZ / "datos" / "arranque_fallido.txt"
+                fallo.parent.mkdir(parents=True, exist_ok=True)
+                fallo.write_text(traceback.format_exc(), encoding="utf-8")
+            except Exception:                    # noqa: BLE001
+                pass
+
+    def _arrancar(self) -> None:
         """Carga corpus y motor. Si falla, se dice en cristiano y se bloquea."""
         self._escribir_texto([("Cargando la ley y el reglamento...\n", "apagado")])
         try:
@@ -1919,6 +1949,12 @@ class Ventana:
     def _bloquear(self, frase: str, detalle_tecnico: str = "") -> None:
         """Deja la ventana inservible pero explicada. Nunca con una traza."""
         self.boton.configure(state="disabled")
+        # LOS DOS BOTONES, NO UNO. Aqui solo se apagaba el primero: el de
+        # criterio se quedaba encendido sobre un motor que no existe, asi que
+        # la ventana decia «no se puede consultar» y a la vez ofrecia un boton
+        # que se podia pulsar. Se apagan juntos porque juntos se encienden.
+        if getattr(self, "boton_criterio", None) is not None:
+            self.boton_criterio.configure(state="disabled")
         self._pintar_estado("NO SE PUEDE CONSULTAR", frase,
                             EST.NO_ENCONTRADO)
         self._escribir_texto([(frase + "\n", "titulo")])
@@ -1934,7 +1970,26 @@ class Ventana:
         Los dos van juntos: si se puede consultar, se puede con cualquiera de
         los dos. Cual se pulsa es del que pregunta.
         """
-        if self.trabajando or self.motor is None:
+        if self.trabajando:
+            return
+        if self.motor is None:
+            # UN BOTON GRIS SIN EXPLICACION ES EL PEOR MENSAJE POSIBLE: quien
+            # lo mira no sabe si ha hecho algo mal o si la herramienta esta
+            # rota, y no tiene nada que hacer.
+            #
+            # Aqui se volvia en silencio, asi que si el arranque no llegaba a
+            # dejar motor -por lo que fuera- la ventana se quedaba con los dos
+            # botones apagados y sin una palabra. En Mac se veia la causa en la
+            # terminal; en Windows se abre con `pythonw.exe`, QUE NO TIENE
+            # CONSOLA NI stderr, asi que no se veia en ningun sitio. El mismo
+            # fallo, mudo en un sistema y explicado en el otro.
+            self._pintar_estado(
+                "NO SE PUEDE CONSULTAR",
+                "El agente no ha terminado de prepararse.", EST.NO_ENCONTRADO)
+            self.mostrar_cinta(
+                "Los botones están apagados porque el agente no ha podido "
+                "prepararse. Haz doble clic en «comprobar_equipo» y enséñale "
+                "a Emili lo que salga.")
             return
         duda = self.caja.get("1.0", "end").strip()
         # LA REGLA DEL AÑO, UNA SOLA VEZ. Aqui habia una TERCERA copia escrita

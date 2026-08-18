@@ -316,8 +316,109 @@ COMPROBACIONES = [
 ]
 
 
+def ficha() -> None:
+    """LA FICHA DEL EQUIPO, DE UN VISTAZO Y PARA COPIAR ENTERA.
+
+    Se imprime SIEMPRE, salga bien o mal la comprobacion, y ANTES de los
+    pasos: si algo revienta a la mitad, la ficha ya esta escrita.
+
+    Es lo que hay que poder pegar en un mensaje cuando alguien dice «los
+    botones salen en gris». Sin esto, la conversacion son cuatro idas y
+    vueltas preguntando en que commit esta el equipo.
+
+    Todo en ASCII y sin salir a la red: la credencial se MIRA, no se usa.
+    """
+    import subprocess
+
+    barra("FICHA DE ESTE EQUIPO")
+    print()
+
+    # --- en que version esta el equipo
+    commit = "(no es un repositorio git)"
+    sucio = ""
+    try:
+        r = subprocess.run(["git", "log", "-1", "--format=%h %ad %s",
+                            "--date=short"], cwd=str(RAIZ),
+                           capture_output=True, text=True, timeout=20)
+        if r.returncode == 0 and r.stdout.strip():
+            commit = r.stdout.strip()[:70]
+        r2 = subprocess.run(["git", "status", "--porcelain"], cwd=str(RAIZ),
+                            capture_output=True, text=True, timeout=20)
+        if r2.returncode == 0 and r2.stdout.strip():
+            n = len(r2.stdout.strip().splitlines())
+            sucio = f"  <-- {n} fichero(s) sin guardar: el pull pudo quedarse a medias"
+    except Exception:                            # noqa: BLE001
+        pass
+    print(f"  version   : {commit}{sucio}")
+
+    # --- normas y sellos
+    normas = sellos = "?"
+    try:
+        sys.path.insert(0, str(RAIZ))
+        import json
+        f = RAIZ / "datos" / "corpus" / "sellos.json"
+        if f.is_file():
+            normas = str(len({k.split("#")[0] for k in
+                              json.loads(f.read_text(encoding="utf-8"))}))
+        else:
+            normas = "0 (no hay sellos.json)"
+        import instalar
+        problemas = instalar.corpus_no_cuadra()
+        sellos = "cuadran" if not problemas else f"NO CUADRAN ({len(problemas)})"
+    except Exception as e:                       # noqa: BLE001
+        sellos = f"no se han podido mirar ({type(e).__name__})"
+    print(f"  normas    : {normas}")
+    print(f"  sellos    : {sellos}")
+
+    # --- credencial: se mira, no se usa
+    # SE PREGUNTA AL PASO 4, NO SE VUELVE A ESCRIBIR. La primera version de
+    # esta linea llevaba su propia lectura del .env -partir por «=» y mirar que
+    # empezara por «sk-»- y decia que la credencial no valia mientras el paso 4
+    # decia que si: no toleraba las comillas que el paso 4 si quita. Dos
+    # lecturas del mismo fichero que se contradicen en la misma pantalla es
+    # peor que no tener ninguna.
+    try:
+        cred = "correcta " + paso_4_credencial()
+    except Falta as f:
+        cred = "NO VALE - " + f.que_pasa
+    except Exception as e:                       # noqa: BLE001
+        cred = f"no se ha podido mirar ({type(e).__name__})"
+    print(f"  credencial: {cred}")
+    print("              (se mira, NO se usa: esta ficha no gasta nada)")
+
+    # --- POR QUE ESTA EL BOTON APAGADO, que es la pregunta de verdad
+    motivo = "no se ha podido saber"
+    try:
+        import instalar
+        pendiente = instalar.que_falta()
+        if pendiente:
+            motivo = "falta " + ", ".join(pendiente) + " (lo dice el instalador)"
+        else:
+            import fase4
+            _motor, err = fase4.preparar_motor("anthropic", silencioso=True)
+            motivo = ("el motor arranca: el boton NO deberia estar apagado"
+                      if _motor is not None else f"el motor no arranca: {err}")
+    except Exception as e:                       # noqa: BLE001
+        motivo = f"{type(e).__name__}: {e}"
+    print()
+    print("  POR QUE EL BOTON PODRIA ESTAR APAGADO:")
+    for linea in envolver(str(motivo)[:400], sangria="    ").splitlines():
+        print(linea)
+
+    # --- y el ultimo arranque fallido, si lo hubo
+    fallo = RAIZ / "datos" / "arranque_fallido.txt"
+    if fallo.is_file():
+        print()
+        print("  ULTIMO ARRANQUE QUE FALLO (esto es lo que hay que enviar):")
+        for linea in fallo.read_text(encoding="utf-8",
+                                     errors="replace").splitlines()[-12:]:
+            print("    " + linea[:110])
+    print()
+
+
 def main() -> int:
     print()
+    ficha()
     barra("COMPROBACION DEL EQUIPO")
     print()
     print(envolver("Se mira que este todo lo que el agente necesita para "
