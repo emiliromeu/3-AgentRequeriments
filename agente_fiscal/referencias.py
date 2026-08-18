@@ -104,12 +104,12 @@ _RE_ANEXO = re.compile(
 # QUEDAN CINCO, Y NINGUNA ES UN NUMERO COMPUESTO. Se miraron una a una, porque
 # dar por hecho que eran «mas de lo mismo» es como se etiqueta por parecido:
 #
-#   3 · «articulo 7.2 RD646/20», en el anexo de tarifas de residuos. Es la
+        #   3 · «articulo 7.2 RD646/20», en el anexo de tarifas de residuos. Es la
 #       MISMA cita repetida tres veces en una tabla, y apunta a un real decreto
 #       de residuos que no es tributario ni esta en el corpus.
-#   1 · «articulo 2» a secas, en el 631-34, para definir el grupo II de
+        #   1 · «articulo 2» a secas, en el 631-34, para definir el grupo II de
 #       parentesco. Sin norma al lado: no hay forma de saber de cual es.
-#   1 · «articulo 12 del Real decreto 1629/1991», el Reglamento del ISD, QUE SI
+        #   1 · «articulo 12 del Real decreto 1629/1991», el Reglamento del ISD, QUE SI
 #       TENEMOS. Esta falla por otra cosa: la designacion resuelve al cuerpo #0
 #       -el decreto que aprueba, tres articulos- y el 12 vive en el #1. Es
 #       EXACTAMENTE el defecto que `dgt.py` corrige con `cuerpo_hermano_con`, y
@@ -887,6 +887,49 @@ class GrafoRemisiones:
             )
 
         clave = self.articulos.get(cuerpo_destino, {}).get(B.normalizar(numero))
+
+        # LA COMPROBACION DE EXISTENCIA, LA MISMA QUE USA EL CAMPO DE LA DGT.
+        #
+        # Un documento del BOE puede traer dos articulados: el del Real Decreto
+        # que aprueba -uno o seis articulos- y el del Reglamento aprobado
+        # -ciento y pico-. El texto cita «el articulo 22 del Real Decreto
+        # 439/2007», la designacion resuelve limpiamente al DECRETO y el 22
+        # vive en el Reglamento.
+        #
+        # NO SE DUPLICA LA REGLA: `cuerpo_hermano_con` vive en `normas.py` y es
+        # la unica implementacion que hay. Lo que faltaba no era la regla, era
+        # el segundo consumidor. Las condiciones de contencion -solo entre
+        # cuerpos del MISMO documento, si ninguno lo tiene no se toca, si lo
+        # tienen varios tampoco- vienen dentro de esa funcion y no se repiten
+        # aqui: repetirlas seria empezar a tener dos versiones.
+        #
+        # Y CON ESTO EL PATRON DE LOS DOS CUERPOS QUEDA AGOTADO. De 115 no
+        # encontradas se pasa a 59, y las que quedan estan REPARTIDAS, sin
+        # concentracion: la mayor es de 8. No queda una causa comun que
+        # perseguir, asi que quien mire esa lista buscando otro arreglo de un
+        # golpe va a perder el tiempo. El reparto el 18/08/2026 era:
+        #     8  Ley 35/2006
+        #     6  Real Decreto 1624/1992
+        #     6  Real Decreto 439/2007
+        #     6  Ley 27/2014
+        #     5  Reglamento General de Recaudación
+        #     4  Reglamento general del régimen sancionador tributari
+        #     4  Real Decreto 1065/2007
+        #     4  Reglamento del Impuesto sobre la Renta de las Person
+        #
+        # AQUI NO HAY DEFECTO SILENCIOSO QUE CORREGIR, al reves que en la DGT.
+        # El grafo busca el articulo DENTRO del inventario del cuerpo, asi que
+        # una remision resuelta nunca apunta a un articulo que no existe: lo
+        # que se gana es lo que hoy queda en «no encontrada», no citas malas
+        # que estuvieran pasando por buenas. Medido: 0 mal resueltas antes y
+        # despues.
+        if not clave and self.normas is not None:
+            hermano = self.normas.cuerpo_hermano_con(cuerpo_destino, numero)
+            if hermano:
+                clave = self.articulos.get(hermano, {}).get(B.normalizar(numero))
+                if clave:
+                    cuerpo_destino = hermano
+
         if clave:
             doc = self.por_clave[clave]
             cuerpo = self.normas.por_clave(cuerpo_destino)
