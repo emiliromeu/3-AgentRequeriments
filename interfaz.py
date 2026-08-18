@@ -1377,6 +1377,20 @@ class Ventana:
         """
         import threading
 
+        # EN MODO ENSAYO NO SE SALE A LA FUENTE, y esto no es una comodidad
+        # para las pruebas: es la misma regla de siempre. En ensayo nada es
+        # real -las respuestas las fabrica una regla fija- asi que pedirle
+        # consultas a un servicio publico es gastar peticiones de otro por algo
+        # que no se va a usar.
+        #
+        # Se descubrio porque las suites de la ventana crean Ventanas de
+        # verdad, y CADA UNA vaciaba la cola: dos busquedas reales a PETETE en
+        # una pasada de pruebas. La regla del proyecto es que la suite va
+        # contra dobles y no toca la fuente, y esto se la saltaba por la
+        # espalda.
+        if not getattr(self.motor, "es_modelo_real", False):
+            return
+
         def trabajar() -> None:
             try:
                 from agente_fiscal import cola as _COLA
@@ -2438,6 +2452,20 @@ class Ventana:
             # respuestas peores en silencio. Quien venga aqui a preguntarse
             # «¿esto lo tiene?» tiene que poder ver que si, y que se ha
             # comprobado, no que se supone. Ver `sellos`.
+            # EL ESTADO DE LA COLA, sin barra de progreso. La cola avanza a
+            # saltos, por detras y solo al abrir: una barra sugiere que algo se
+            # mueve ahora y que se puede esperar, y las dos cosas son falsas.
+            try:
+                from agente_fiscal import cola as _COLA
+                frase_cola = _COLA.frase_de_estado()
+                if frase_cola:
+                    tk.Label(c, text="·  " + frase_cola, bg=PAPEL2, fg=TINTA,
+                             font=self.fuente_menuda, anchor="w",
+                             justify="left", wraplength=560, padx=RELLENO,
+                             ).pack(fill="x", pady=(HUECO2 - 4, 0))
+            except Exception:                    # noqa: BLE001
+                pass
+
             from agente_fiscal import sellos as _S
             est = _S.estado(self.ix.rutas)
             tk.Label(c, text=("✓  " if not est["problemas"] and est["sellado"]
@@ -2773,6 +2801,33 @@ class Ventana:
                      "parcial y esta duda aún no está dentro.")
             detalle = ""
             color = TINTA2
+
+            # «TODAVIA NO» EN VEZ DE «NO LO TENGO».
+            #
+            # El departamento dijo que a la segunda consulta ya no encuentra
+            # criterio. La cola YA lo apuntaba y YA lo bajaba, pero desde aqui
+            # no se veia: la frase de arriba se lee como «esto no lo sabe»
+            # cuando la verdad es «esto lo esta buscando». Es la diferencia
+            # entre una herramienta corta y una que crece, y estaba ocurriendo
+            # sin que nadie pudiera verlo.
+            #
+            # SIN PROMETER UNA HORA. La cola avanza al abrir el agente, asi que
+            # decir «mañana» seria inventarse un plazo que depende de cuando
+            # vuelvan a abrirlo.
+            try:
+                from agente_fiscal import cola as _COLA
+                apuntados = _COLA.apuntados_de(
+                    [(x["cuerpo"], x["articulo"])
+                     for x in (res.get("apuntados_en_cola") or [])])
+                if apuntados:
+                    texto += ("\n\nYa está apuntado para buscarlo: "
+                              + ("el artículo " if len(apuntados) == 1
+                                 else "los artículos ")
+                              + ", ".join(apuntados[:6])
+                              + ". Vuelve a preguntar esto más adelante y, si "
+                                "la fuente tiene algo, estará aquí.")
+            except Exception:                    # noqa: BLE001
+                pass
 
         et = tk.Label(self.panel_aporte, text=texto, bg=PAPEL2, fg=color,
                       font=self.fuente, anchor="w", justify="left",

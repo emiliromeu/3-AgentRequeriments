@@ -343,3 +343,68 @@ def vaciar(tope: int = 3, pausa: float = 10.0, progreso=None) -> dict:
     except Exception as exc:                     # noqa: BLE001
         salida["corte"] = f"{type(exc).__name__}: {str(exc)[:90]}"
     return salida
+
+
+def apuntados_de(preceptos) -> list:
+    """De `[(cuerpo, articulo)]`, los que estan en la cola esperando turno.
+
+    Es lo que convierte «no lo tengo» en «todavia no lo tengo». La cola ya
+    apuntaba y ya bajaba, pero desde la ventana no se veia, asi que a la
+    segunda consulta sin criterio la lectura era «esto no lo sabe» cuando la
+    verdad era «esto lo esta buscando».
+
+    NUNCA LEVANTA: se llama al pintar una respuesta.
+    """
+    try:
+        d = leer()
+        fuera = []
+        for cuerpo, articulo in preceptos or []:
+            e = d["entradas"].get(clave(cuerpo, articulo))
+            if e is not None and _toca_reintentar(e):
+                fuera.append(e["articulo"])
+        return fuera
+    except Exception:                            # noqa: BLE001
+        return []
+
+
+def resumen() -> dict:
+    """El estado de la cola, para enseñarlo. Nunca levanta.
+
+    SIN BARRA DE PROGRESO, y es deliberado: la cola avanza a saltos, por
+    detras y solo al abrir el agente. Una barra sugiere que algo se mueve
+    ahora mismo y que se puede esperar a que llegue, y las dos cosas son
+    falsas. Un estado honesto -cuantos faltan, cuantos entraron y cuando- dice
+    mas y no promete nada.
+    """
+    try:
+        d = leer()
+        pend = [e for e in d["entradas"].values() if _toca_reintentar(e)]
+        ult = recien_bajado()
+        return {"en_cola": len(pend),
+                "ultima_vez_articulos": ult["articulos"],
+                "ultima_vez_consultas": ult["consultas"],
+                "cuando": ult["cuando"],
+                "sin_bajar": dias_sin_bajar()}
+    except Exception:                            # noqa: BLE001
+        return {"en_cola": 0, "ultima_vez_articulos": 0,
+                "ultima_vez_consultas": 0, "cuando": "", "sin_bajar": None}
+
+
+def frase_de_estado() -> str:
+    """Una linea para «Que hay dentro». Vacia si no hay nada que contar."""
+    r = resumen()
+    if not r["en_cola"] and not r["ultima_vez_articulos"]:
+        return ""
+    trozos = []
+    if r["en_cola"]:
+        trozos.append(f"{r['en_cola']} artículo(s) apuntados, buscando criterio")
+    if r["ultima_vez_articulos"]:
+        cuando = r["cuando"]
+        try:
+            cuando = date.fromisoformat(cuando).strftime("%d/%m")
+        except ValueError:
+            pass
+        trozos.append(f"la última vez ({cuando}) entraron "
+                      f"{r['ultima_vez_consultas']} consulta(s) sobre "
+                      f"{r['ultima_vez_articulos']} artículo(s)")
+    return ". ".join(trozos) + "."

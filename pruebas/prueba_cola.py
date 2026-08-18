@@ -226,6 +226,54 @@ finally:
     shutil.rmtree(d, ignore_errors=True)
     C.COLA, C.DEMANDA = guardado
 
+# ==================================== 5. «TODAVIA NO» EN VEZ DE «NO LO TENGO»
+print("\n=== 5. QUE SE VEA QUE SE ESTA BUSCANDO ===")
+print("  La cola ya apuntaba y ya bajaba, pero desde la ventana no se veia:")
+print("  la respuesta se leia como «esto no lo sabe» cuando la verdad era")
+print("  «esto lo esta buscando».\n")
+
+guardado = (C.COLA, C.DEMANDA)
+d = cola_de_mentira()
+try:
+    C.apuntar([("BOE-A-1992-28740#0", "80")])
+    comprobar("un articulo apuntado se reconoce como «se esta buscando»",
+              C.apuntados_de([("BOE-A-1992-28740#0", "80")]) == ["80"],
+              C.apuntados_de([("BOE-A-1992-28740#0", "80")]))
+    comprobar("  y uno que no se apunto, no",
+              C.apuntados_de([("BOE-A-1992-28740#0", "999")]) == [])
+
+    # Y LA HONESTIDAD DEL MENSAJE: si ya se busco y no habia, NO se dice que se
+    # esta buscando. Seria mentir para quedar bien.
+    C.marcar("BOE-A-1992-28740#0", "80", C.SIN_RESULTADOS)
+    comprobar("si ya se busco y NO habia, no se dice que se esta buscando",
+              C.apuntados_de([("BOE-A-1992-28740#0", "80")]) == [],
+              C.apuntados_de([("BOE-A-1992-28740#0", "80")]))
+
+    # EL ESTADO, sin barra de progreso.
+    C.apuntar([("BOE-A-1992-28740#0", "91")])
+    C.marcar("BOE-A-1992-28740#0", "91", C.BAJADA, bajadas=4)
+    C.apuntar([("BOE-A-1992-28740#0", "95")])
+    r = C.resumen()
+    comprobar("el estado dice cuantos quedan en cola", r["en_cola"] == 1, r)
+    comprobar("  cuantos entraron la ultima vez",
+              r["ultima_vez_consultas"] == 4, r)
+    comprobar("  y cuando", bool(r["cuando"]), r)
+    frase = C.frase_de_estado()
+    print(f"    «{frase}»")
+    comprobar("la frase se puede leer de un vistazo", bool(frase), frase)
+finally:
+    shutil.rmtree(d, ignore_errors=True)
+    C.COLA, C.DEMANDA = guardado
+
+comprobar("NO hay barra de progreso de la cola: avanza a saltos y por detras",
+          "barra" not in INTERFAZ.split("_vaciar_cola_por_detras")[1][:900].lower())
+comprobar("y en modo ENSAYO la ventana NO sale a la fuente",
+          'if not getattr(self.motor, "es_modelo_real", False):' in INTERFAZ)
+
+FASE4b = (RAIZ / "fase4.py").read_text("utf-8")
+comprobar("`fase4` dice QUE apunto, para que la ventana no lo recalcule",
+          'res["apuntados_en_cola"]' in FASE4b)
+
 print("\n" + "=" * 62)
 print(f"COMPROBACIONES: {len(fallos)} fallos")
 for f in fallos:

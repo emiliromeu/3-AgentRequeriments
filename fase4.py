@@ -633,7 +633,14 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
                    if (r.get("cuerpo_clave", ""),
                        r["referencia"].replace("Articulo ", "").strip().lower())
                    not in _con_criterio]
-        _COLA.apuntar([(c, a) for c, a in _faltan if c and a and a[0].isdigit()])
+        _apuntados = [(c, a) for c, a in _faltan if c and a and a[0].isdigit()]
+        _COLA.apuntar(_apuntados)
+        # QUE SE HA APUNTADO, para que la ventana pueda decir «todavia no» en
+        # vez de «no lo tengo». Se guarda AQUI y no se recalcula en la ventana:
+        # recalcularlo seria una segunda version de la misma cuenta, y las dos
+        # se descuadrarian en cuanto una cambiara.
+        res["apuntados_en_cola"] = [{"cuerpo": c, "articulo": a}
+                                    for c, a in _apuntados]
     except Exception:                            # noqa: BLE001
         pass
     res["preceptos_descartados"] = [d["referencia"] for d in seleccion.descartados]
