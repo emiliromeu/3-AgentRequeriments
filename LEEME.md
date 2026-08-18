@@ -4444,6 +4444,41 @@ Y lleva su control negativo: con `empezar_consulta` doblado para que no
 reinicie, **las vueltas 4, 5 y 6 se caen**. Sin eso, la prueba sería verde por
 casualidad.
 
+### Y con el modelo de verdad
+
+Todo lo anterior se construyó con el motor de ensayo, que redacta con reglas
+fijas. Eso prueba el andamiaje y **no prueba** lo único que un motor de reglas no
+puede tener: si el modelo *entiende* que la pregunta viene de otra.
+`medir_hilo_real.py` lo mide (por defecto no gasta; con `--con-modelo` sí).
+
+Dos vueltas: un turismo usado por un comercial, y luego **«¿y si fuera una
+furgoneta de reparto?»**.
+
+| | vuelta 1 | vuelta 2 |
+|---|---|---|
+| impuesto / ejercicio | IVA / 2023 | IVA / 2023 |
+| preceptos enviados | 95, 101, 9 | 95 |
+| veredicto | ACEPTADO | ACEPTADO |
+
+**Clasifica bien con la pregunta en dos partes.** Mismo impuesto y mismo
+ejercicio, sin que la línea añadida lo despiste.
+
+**Los términos recogen el contexto**, no lo repiten. Aparece
+`vehiculo mixto transporte de mercancias`, que en la vuelta 1 no existía;
+`representante o agente comercial` se mantiene, que es lo que debe mantenerse.
+
+**La respuesta se sostiene sola.** Ni un «como se dijo antes». La vuelta 2
+vuelve a resolver el turismo *y* añade la furgoneta, con sus citas propias — que
+es lo que tiene que hacer, porque en pantalla sólo está la última.
+
+**Y el resumen de la duda anterior basta.** Se le pasó *«Se pregunta en qué
+porcentaje puede deducirse el IVA soportado en la adquisición de un turismo
+utilizado por un comercial…»* y entendió *«…y si la respuesta cambia tratándose
+de una furgoneta de reparto de mercancías»*. El material **cambió**: de tres
+preceptos a uno, el 95, que es donde están las dos reglas.
+
+Coste real de la pasada: 4 llamadas, **$0,247 · 0,23 €**.
+
 ### La frontera, que no se afloja porque el formato sea más suelto
 
 Conversar invita a preguntar **«¿y tú qué harías?»**. El sistema aporta

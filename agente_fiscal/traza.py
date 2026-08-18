@@ -40,6 +40,23 @@ class Traza:
         self.dir = raiz / self.sello
         # Por que no se ha podido guardar el expediente. Vacio = todo bien.
         self.roto: str = ""
+        # DOS CONSULTAS EN EL MISMO SEGUNDO NO PUEDEN COMPARTIR CARPETA.
+        #
+        # El sello va al segundo y antes se creaba con `exist_ok=True`, asi que
+        # la segunda escribia ENCIMA de la primera: misma `pregunta.txt`, mismo
+        # `analisis.json`, misma `verificacion_1.json`. El expediente de la
+        # primera desaparecia sin que nadie se enterara, y un expediente que no
+        # esta es exactamente lo que este proyecto no puede permitirse.
+        #
+        # Se veia poco porque hacen falta dos consultas seguidas de menos de un
+        # segundo. Con la conversacion eso dejo de ser raro: una vuelta que
+        # acaba en NO ENCONTRADO tarda decimas, y la siguiente va detras.
+        if sello is None:
+            n = 1
+            while self.dir.exists():
+                n += 1
+                self.sello = f"{self.dir.name.split('-')[0]}-{n}"
+                self.dir = raiz / self.sello
         try:
             self.dir.mkdir(parents=True, exist_ok=True)
         except OSError as e:

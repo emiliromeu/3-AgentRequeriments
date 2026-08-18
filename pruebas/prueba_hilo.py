@@ -313,6 +313,33 @@ comprobar("y el hilo se apunta por NOMBRE de expediente, no por camino",
 comprobar("y el modo -con criterio o sin el- se hereda: es la misma consulta",
           "self._lanzar(self.con_criterio)" in cuerpo_seguir)
 
+# ============================== 5bis. DOS VUELTAS NO SE PISAN EL EXPEDIENTE
+print("\n=== 5bis. DOS CONSULTAS EN EL MISMO SEGUNDO NO COMPARTEN CARPETA ===")
+print("  El sello va al segundo. Antes la carpeta se creaba con `exist_ok`,")
+print("  asi que la segunda escribia ENCIMA: misma pregunta.txt, mismo")
+print("  analisis.json. El expediente de la primera desaparecia. Con la")
+print("  conversacion dejo de ser raro: una vuelta que acaba en NO ENCONTRADO")
+print("  tarda decimas y la siguiente va detras.\n")
+
+import shutil
+import tempfile
+from agente_fiscal.traza import Traza            # noqa: E402
+
+corral = Path(tempfile.mkdtemp())
+try:
+    trazas = [Traza(corral, f"la duda numero {i}") for i in range(4)]
+    comprobar("cuatro trazas seguidas, cuatro carpetas",
+              len({t.dir for t in trazas}) == 4, [t.sello for t in trazas])
+    comprobar("  y cada una conserva SU pregunta",
+              [(t.dir / "pregunta.txt").read_text("utf-8") for t in trazas]
+              == [f"la duda numero {i}" for i in range(4)])
+    comprobar("  el sello sigue empezando por la fecha y la hora",
+              all(t.sello[:15] == trazas[0].sello[:15] for t in trazas),
+              [t.sello for t in trazas])
+finally:
+    shutil.rmtree(corral, ignore_errors=True)
+
+
 print("\n=== 6. Y LA VENTANA DE VERDAD, PULSANDO EL BOTON ===")
 print("  El grep de arriba dice que el codigo esta escrito. Esto dice que")
 print("  hace lo que dice: la caja no se vacia y la vuelta sube.\n")

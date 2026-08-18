@@ -134,6 +134,24 @@ TIMEOUT_LLAMADA = 120.0  # segundos que se espera UNA llamada
 REINTENTOS_RED = 3       # reintentos por fallo de red, con espera creciente
 
 
+# LO QUE CUESTA UN MILLON DE TOKENS, en dolares. Son los precios publicados de
+# Opus 5: entrada / cache escrita / cache leida / salida.
+#
+# VIVE AQUI Y EN NINGUN SITIO MAS, al lado de la contabilidad de tokens. Un
+# precio copiado en tres guiones son tres precios en cuanto cambie uno.
+TARIFAS = {"entrada": 5.0, "cache_escritura": 6.25,
+           "cache_lectura": 0.50, "salida": 25.0}
+
+
+def dolares(totales: dict) -> float:
+    """Lo que cuesta un consumo YA MEDIDO. Aritmetica sobre tokens reales.
+
+    No estima nada: si no hay tokens, son cero dolares. Un coste inventado al
+    lado de tokens reales se lee como medido, y eso es lo que no puede pasar.
+    """
+    return sum(TARIFAS[k] * totales.get(k, 0) / 1_000_000 for k in TARIFAS)
+
+
 class TopeAlcanzado(ErrorModelo):
     """Se ha llegado al techo. No es un fallo del modelo: es la red de seguridad."""
 
