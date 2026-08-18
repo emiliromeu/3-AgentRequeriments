@@ -4337,3 +4337,65 @@ que no trae resultados y tampoco dice que no los haya, sigue siendo una rareza.
 
 Ver la sección de la fase 17. `caffeinate -i` no cubre cerrar la tapa, y por eso
 la tanda 3 pasó siete horas dormida.
+
+---
+
+# FASE 35 · «ESCRÍBEMELO PARA EL CLIENTE», Y POR QUÉ NO SE HIZO EL RESTO
+
+Chus pidió poder añadir algo después de preguntar. Al separarlo salieron **tres
+cosas distintas**, y sólo se ha construido una:
+
+| | qué es | llamadas | estado |
+|---|---|---|---|
+| **A** · precisar | misma pregunta con más contexto | 2-3 | **no se hace** |
+| **B** · sobre la respuesta | pregunta nueva, material nuevo | 2-3 | **no se hace** |
+| **C** · otra forma | mismo material, sólo redacción | **1** | hecha |
+
+## El principio que ordena las tres
+
+**El hilo es de preguntas, no de respuestas.** Cada respuesta se genera entera y
+se verifica entera. Nunca se añade texto a una respuesta ya dada, porque
+entonces habría texto verificado y sin verificar en la misma pantalla.
+
+De ahí sale que las tres son **consultas nuevas**; lo único que cambia es qué se
+reutiliza de la anterior.
+
+## Por qué A y B no se construyen todavía
+
+**La sospecha es que la gente reformula porque no encuentra criterio, no porque
+quiera conversar.** Si es eso, el hilo es el *síntoma* y la cobertura es la
+enfermedad — y construir A y B ahora sería **automatizar una frustración**.
+
+Y no hace falta construir la conversación para medirla: **el hilo ya ocurre a
+mano**. Alguien pregunta, no le convence, reescribe y vuelve a preguntar, y eso
+deja dos trazas seguidas y parecidas. `medir_hilo.py` las cuenta.
+
+La primera medición, con lo poco que hay (19 consultas reales de una persona,
+del 2 al 11 de agosto):
+
+```
+pares de la misma sesión (<15 min) : 12
+de esos, REFORMULACIONES           :  1
+y de esas, TRAS UNA CONSULTA SIN CRITERIO: 1 de 1
+```
+
+**Un caso no decide nada** — se deja escrito para que nadie lo lea como
+conclusión. Lo que decide es **comparar mediciones**: si el porcentaje baja
+según crece la despensa con la cola, era el síntoma; si se mantiene con la
+cobertura alta, la gente quiere conversar de verdad y A y B valen la pena.
+
+## Y las tres preguntas que quedaban abiertas
+
+- **El hilo en pantalla**: sólo la última respuesta. Lo anterior puede estar
+  superado, y mezclar en una pantalla lo vigente con lo descartado es el mismo
+  error que mezclar lo verificado con lo que no lo está.
+- **Dónde se corta**: no hay hilo que cortar. C reescribe **la respuesta que
+  está en pantalla**, y ahí se acaba.
+- **El idioma**: C responde en el idioma de la pregunta, como todo lo demás. La
+  pregunta va dentro del material, así que el redactor ya lo sabe; no hay nada
+  que decidir aparte.
+
+## El botón de copiar
+
+Se lleva **la última respuesta**, no el hilo. Lo que se pega en un correo o en
+el expediente del cliente tiene que ser **una** respuesta verificada.

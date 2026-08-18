@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import json
 from pathlib import Path
 
 from agente_fiscal import analizador as AN
@@ -199,6 +200,81 @@ def _fin(res: dict, tr) -> dict:
 
 
 # ------------------------------------------------------------------ consultar
+
+
+def otra_forma(traza, ejercicio, motor, ix) -> dict:
+    """«Escribemelo para el cliente»: la misma respuesta, otra redaccion.
+
+    NO ANALIZA, NO BUSCA, NO RECORTA. El material sale del expediente, tal
+    cual: es lo que garantiza que es LA MISMA respuesta y no otra parecida.
+    UNA llamada al modelo, no dos.
+
+    Y EL VERIFICADOR PASA ENTERO SOBRE EL TEXTO NUEVO. Ver `otraforma.py` para
+    por que no vale decir «el material es el mismo, ya estaba verificado»: lo
+    que se verifica no es el material, es el TEXTO, y una reescritura para el
+    cliente invita justo a lo que rompe una cita -resumir el fragmento
+    entrecomillado, quitar la norma de la referencia, suavizar un «debera»-.
+
+    Si la reescritura no pasa, NO SE ENSEÑA. Se dice, y se queda la primera,
+    que si paso. Una respuesta mas facil de leer con una cita retocada no es
+    mas facil: es falsa.
+    """
+    from agente_fiscal import otraforma as OF
+
+    res = {"respuesta": "", "motivo": "", "veredicto": "", "traza": str(traza),
+           "verificacion": {}, "llamadas": 0}
+    try:
+        material = OF.material_del_expediente(traza)
+    except (FileNotFoundError, OSError) as e:
+        res["motivo"] = str(e)
+        return res
+
+    # El tope se cuenta POR CONSULTA, y esto es una consulta corta: una
+    # llamada. Sin esto arrastraria las de la consulta original.
+    if hasattr(motor, "empezar_consulta"):
+        motor.empezar_consulta()
+
+    try:
+        resp = motor.redactar(RED.SISTEMA + OF.PARA_EL_CLIENTE, material)
+    except MOD.ErrorModelo as e:
+        res["motivo"] = f"fallo del modelo: {e}"
+        return res
+    res["llamadas"] = 1
+
+    if (resp.crudo or {}).get("stop_reason") == "max_tokens":
+        res["motivo"] = ("la reescritura llego cortada por su longitud: no se "
+                         "enseña media respuesta")
+        return res
+
+    borrador = (resp.texto or "").strip()
+    informe = VF.Verificador(ix).verificar_texto(borrador, ejercicio,
+                                                exigir_norma=True)
+    res["veredicto"] = informe.veredicto
+    res["verificacion"] = informe.a_json()
+
+    # SE GUARDA PASE LO QUE PASE, y en el MISMO expediente: al lado de la
+    # primera, con su informe propio. Dentro de seis meses tiene que poder
+    # verse que las dos se comprobaron y contra que. Tambien la rechazada:
+    # sobre todo la rechazada.
+    try:
+        d = Path(traza)
+        n = len(list(d.glob("redaccion_para_cliente_*.txt"))) + 1
+        (d / f"redaccion_para_cliente_{n}.txt").write_text(
+            borrador, encoding="utf-8")
+        (d / f"verificacion_para_cliente_{n}.json").write_text(
+            json.dumps(informe.a_json(), ensure_ascii=False, indent=1),
+            encoding="utf-8")
+    except OSError:
+        pass
+
+    if informe.veredicto != VF.ACEPTADO:
+        res["motivo"] = ("la reescritura no pasa el verificador: alguna cita "
+                         "ha cambiado al reescribirla. Se queda la respuesta "
+                         "de antes, que si esta comprobada.")
+        return res
+
+    res["respuesta"] = borrador
+    return res
 
 
 def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
