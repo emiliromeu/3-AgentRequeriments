@@ -32,6 +32,7 @@ from agente_fiscal import analizador as AN
 from agente_fiscal import dgt as DGT
 from agente_fiscal import estado as EST
 from agente_fiscal import modelo as MOD
+from agente_fiscal import orientacion as OR
 from agente_fiscal import redactor as RED
 from agente_fiscal import referencias as R
 from agente_fiscal import teac as TEAC
@@ -623,6 +624,18 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
 
     registros = [r.doc.registro for r in resultados]
     if not pertinente:
+        # NO ES UN CALLEJON: SE ORIENTA. Los preceptos estan ahi y hasta ahora
+        # se tiraban. Una llamada mas, y si no pasa los tres candados se cae al
+        # NO ENCONTRADO de siempre con los preceptos en crudo.
+        #
+        # SOLO EN ESTA RAMA. La otra forma de acabar sin respuesta -el
+        # verificador rechazo- ya ha pagado dos redacciones y ahi el modelo YA
+        # ha intentado contestar y ha fallado: es otro problema y se decide
+        # aparte.
+        orientada = _orientar(res, tr, ejercicio, registros, motor, ix, grafo,
+                              pregunta, razon)
+        if orientada is not None:
+            return orientada
         return _sin_respaldo(res, tr, ejercicio, registros, None, motor, razon)
 
     # ------------------------------------------- CORTE POR PERTINENCIA
@@ -1072,13 +1085,119 @@ def _parada_por_tope(res, tr, motor, error, donde: str) -> dict:
     return _fin(res, tr)
 
 
-def _sin_respaldo(res, tr, ejercicio, registros, informe, motor, motivo) -> dict:
-    """NO ENCONTRADO. Se ensena lo recuperado en crudo, nunca el borrador."""
+def _orientar(res, tr, ejercicio, registros, motor, ix, grafo, pregunta,
+              razon) -> dict | None:
+    """Una orientacion, o None si no se ha podido dar ninguna que se sostenga.
+
+    UNA sola llamada, y SOLO en la rama de pertinencia insuficiente. No es una
+    respuesta: es decir que se ha encontrado, por que no basta, DONDE vive lo
+    que falta y que dato haria falta para acotar. Ver `orientacion.py`, que es
+    donde esta escrita entera la linea que no se cruza.
+
+    TRES CANDADOS Y NINGUNO SE FIA DEL DE AL LADO:
+
+      1. el prompt lo dice con todas las letras;
+      2. el verificador pasa ENTERO, igual que sobre una respuesta;
+      3. `derecho_sin_cita` mira lo que el verificador no puede mirar: lo que
+         se afirma SIN citar nada.
+
+    Si cualquiera de los tres dice que no, devuelve None y quien llama se cae
+    al NO ENCONTRADO de toda la vida. Ante la duda, nada.
+
+    NO REINTENTA. La redaccion normal tiene dos intentos porque ahi hay una
+    respuesta que dar y merece la pena insistir; aqui no hay respuesta, solo
+    una ayuda, y pagar una segunda llamada por una ayuda que ya ha salido mal
+    una vez no lo vale.
+    """
+    material = RED.construir_material(pregunta, ejercicio, registros, grafo,
+                                      None, normas=ix.normas)
+    tr.escribir("material_orientacion.txt", material)
+    print("   sin material para contestar: se intenta ORIENTAR (1 llamada)")
+    try:
+        resp = motor.redactar(RED.SISTEMA + OR.ORIENTAR, material)
+    except (MOD.TopeAlcanzado, MOD.ErrorModelo) as e:
+        # NI SE PARA NI SE ROMPE LA CONSULTA POR ESTO. La orientacion es un
+        # extra sobre un camino que ya no tenia respuesta: si falla, se sigue
+        # al NO ENCONTRADO, que es lo que habria pasado sin ella.
+        tr.paso("orientacion", f"no se ha podido pedir: {e}")
+        return None
+
+    tr.gasto("orientacion", resp)
+    tr.json("orientacion_crudo.json", resp.crudo)
+    texto = (resp.texto or "").strip()
+    tr.escribir("orientacion_borrador.txt", texto)
+
+    if (resp.crudo or {}).get("stop_reason") == "max_tokens":
+        tr.paso("orientacion", "llego cortada: no se enseña media orientacion")
+        return None
+
+    # CANDADO 2 · el verificador, entero.
+    informe = VF.Verificador(ix).verificar_texto(texto, ejercicio,
+                                                exigir_norma=True)
+    tr.json("verificacion_orientacion.json", informe.a_json())
+    if informe.veredicto != VF.ACEPTADO:
+        tr.paso("orientacion", f"RECHAZADA por el verificador: "
+                               f"{informe.motivo_global}")
+        return None
+
+    # Y LAS REFERENCIAS SUELTAS TAMBIEN TUMBAN, que en el camino normal solo se
+    # cuentan. Un «lo regula el articulo 20» sin fragmento literal es
+    # exactamente el numero de articulo dicho de memoria que aqui no puede
+    # salir; en una respuesta con material delante es una imprecision, aqui es
+    # el fallo entero.
+    if informe.sueltas:
+        tr.paso("orientacion", f"RECHAZADA: {len(informe.sueltas)} referencia(s) "
+                               f"sin fragmento literal")
+        return None
+
+    # CANDADO 3 · lo que se afirma sin citar nada.
+    hallazgos = OR.derecho_sin_cita(texto)
+    if hallazgos:
+        tr.paso("orientacion", "RECHAZADA: " + OR.motivo_de(hallazgos))
+        return None
+
+    tr.escribir("orientacion.txt", texto)
+    tr.paso("orientacion", "ACEPTADA", citas=len(informe.dictamenes))
+    # NO VA EN `respuesta`, Y ESO NO ES UN DETALLE. `respuesta` es lo que la
+    # ventana enseña como contestacion: enciende el copiar, el «escribirlo para
+    # el cliente» y el pie de citas que dice «preceptos que la SOSTIENEN». Esto
+    # no sostiene nada: dice donde buscar. Va por su propio nombre para que
+    # nadie -ni el codigo- la confunda con una respuesta.
+    res["orientacion"] = texto
+    res["veredicto"] = informe.veredicto
+    res["preceptos"] = [VF.nombre_de(ix, d.clave) for d in informe.dictamenes
+                        if getattr(d, "clave", "")]
+    res["preceptos_enviados"] = [r["referencia"] for r in registros]
+    res["motivo"] = razon
+    return _sin_respaldo(res, tr, ejercicio, registros, None, motor, razon,
+                         orientacion=texto)
+
+
+def _sin_respaldo(res, tr, ejercicio, registros, informe, motor, motivo,
+                  orientacion: str = "") -> dict:
+    """NO ENCONTRADO. Se ensena lo recuperado en crudo, nunca el borrador.
+
+    CON O SIN ORIENTACION, EL FINAL ES ESTE. Se pasa por parametro y no se
+    cierra el camino en dos sitios: el estado, el codigo de salida, la traza y
+    el volcado en crudo son los mismos, y tenerlos duplicados es como se acaba
+    con dos finales que se separan sin que nadie lo note.
+
+    La orientacion, si la hay, YA HA PASADO LOS TRES CANDADOS. Aqui no se
+    comprueba nada: se enseña.
+    """
     titulo(f"NO ENCONTRADO  ·  ejercicio {ejercicio}")
     print(f"Motivo: {motivo}")
     print()
-    print("No se muestra ningun texto redactado: no ha superado la verificacion.")
-    print("Ni con aviso, ni en gris, ni a titulo orientativo.")
+    if orientacion:
+        # NO ES LA RESPUESTA Y SE DICE ANTES DE ENSEÑARLA. Un texto que empieza
+        # citando un articulo se lee como una respuesta si nadie avisa, y esto
+        # no lo es: dice DONDE buscar, no que dice la ley sobre el caso.
+        apartado("No hay respaldo para contestar, pero SI para orientar")
+        print(orientacion)
+        print()
+    else:
+        print("No se muestra ningun texto redactado: no ha superado la verificacion.")
+        print("Ni con aviso, ni en gris, ni a titulo orientativo.")
 
     if registros:
         apartado(f"Lo que SI se recupero, en crudo, para leerlo a mano "

@@ -4510,6 +4510,88 @@ cada vuelta contra `RED.SISTEMA` — tienen que ser idénticos.
   pregunta va dentro del material, así que el redactor ya lo sabe; no hay nada
   que decidir aparte.
 
+## El NO ENCONTRADO orienta (y lo que la medición dijo después)
+
+Cuando la búsqueda recupera preceptos pero ninguno resuelve el caso, hasta ahora
+se tiraban y se decía que no hay nada. Ahora, en **una llamada más**, se dice qué
+se ha encontrado y por qué no basta, **dónde** vive la respuesta, y qué dato
+falta para acotar. Sólo en esa rama: la otra forma de acabar sin respuesta —el
+verificador rechazó— ya ha pagado dos redacciones y ahí el modelo *ya* intentó
+contestar y falló.
+
+**Orientar es decir dónde buscar. Contestar es decir qué dice la ley.**
+
+| | |
+|---|---|
+| «depende de dónde tuviera la residencia el causante» | orientación |
+| «en Cataluña la reducción es del 95 %» | derecho sin cita |
+| «el plazo son seis meses» | derecho sin cita |
+| «lo regula el artículo 20 de la Ley 29/1987» | derecho sin cita |
+
+Las tres últimas son verdad, probablemente. Y da igual.
+
+### Tres candados, y ninguno se fía del de al lado
+
+1. **El prompt**, con todas las letras. Necesario y no suficiente: un prompt es
+   una petición, no una garantía.
+2. **El verificador entero**, el de siempre. Una cita inventada tumba la
+   orientación como tumba una respuesta. Y aquí, además, **las referencias
+   sueltas también tumban** — un «lo regula el artículo 20» sin fragmento
+   literal, que en el camino normal sólo se cuenta.
+3. **`derecho_sin_cita`**, que es nuevo. El verificador comprueba lo que se
+   cita; no comprueba lo que se afirma **sin citar nada**. «En Cataluña la
+   reducción es del 95 %» no lleva comillas ni referencia: para el verificador
+   no existe. Para este guardián sí.
+
+Cada candado tiene su control negativo. Quitando el 3º pasan el porcentaje y el
+plazo; quitando el rechazo por sueltas pasa el artículo de memoria; quitando el
+verificador pasa la cita inventada. Los tres son de carga.
+
+Un hueco encontrado por el camino: el patrón de artículo llevaba `iculo` sin
+tilde, así que **«artículo 99» —como lo escribe el modelo— se le escapaba
+entero**. Sólo lo cazaba el rechazo por sueltas, y eso sólo funciona cuando el
+número va con el nombre de la norma al lado.
+
+### Lo que costó, y la sorpresa
+
+| | |
+|---|---|
+| una redacción completa | 3.773 tokens de salida |
+| la orientación medida | **3.064 tokens · el 81 %** |
+| coste de la llamada | $0,210 · 0,19 € |
+
+**El 81 % es la señal de alarma que había que vigilar**: si ocupa casi lo mismo
+que contestar, puede estar contestando. Leída entera, no lo hace —no dice en
+ningún punto qué dice la ley sobre el caso— pero es larga, y la longitud viene
+del punto 1, que recorre cuatro preceptos con su cita cada uno. Queda anotado
+para apretar si vuelve a salir así.
+
+### Y la rama casi no salta
+
+Las dos consultas reales que motivaron esto son del 2 de agosto, **con trece
+normas cargadas**. Hoy hay diecisiete. Al repetirlas con el modelo, **ninguna de
+las dos volvió a caer por esta rama**: ahora la búsqueda encuentra material
+suficiente y salen por el verificador.
+
+Barriendo las 1.474 consultas de la DGT de la despensa, un **22,2 %** cae por
+esta puerta — pero eso usa el texto crudo de la pregunta, no los términos que
+escribe el analizador. Cribando seis consultas con el analizador **real** (0,064
+$ en análisis sueltos, en vez de pagar consultas enteras a ciegas), **las seis
+pasaron la puerta**. El 22,2 % es un techo; el número real es bastante menor.
+
+O sea: lo construido funciona y está probado, pero **se disparará poco**. Donde
+hoy se acaba de verdad sin respuesta es en la rama del verificador, que es la
+que se dejó fuera a propósito. Eso queda para decidir.
+
+### El rótulo se queda
+
+«NO ENCONTRADO» sigue siendo cierto: no hay respaldo para *contestar*, y la línea
+de debajo dice inmediatamente lo que sí hay. Cambiarlo obligaría a tocar el enum,
+la guía, las etiquetas del banco y la comprobación de coincidencia, y para un
+camino que salta poco. Lo que sí hacía falta: **las dos frases nuevas están en
+`TEXTOS_DE_ESTADO`**, así que la comprobación de coincidencia exige que estén
+escritas en `GUIA.md`. Ocho frases ahora, no seis.
+
 ## Los botones grises de Windows, y por qué el arreglo anterior no bastó
 
 **El síntoma:** en el PC de la oficina los dos botones salen en gris con la

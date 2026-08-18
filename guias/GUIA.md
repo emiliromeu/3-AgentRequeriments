@@ -185,7 +185,21 @@ respuesta a tus notas.
 
 No es un error: es una respuesta. No ha podido sostener nada con el texto de la
 ley y **prefiere no enseñarte nada antes que algo sin comprobar**. Debajo te
-deja los artículos que sí encontró, con sus enlaces. Casi siempre es porque la
+deja los artículos que sí encontró, con sus enlaces.
+
+**A veces, además, te orienta.** Cuando ha encontrado artículos pero ninguno
+resuelve tu caso, arriba aparece *«No hay respaldo para contestar, pero sí para
+orientar»* y debajo un texto que te dice tres cosas: qué ha encontrado y por qué
+no basta, dónde vive la respuesta (de qué impuesto parece, de qué dato depende,
+qué norma haría falta) y qué le falta saber para acotar. Al pie lo repite:
+*«Esto no es la respuesta: dice dónde buscar, no qué dice la ley sobre tu caso.
+Las citas que lleva sí están comprobadas una a una contra el texto oficial.»*
+
+Eso es exactamente lo que es. **No te dirá un porcentaje, un plazo ni un número
+de artículo que no venga de lo que ha encontrado**, y si lo intentara no saldría:
+se comprueba igual que una respuesta y, además, se le mira que no afirme nada sin
+citar. Si no pasa, no lo verás. Puedes seguir preguntando en la caja de abajo con
+el dato que te pida. Casi siempre es porque la
 duda no es de IVA ni de procedimiento (IRPF, Sociedades y Sucesiones no están
 dentro), porque la norma que lo resuelve no la tiene, o porque la pregunta va en
 lenguaje de la calle: «un cliente no me paga» no se parece a «modificación de la

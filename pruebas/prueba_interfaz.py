@@ -528,8 +528,11 @@ comprobar("existe la pantalla de descoordinacion",
 import agente_fiscal.configuracion as CONF
 r = CONF.revisar()
 comprobar("y hoy el sistema esta coherente", r.coherente, str(r.descuadres))
-comprobar("se comprueban TODAS las frases de estado, las seis",
-          len(interfaz.TEXTOS_DE_ESTADO) == 6,
+# Ocho desde que el NO ENCONTRADO puede orientar: el titulo de la orientacion
+# y su pie tambien son frases que se leen en pantalla, y por tanto tienen que
+# estar en la hoja que hay encima de la mesa.
+comprobar("se comprueban TODAS las frases de estado, las ocho",
+          len(interfaz.TEXTOS_DE_ESTADO) == 8,
           str(len(interfaz.TEXTOS_DE_ESTADO)))
 guia = CONF._plano(CONF.GUIA.read_text("utf-8"))
 for frase in interfaz.TEXTOS_DE_ESTADO:

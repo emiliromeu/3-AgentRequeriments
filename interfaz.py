@@ -228,9 +228,26 @@ def explicacion(estado: str, con_criterio: bool) -> str:
 # Todas las frases que pueden salir en pantalla. `configuracion.revisar` exige
 # que TODAS esten dentro de GUIA.md: es lo que impide que la ventana y la hoja
 # de la mesa digan cosas distintas.
+# EL ROTULO NO CAMBIA, Y SE HA MIRADO. Con orientacion delante, «NO
+# ENCONTRADO» sigue siendo cierto -no hay respaldo para CONTESTAR- y la linea
+# de debajo dice inmediatamente lo que si hay. Cambiar el estado obligaria a
+# tocar el enum, la guia, las etiquetas del banco y la comprobacion de
+# coincidencia, y para un camino que -medido- salta poco.
+#
+# LO QUE SI HACIA FALTA es que la frase nueva pase por la misma comprobacion
+# que las otras seis: que este escrita en GUIA.md. Es la unica forma de que la
+# hoja que tienen encima de la mesa no se quede vieja sin que nadie lo note.
+ORIENTACION_TITULO = "No hay respaldo para contestar, pero sí para orientar"
+ORIENTACION_PIE = (
+    "Esto no es la respuesta: dice dónde buscar, no qué dice la ley sobre tu "
+    "caso. Las citas que lleva sí están comprobadas una a una contra el texto "
+    "oficial."
+)
+
 TEXTOS_DE_ESTADO = [CLARO_SIN_DGT, CLARO_CON_TRES_FUENTES,
                     DISCUTIDO_SIN_DGT, DISCUTIDO_CON_EJES,
-                    NO_ENCONTRADO_TEXTO, NO_ENCONTRADO_CON_CRITERIO]
+                    NO_ENCONTRADO_TEXTO, NO_ENCONTRADO_CON_CRITERIO,
+                    ORIENTACION_TITULO, ORIENTACION_PIE]
 
 # --------------------------------------------------------------- la paleta
 #
@@ -497,8 +514,10 @@ class Ventana:
         self.hilo_viene_de = ""
         self.hilo_contexto = None
         self.vuelta = 1
+        self.es_orientacion = False
         self.analisis_actual = None
         self.preceptos_actuales = []
+        self.es_orientacion = False
         self.con_criterio = False
         # La ventana esta bloqueada: el arranque no llego a dejar motor. Se
         # guarda para que los botones NUEVOS -continuar, escribir para el
@@ -2451,6 +2470,7 @@ class Ventana:
         self.vuelta = 1
         self.analisis_actual = None
         self.preceptos_actuales = []
+        self.es_orientacion = False
         self.boton_copiar.configure(state="disabled")
         # Y EL DE REESCRIBIR CON EL, porque dependen de lo mismo: que haya una
         # respuesta aceptada delante. Si no hay que copiar, no hay que
@@ -2862,6 +2882,7 @@ class Ventana:
         # 2. El texto: SOLO si paso el verificador. `respuesta` viene vacia
         #    cuando no se puede ensenar, y entonces se ensena otra cosa.
         if res.get("respuesta"):
+            self.es_orientacion = False
             self.respuesta_actual = res["respuesta"]
             self._escribir_respuesta(res["respuesta"], res)
             self.boton_copiar.configure(state="normal")
@@ -2897,6 +2918,24 @@ class Ventana:
         else:
             self._sin_nada_que_copiar()
             self._escribir_sin_respaldo(res)
+            # LA ORIENTACION ABRE CONVERSACION: eso es la tercera de las tres
+            # cosas que hace -«si me dices a nombre de quien esta el vehiculo,
+            # puedo acotar»- y sin la caja debajo esa frase no lleva a ningun
+            # sitio. Es el unico NO ENCONTRADO en el que seguir preguntando
+            # tiene sentido, porque la orientacion dice QUE dato falta.
+            if res.get("orientacion"):
+                self.es_orientacion = True
+                self.respuesta_actual = res["orientacion"]
+                self.traza_actual = res.get("traza") or ""
+                self.analisis_actual = res.get("analisis") or {}
+                self.preceptos_actuales = res.get("preceptos_enviados") or []
+                self.boton_copiar.configure(state="normal")
+                # EL DE ESCRIBIR PARA EL CLIENTE NO. Una orientacion no es una
+                # respuesta que mandar a nadie: es una nota de trabajo que dice
+                # que falta por mirar.
+                self.boton_cliente.configure(state="disabled")
+                self.marco_seguir.grid()
+                self.caja_seguir.delete("1.0", "end")
 
         # EL PIE NO PUEDE AFIRMAR QUE ALGO ESTA GUARDADO SIN SABERLO. Con el
         # disco lleno seguia diciendo «Expediente guardado en ...» señalando a
@@ -3242,21 +3281,32 @@ class Ventana:
         self._arriba()
 
     def _escribir_sin_respaldo(self, res: dict) -> None:
-        """NO ENCONTRADO: nunca el borrador, solo lo recuperado en crudo."""
-        trozos = [
-            ("No se muestra ningun texto redactado: no ha superado la "
-             "comprobacion de citas.\n\n", "titulo"),
-        ]
-        if res.get("motivo"):
-            trozos.append((f"Motivo: {res['motivo']}\n\n", "apagado"))
+        """NO ENCONTRADO: nunca el borrador, solo lo recuperado en crudo.
+
+        CON ORIENTACION, SI LA HAY. No es la respuesta y se dice antes de
+        enseñarla: un texto que empieza citando un articulo se lee como una
+        contestacion si nadie avisa, y esto dice DONDE buscar, no que dice la
+        ley sobre el caso. Ha pasado los tres candados de `orientacion.py`
+        -prompt, verificador entero y `derecho_sin_cita`- o no estaria aqui.
+        """
         self.texto.configure(state="normal")
         self.texto.delete("1.0", "end")
-        for t, e in trozos:
-            self.texto.insert("end", t, e)
+        self._enlaces = {}
+        orientacion = res.get("orientacion") or ""
+        if orientacion:
+            self.texto.insert("end", ORIENTACION_TITULO + "\n\n", "titulo")
+            self._escribir_con_jerarquia(orientacion)
+            self.texto.insert("end", "\n\n" + ORIENTACION_PIE + "\n\n",
+                              "apagado")
+        else:
+            self.texto.insert(
+                "end", "No se muestra ningun texto redactado: no ha superado "
+                       "la comprobacion de citas.\n\n", "titulo")
+        if res.get("motivo"):
+            self.texto.insert("end", f"Motivo: {res['motivo']}\n\n", "apagado")
 
         # Los articulos encontrados, para mirarlos a mano. Se leen de la traza,
         # que es donde estan con su enlace.
-        self._enlaces = {}
         encontrados = self._leer_recuperado(res)
         if encontrados:
             self.texto.insert("end", "Articulos encontrados, por si quieres "
@@ -3332,6 +3382,11 @@ class Ventana:
         # correos con dos vueltas de la misma consulta serian indistinguibles.
         if getattr(self, "vuelta", 1) > 1:
             cabecera += f" · vuelta {self.vuelta} de la consulta"
+        # Y SI ES UNA ORIENTACION, EN LA PRIMERA LINEA. Pegada en un correo sin
+        # esto se lee como una contestacion, que es exactamente lo que no es.
+        if getattr(self, "es_orientacion", False):
+            cabecera = ("ORIENTACION, NO RESPUESTA: dice donde buscar, no que "
+                        "dice la ley sobre el caso · " + cabecera)
         aviso = getattr(self, "aviso_territorial", "")
         self.raiz.clipboard_clear()
         self.raiz.clipboard_append(
