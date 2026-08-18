@@ -492,6 +492,13 @@ class Ventana:
         self.respuesta_actual = ""
         self.traza_actual = ""
         self.ejercicio_usado = None
+        # EL HILO. `vuelta` es solo para enseñarlo: el hilo de verdad se
+        # reconstruye por `viene_de`, que va en cada expediente.
+        self.hilo_viene_de = ""
+        self.hilo_contexto = None
+        self.vuelta = 1
+        self.analisis_actual = None
+        self.preceptos_actuales = []
         self.con_criterio = False
         self.ix = None
         self.grafo = None
@@ -996,6 +1003,44 @@ class Ventana:
         self.copiado = tk.Label(barra_alta, text="", bg=PAPEL,
                                 fg=LILA, font=self.fuente_menuda)
         self.copiado.grid(row=0, column=5, sticky="e", padx=(AIRE, 0))
+
+        # --- SEGUIR HABLANDO ---
+        #
+        # LO QUE SE SIENTE: se sigue hablando. La caja de arriba NO se vacia,
+        # la pregunta anterior sigue ahi y aqui solo se añade una linea.
+        #
+        # LO QUE PASA POR DEBAJO: cada vuelta es una consulta ENTERA. Se
+        # reanaliza, se vuelve a buscar y se redacta y verifica de cero. NUNCA
+        # se reutiliza el material de la vuelta anterior, y esa es la
+        # diferencia con un chatbot: si el contexto nuevo cambia que articulos
+        # aplican -«y si fuera una furgoneta»- reutilizarlos daria una
+        # respuesta segura sobre los articulos equivocados.
+        # VA EN LA FILA 2, DEBAJO DE LA RESPUESTA: la fila 1 es la que crece,
+        # asi que esta caja se queda pegada al borde de abajo y el texto se
+        # queda con todo el alto que sobre. Esta vista va con `grid`, no con
+        # `pack`, y mezclar los dos en el mismo padre revienta la ventana.
+        self.marco_seguir = tk.Frame(raiz_vista, bg=PAPEL2,
+                                     highlightthickness=1,
+                                     highlightbackground=FILETE)
+        self.marco_seguir.grid(row=2, column=0, sticky="ew", pady=(AIRE, 0))
+        tk.Label(self.marco_seguir, text="Añadir contexto o preguntar algo más",
+                 bg=PAPEL2, fg=TINTA2, font=self.fuente_rotulo, anchor="w",
+                 padx=RELLENO).pack(fill="x", pady=(AIRE, 0))
+        fila_seguir = tk.Frame(self.marco_seguir, bg=PAPEL2)
+        fila_seguir.pack(fill="x", padx=RELLENO, pady=(2, AIRE))
+        self.caja_seguir = tk.Text(fila_seguir, height=2, wrap="word",
+                                   font=self.fuente, relief="flat",
+                                   highlightthickness=1,
+                                   highlightbackground=FILETE, padx=6, pady=4)
+        self.caja_seguir.pack(side="left", fill="x", expand=True)
+        self.boton_seguir = ttk.Button(fila_seguir, text="Preguntar de nuevo",
+                                       style="Discreto.TButton",
+                                       command=self._seguir)
+        self.boton_seguir.pack(side="left", padx=(HUECO, 0))
+        self._pinchable(self.boton_seguir)
+        # `grid_remove` y no `grid_forget`: recuerda la fila, asi que al
+        # volver a enseñarla no hay que repetir donde iba.
+        self.marco_seguir.grid_remove()
 
         # --- lo que se lee ---
         #
@@ -2110,14 +2155,28 @@ class Ventana:
         self.paso.configure(text="Preparando la consulta...")
 
         comunidad = self.comunidad.get().strip()
+        # LA VUELTA ANTERIOR, si la hay. Se coge AQUI y se limpia el estado:
+        # si la consulta fallara a medias, la siguiente no puede quedarse
+        # colgando de un hilo que no llego a existir.
+        viene_de = self.hilo_viene_de
+        contexto = self.hilo_contexto
+        self.hilo_viene_de = ""
+        self.hilo_contexto = None
+        # Y SI ESTO NO VIENE DE NADA, LA CUENTA VUELVE A EMPEZAR. Sin esto, el
+        # numero de vuelta se quedaba pegado de la conversacion anterior y una
+        # consulta recien empezada se copiaba como «vuelta 4»: una etiqueta
+        # falsa en un correo que alguien va a leer dentro de meses.
+        if not viene_de:
+            self.vuelta = 1
         hilo = threading.Thread(target=self._trabajar,
                                 args=(duda, ejercicio, con_criterio,
-                                      comunidad),
+                                      comunidad, viene_de, contexto),
                                 daemon=True)
         hilo.start()
 
     def _trabajar(self, duda: str, ejercicio: int,
-                  con_criterio: bool = False, comunidad: str = "") -> None:
+                  con_criterio: bool = False, comunidad: str = "",
+                  viene_de: str = "", contexto=None) -> None:
         """Corre FUERA del hilo de la ventana: tkinter no es reentrante."""
         import contextlib
         import io
@@ -2133,7 +2192,9 @@ class Ventana:
                 res = fase4.consultar(duda, ejercicio, self.motor, self.ix,
                                       self.grafo, progreso=progreso,
                                       con_criterio=con_criterio,
-                                      comunidad=comunidad)
+                                      comunidad=comunidad,
+                                      viene_de=viene_de,
+                                      contexto_anterior=contexto)
             print(buf.getvalue())
             self.avisos.put(("hecho", res))
         except Exception:  # noqa: BLE001
@@ -2234,6 +2295,48 @@ class Ventana:
             "así que no se enseña. La respuesta que tienes delante sigue "
             "siendo la buena y no se ha perdido nada.")
 
+    def _seguir(self) -> None:
+        """Otra vuelta: la pregunta de antes MAS lo que se acaba de añadir.
+
+        LA CAJA DE ARRIBA NO SE VACIA. Eso es lo que hace que se sienta como
+        seguir hablando: la duda anterior sigue delante y solo se le añade una
+        linea. El año y la comunidad se quedan como estaban, editables por si
+        el caso resulta ser de otro ejercicio.
+
+        Y POR DEBAJO ES UNA CONSULTA ENTERA. Ver `fase4.consultar`: se
+        reanaliza, se vuelve a buscar y se redacta y verifica de cero.
+        """
+        anadido = self.caja_seguir.get("1.0", "end").strip()
+        if not anadido or self.trabajando or not self.traza_actual:
+            return
+        # LA PREGUNTA HEREDADA, escrita en la caja de siempre: lo que se
+        # consulta tiene que estar A LA VISTA. Si se compusiera por dentro,
+        # quien pregunta no sabria con que texto se le esta contestando.
+        anterior = self.caja.get("1.0", "end").strip()
+        self.caja.delete("1.0", "end")
+        self.caja.insert("1.0", f"{anterior}\n\n{anadido}")
+        self.caja_seguir.delete("1.0", "end")
+
+        # POR NOMBRE DE EXPEDIENTE, no por camino: es lo que se escribe en
+        # `hilo.json` y lo que `medir_hilo` compara. Un camino absoluto de este
+        # ordenador no significa nada en el PC de la oficina.
+        self.hilo_viene_de = Path(self.traza_actual).name
+        self.hilo_contexto = {
+            "resumen": (self.analisis_actual or {}).get("resumen_duda", ""),
+            "preceptos": list(self.preceptos_actuales or []),
+        }
+        self.vuelta += 1
+        # SE VUELVE A LA PANTALLA DE PREGUNTAR, y no es un detalle: la barra de
+        # progreso y el «buscando en...» viven ahi. Lanzando desde la pantalla
+        # de leer, la vuelta se haria entera detras de una respuesta VIEJA y sin
+        # una señal de que algo esta pasando -que es justo lo que el
+        # departamento pidio arreglar-. De paso deja delante la pregunta
+        # compuesta, que es la que se va a consultar.
+        self._mostrar("consulta")
+        # EL MISMO MODO QUE LA VUELTA ANTERIOR: es la misma consulta. Si la
+        # primera se hizo con criterio administrativo, la segunda tambien.
+        self._lanzar(self.con_criterio)
+
     def _sin_nada_que_copiar(self) -> None:
         """Deja el portapapeles fuera de juego. Se llama SIEMPRE que no hay
         texto verificado en pantalla.
@@ -2246,6 +2349,13 @@ class Ventana:
         self.respuesta_actual = ""
         self.traza_actual = ""
         self.ejercicio_usado = None
+        # EL HILO. `vuelta` es solo para enseñarlo: el hilo de verdad se
+        # reconstruye por `viene_de`, que va en cada expediente.
+        self.hilo_viene_de = ""
+        self.hilo_contexto = None
+        self.vuelta = 1
+        self.analisis_actual = None
+        self.preceptos_actuales = []
         self.boton_copiar.configure(state="disabled")
         # Y EL DE REESCRIBIR CON EL, porque dependen de lo mismo: que haya una
         # respuesta aceptada delante. Si no hay que copiar, no hay que
@@ -2668,6 +2778,13 @@ class Ventana:
             # tiene que verificarse contra la MISMA version de la ley que la
             # respuesta que reescribe.
             self.ejercicio_usado = res.get("ejercicio")
+            self.analisis_actual = res.get("analisis") or {}
+            self.preceptos_actuales = res.get("preceptos_enviados") or []
+            # SOLO CON RESPUESTA: seguir hablando sobre un «no encontrado» no
+            # lleva a ningun sitio; ahi lo que hace falta es replantear, y la
+            # caja de arriba ya esta para eso.
+            self.marco_seguir.grid()
+            self.caja_seguir.delete("1.0", "end")
             if self.traza_actual:
                 self.boton_cliente.configure(state="normal")
         else:
@@ -2992,6 +3109,17 @@ class Ventana:
         self.texto.configure(state="normal")
         self.texto.delete("1.0", "end")
         self._enlaces: dict[str, str] = {}
+        # QUE SE VEA QUE ES UNA CONTINUACION, y que se ha vuelto a mirar todo.
+        # En pantalla solo esta la ultima -lo anterior puede estar superado,
+        # y mezclar lo vigente con lo descartado es el mismo error que mezclar
+        # lo verificado con lo que no-, asi que sin esta linea una vuelta se
+        # leeria igual que una consulta suelta.
+        if res.get("viene_de"):
+            self.texto.insert(
+                "end",
+                f"Vuelta {getattr(self, 'vuelta', 2)} de la misma consulta. "
+                f"Se ha vuelto a buscar y a comprobar todo con lo que has "
+                f"añadido.\n\n", "apagado")
         self._escribir_con_jerarquia(cuerpo)
 
         verificadas = res.get("preceptos") or []
@@ -3092,6 +3220,11 @@ class Ventana:
         com = getattr(self, "comunidad_usada", "")
         if com:
             cabecera += f" · comunidad: {com}"
+        # LA VUELTA VA EN LA CABECERA. Se copia SOLO la ultima respuesta -el
+        # hilo lleva versiones que ya se superaron- y sin decir cual es, dos
+        # correos con dos vueltas de la misma consulta serian indistinguibles.
+        if getattr(self, "vuelta", 1) > 1:
+            cabecera += f" · vuelta {self.vuelta} de la consulta"
         aviso = getattr(self, "aviso_territorial", "")
         self.raiz.clipboard_clear()
         self.raiz.clipboard_append(

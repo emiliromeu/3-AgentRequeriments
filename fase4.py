@@ -277,9 +277,32 @@ def otra_forma(traza, ejercicio, motor, ix) -> dict:
     return res
 
 
+# LO QUE SE LE CUENTA AL ANALIZADOR DE LA VUELTA ANTERIOR.
+#
+# EL RESUMEN Y LOS ARTICULOS, NO LA RESPUESTA. Meter la respuesta entera serian
+# dos mil tokens de contexto en cada vuelta, y ademas lo que hace falta para
+# entender «¿y si fuera una furgoneta?» no es el texto redactado: es de que iba
+# la duda y sobre que articulos se contesto.
+#
+# Y VA SOLO AL ANALIZADOR. El redactor no lo ve: el redacta con el material
+# NUEVO y nada mas, como siempre. Si lo viera, podria arrastrar frases de la
+# vuelta anterior a una respuesta que se verifica contra otros articulos.
+_CONTINUACION = """
+--- ESTO VIENE DE UNA CONSULTA ANTERIOR ---
+
+Antes se pregunto: {resumen}
+Y se contesto sobre estos articulos: {preceptos}
+
+Lo de arriba es CONTEXTO para entender la pregunta de ahora, que puede
+apoyarse en el ({ejemplo}). Analiza LA PREGUNTA DE AHORA: los terminos de
+busqueda tienen que servir para lo que se pregunta ahora, no para lo de antes.
+"""
+
+
 def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
               progreso=None, con_criterio: bool | None = None,
-              comunidad: str = "") -> dict:
+              comunidad: str = "", viene_de: str = "",
+              contexto_anterior: dict | None = None) -> dict:
     """Resuelve una duda. Imprime el proceso y DEVUELVE el resultado en dict.
 
     Devolver un dict (y no solo imprimir) es lo que permite que el banco de
@@ -381,6 +404,24 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
               file=sys.stderr)
     tr = Traza(DIR_TRAZAS, pregunta)
     res["traza"] = str(tr.dir)
+    # EL HILO SE RECONSTRUYE HACIA ATRAS. Expediente NUEVO por vuelta -cada
+    # respuesta se verifico contra un material concreto en un momento
+    # concreto- y un campo que dice de cual viene. Con eso se recorre la cadena
+    # entera desde cualquier vuelta; con un expediente que crece, dentro de
+    # seis meses no se sabria que material sostenia que frase.
+    #
+    # `tipo` dice «continuacion» y no si es A o B: eso es INTENCION y no se
+    # puede leer de fuera. Lo que si es observable -y lo que mide `medir_hilo`-
+    # es si el material cambio entre vueltas, que es la diferencia de verdad
+    # entre precisar la misma duda y preguntar otra cosa.
+    if viene_de:
+        res["viene_de"] = viene_de
+        res["tipo"] = "continuacion"
+        try:
+            tr.json("hilo.json", {"viene_de": viene_de,
+                                  "tipo": "continuacion"})
+        except Exception:                        # noqa: BLE001
+            pass
     res["con_criterio"] = res_con_criterio
     res["comunidad"] = (comunidad or "").strip()
 
@@ -438,6 +479,20 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     errores: list[str] = []
     for intento in range(1, 3):
         entrada = pregunta
+        # EL CONTEXTO DE LA VUELTA ANTERIOR, SOLO AQUI.
+        #
+        # Y LA CONSULTA SE HACE ENTERA IGUAL: se reanaliza, se vuelve a buscar
+        # y se redacta y verifica de cero. NO se reutiliza el material de la
+        # vuelta anterior, y esa es la diferencia con un chatbot: si el
+        # contexto nuevo cambia que articulos aplican -«y si fuera una
+        # furgoneta»- reutilizarlos daria una respuesta segura sobre los
+        # articulos equivocados, que es peor que no contestar.
+        if contexto_anterior:
+            entrada = pregunta + _CONTINUACION.format(
+                resumen=(contexto_anterior.get("resumen") or "(sin resumen)"),
+                preceptos=", ".join(contexto_anterior.get("preceptos") or [])
+                or "(ninguno)",
+                ejemplo="«y si fuera...», «entonces que pasa con...»")
         if errores:
             entrada = f"{pregunta}\n\n{AN.mensaje_reintento(errores)}"
         try:
@@ -480,6 +535,10 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         "ejercicio_propuesto": analisis.ejercicio,
         "terminos_busqueda": analisis.terminos_busqueda,
         "articulos_sospechados": analisis.articulos_sospechados,
+        # El resumen viaja a la vuelta siguiente como contexto del analizador.
+        # Es lo que hace entendible un «¿y si fuera una furgoneta?» sin tener
+        # que arrastrar la respuesta entera.
+        "resumen_duda": analisis.resumen_duda,
     }
     tr.json("analisis.json", res["analisis"])
     print(f"   impuesto : {analisis.impuesto}")

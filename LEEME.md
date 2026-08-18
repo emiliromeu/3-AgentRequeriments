@@ -4360,17 +4360,18 @@ entonces habría texto verificado y sin verificar en la misma pantalla.
 De ahí sale que las tres son **consultas nuevas**; lo único que cambia es qué se
 reutiliza de la anterior.
 
-## Por qué A y B no se construyen todavía
+## A y B, ya construidas — y por qué se esperó
 
-**La sospecha es que la gente reformula porque no encuentra criterio, no porque
-quiera conversar.** Si es eso, el hilo es el *síntoma* y la cobertura es la
-enfermedad — y construir A y B ahora sería **automatizar una frustración**.
+**La sospecha era que la gente reformula porque no encuentra criterio, no porque
+quiera conversar.** Si fuera eso, el hilo sería el *síntoma* y la cobertura la
+enfermedad, y construir A y B habría sido **automatizar una frustración**. Por
+eso primero se midió.
 
-Y no hace falta construir la conversación para medirla: **el hilo ya ocurre a
+Y no hizo falta construir la conversación para medirla: **el hilo ya ocurría a
 mano**. Alguien pregunta, no le convence, reescribe y vuelve a preguntar, y eso
 deja dos trazas seguidas y parecidas. `medir_hilo.py` las cuenta.
 
-La primera medición, con lo poco que hay (19 consultas reales de una persona,
+La primera medición, con lo poco que había (19 consultas reales de una persona,
 del 2 al 11 de agosto):
 
 ```
@@ -4380,9 +4381,88 @@ y de esas, TRAS UNA CONSULTA SIN CRITERIO: 1 de 1
 ```
 
 **Un caso no decide nada** — se deja escrito para que nadie lo lea como
-conclusión. Lo que decide es **comparar mediciones**: si el porcentaje baja
-según crece la despensa con la cola, era el síntoma; si se mantiene con la
-cobertura alta, la gente quiere conversar de verdad y A y B valen la pena.
+conclusión. Con esa base tan corta, lo que resolvió fue el departamento
+pidiéndolo otra vez, no el número.
+
+`medir_hilo.py` sigue en pie y **ahora mide las dos cosas, en bloques
+separados**: los hilos que él *infiere* (umbral de parecido, ventana de quince
+minutos) y los que la ventana *declara* en `hilo.json`. No se suman. Son bases
+distintas, y mezclar bases entre mediciones es lo que ya nos hizo tomar dos
+decisiones malas.
+
+### Cómo funciona una vuelta
+
+Debajo de la respuesta hay una caja: **«Añadir contexto o preguntar algo más»**.
+Sólo aparece cuando hay una respuesta aceptada en pantalla — sobre un «no
+encontrado» no hay nada que continuar, y para eso ya está la caja de arriba.
+
+Al enviar, **la caja de arriba no se vacía**: la pregunta anterior sigue ahí y
+debajo se le añade la línea nueva. Eso es lo que hace que se sienta como seguir
+hablando. Y la pregunta compuesta está **a la vista**: si se compusiera por
+dentro, quien pregunta no sabría con qué texto se le está contestando. El año y
+la comunidad se heredan y **siguen editables**, por si el caso resulta ser de
+otro ejercicio.
+
+Al enviar se vuelve a la pantalla de preguntar. No es cosmético: **la barra de
+progreso y el «buscando en...» viven ahí**. Lanzando desde la pantalla de leer,
+la vuelta correría entera detrás de una respuesta vieja y sin ninguna señal de
+que algo está pasando — que es justo lo que el departamento pidió arreglar.
+
+El modo se hereda también: si la primera vuelta se hizo con criterio
+administrativo, la segunda también. Es la misma consulta. Y **una consulta nueva
+vuelve a la vuelta 1**: sin eso el número se quedaba pegado de la conversación
+anterior y una consulta recién empezada se copiaba como «vuelta 4», que es una
+etiqueta falsa en un correo que alguien va a leer dentro de meses.
+
+Por debajo, **cada vuelta es una consulta entera**: se reanaliza, se vuelve a
+buscar, se redacta y se verifica de cero. **Nunca se reutiliza el material de la
+vuelta anterior**, y ésa es la diferencia con un chatbot: si el contexto nuevo
+cambia qué artículos aplican — «y si fuera una furgoneta» — reutilizarlos daría
+una respuesta *segura* sobre los artículos *equivocados*, que es peor que no
+contestar.
+
+Lo único que viaja de una vuelta a otra es contexto para **el analizador**: el
+resumen de la duda anterior y los preceptos que se usaron. No la respuesta
+entera. **Al redactor no le llega nada del hilo** — recibe el mismo prompt de
+siempre y sólo el material recién buscado.
+
+Cada vuelta deja **su propio expediente**, con `viene_de`, `tipo:
+continuacion` y su verificación propia. El hilo se reconstruye desde el disco,
+que es donde tiene que estar: dentro de seis meses la memoria de la ventana no
+existe y el expediente sí.
+
+### El techo de llamadas
+
+El tope de 6 llamadas **protege la consulta, y nadie cuenta la sesión**.
+Conversar multiplica las consultas por sesión, que es exactamente el escenario
+que ya rompió esto una vez: a partir de la tercera pregunta el agente dejaba de
+contestar y no se recuperaba hasta cerrar la ventana.
+
+`pruebas/prueba_hilo.py` corre **seis vueltas seguidas con el mismo motor** —
+doce llamadas, el triple del techo — y comprueba que ninguna se queda a medias.
+Y lleva su control negativo: con `empezar_consulta` doblado para que no
+reinicie, **las vueltas 4, 5 y 6 se caen**. Sin eso, la prueba sería verde por
+casualidad.
+
+### La frontera, que no se afloja porque el formato sea más suelto
+
+Conversar invita a preguntar **«¿y tú qué harías?»**. El sistema aporta
+respaldo, no conclusión.
+
+El caso adversario está en la suite, entero. La respuesta que **decide**:
+
+> «Yo en tu caso me acogería a la deducción del 100 por cien: es lo que hace
+> todo el mundo y Hacienda no suele entrar.»
+
+se cae con el motivo de siempre — *el texto no contiene ninguna cita con
+fragmento literal: sin fuente no hay respuesta* — y no llega a pantalla, ni en
+una consulta suelta ni en una continuación. La que **aporta el material sin
+decidir** pasa: cita el artículo 95 literal y deja la valoración donde va, en el
+expediente y en quien decide.
+
+Lo que sostiene esto no es un filtro nuevo: es que **el hilo no toca el prompt
+del redactor**. La suite lo comprueba comparando el sistema que se le pasa en
+cada vuelta contra `RED.SISTEMA` — tienen que ser idénticos.
 
 ## Y las tres preguntas que quedaban abiertas
 

@@ -12,9 +12,16 @@ no porque quiera conversar, sino PORQUE NO ENCUENTRA CRITERIO. Si es eso, el
 hilo es el sintoma y no la enfermedad, y arreglar la cobertura lo hace
 desaparecer. Construir A y B ahora seria automatizar una frustracion.
 
-NO HACE FALTA CONSTRUIR LA CONVERSACION PARA MEDIRLA: el hilo ya ocurre a mano.
-Alguien pregunta, no le convence, reescribe y vuelve a preguntar. Eso deja dos
-trazas seguidas y parecidas, y las trazas ya estan en disco.
+NO HACIA FALTA CONSTRUIR LA CONVERSACION PARA MEDIRLA: el hilo ya ocurria a
+mano. Alguien pregunta, no le convence, reescribe y vuelve a preguntar. Eso deja
+dos trazas seguidas y parecidas, y las trazas ya estan en disco.
+
+Y AHORA HAY LAS DOS COSAS. Construidas A y B, una vuelta deja `hilo.json` con
+su `viene_de`: eso es un hilo DECLARADO, no adivinado. Las dos medidas se
+enseñan separadas y NO se suman, porque no son lo mismo: una la infiere este
+guion con un umbral de parecido y la otra la escribio la ventana. Mezclarlas
+seria cambiar la base entre mediciones, que es exactamente lo que ya nos hizo
+tomar dos decisiones malas.
 
 QUE MIDE
   · cuantos pares SEGUIDOS y PARECIDOS hay -o sea, reformulaciones-;
@@ -73,6 +80,49 @@ def _sin_criterio(d: Path) -> bool:
         return False
     dgt = j.get("dgt") or {}
     return not (dgt.get("consultas") or dgt.get("usadas"))
+
+
+def _declarados(filas) -> None:
+    """LOS HILOS DE VERDAD: los que dejo escritos la ventana, no los inferidos.
+
+    Base distinta a la de arriba y por eso va en su propio bloque: aqui no hay
+    umbral de parecido ni ventana de tiempo. O hay `hilo.json` o no lo hay.
+    """
+    cadenas = {}                      # {traza raiz: nº de vueltas}
+    padre = {}
+    for f in filas:
+        h = f["dir"] / "hilo.json"
+        if not h.is_file():
+            continue
+        try:
+            padre[f["dir"].name] = json.loads(
+                h.read_text(encoding="utf-8")).get("viene_de", "")
+        except (OSError, ValueError):
+            continue
+
+    def raiz_de(nombre: str) -> str:
+        visto = set()
+        while padre.get(nombre) and nombre not in visto:
+            visto.add(nombre)
+            nombre = padre[nombre]
+        return nombre
+
+    for hijo in padre:
+        cadenas[raiz_de(hijo)] = cadenas.get(raiz_de(hijo), 1) + 1
+
+    print()
+    print("-" * 74)
+    print("Y LOS HILOS DECLARADOS (base distinta: los que dejo la ventana)")
+    print("-" * 74)
+    if not cadenas:
+        print("  Ninguno todavia. El boton de seguir es nuevo: vuelve a medir")
+        print("  cuando el departamento lo haya usado unas semanas.")
+        return
+    vueltas = sorted(cadenas.values(), reverse=True)
+    print(f"  conversaciones con mas de una vuelta : {len(cadenas)}")
+    print(f"  vueltas por conversacion             : "
+          f"maxima {vueltas[0]}, media {sum(vueltas)/len(vueltas):.1f}")
+    print(f"  reparto: {dict(Counter(vueltas))}   (vueltas: cuantas)")
 
 
 def main() -> int:
@@ -153,6 +203,7 @@ def main() -> int:
             print("  LECTURA: se reformula tambien con criterio delante, asi")
             print("  que no es solo falta de cobertura. Ahi A y B empiezan a")
             print("  tener sentido por si mismos.")
+    _declarados(filas)
     print()
     print("  NOTA: esto se lee comparando MEDICIONES, no una sola. Lo que")
     print("  importa es si el porcentaje baja segun crece la despensa.")
