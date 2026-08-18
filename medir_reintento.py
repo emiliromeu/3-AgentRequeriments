@@ -28,6 +28,7 @@ NO IMPRIME NINGUNA PREGUNTA: son dudas de clientes.
 """
 import json
 import sys
+from datetime import datetime
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -36,6 +37,23 @@ sys.path.insert(0, str(RAIZ))
 
 TRAZAS = RAIZ / "datos" / "trazas"
 ANCHO = 78
+
+# EL DIA EN QUE LA FICHA PASO A DECIR EL CUERPO Y NO EL DOCUMENTO. Antes de
+# esto, el material del articulo 24 del Reglamento decia «Real Decreto
+# 1624/1992, de 29 de diciembre, por el que se aprueba...» -400 caracteres del
+# titulo del BOE- y el verificador no acepta ese nombre: en el corpus ese es
+# OTRO cuerpo. O sea que al modelo se le pedia nombrar la norma y se le estaba
+# enseñando un nombre que no valia.
+#
+# TODA TRAZA ANTERIOR A ESTA HORA MIDE UN SISTEMA QUE YA NO EXISTE, y sus
+# fallos de «no dice de que norma es» no son un defecto vivo. Contarlas juntas
+# con las de despues fue exactamente el error que hay que no repetir.
+CORTE_FICHA = datetime(2026, 8, 5, 23, 19)   # commit 3b963e6
+
+# ESTOS NUMEROS SON DE MI MAC, y de mi uso: consultas mias probando, no un dia
+# de trabajo del departamento. Se reconfirman con las trazas de la oficina
+# cuando lleguen, y NO antes. Lo que aqui son grupos de tres alli pueden ser
+# grupos de treinta y decir otra cosa.
 
 # LAS CLASES SALEN DE LOS MOTIVOS QUE HAY, no de una lista escrita antes de
 # mirar. Se leyeron primero los motivos reales y estas son las familias que
@@ -89,7 +107,12 @@ def leer(d: Path):
         estado = json.loads((d / "resultado.json").read_text("utf-8")).get("estado")
     except (OSError, ValueError):
         estado = "?"
-    return {"dir": d, "informes": informes, "estado": estado}
+    try:
+        cuando = datetime.strptime(d.name[:15], "%Y%m%dT%H%M%S")
+    except ValueError:
+        cuando = None
+    return {"dir": d, "informes": informes, "estado": estado, "cuando": cuando,
+            "vieja": bool(cuando and cuando < CORTE_FICHA)}
 
 
 def clases_de(informe) -> list[str]:
@@ -120,6 +143,24 @@ def main() -> int:
     print(f"  de esas, el SEGUNDO intento la salvo     : {len(paso)}")
     print(f"  volvieron a caer                         : {len(cayo)}")
 
+    # EL CORTE QUE MANDA, y va antes que cualquier otro reparto.
+    viejas = [t for t in con_dos if t["vieja"]]
+    vivas = [t for t in con_dos if not t["vieja"]]
+    print()
+    print(f"  DE ESAS {len(con_dos)}, ¿CUANTAS MIDEN EL SISTEMA DE HOY?")
+    print(f"    anteriores al {CORTE_FICHA:%d/%m %H:%M} (ficha vieja) : "
+          f"{len(viejas)}   <- NO cuentan")
+    print(f"    posteriores                                : {len(vivas)}")
+    if viejas:
+        print(f"    Antes de esa hora la ficha daba el titulo del BOE en vez")
+        print(f"    del nombre del cuerpo, y ese nombre el verificador no lo")
+        print(f"    acepta: se les pedia nombrar la norma enseñandoles un")
+        print(f"    nombre que no valia. Sus fallos no son un defecto vivo.")
+    vivas_cayo = [t for t in vivas
+                  if t["informes"][1].get("veredicto") != "ACEPTADO"]
+    print(f"\n  LA BASE VIVA: {len(vivas)} consultas, de las que cayeron "
+          f"{len(vivas_cayo)}")
+
     print()
     print("=" * ANCHO)
     print("2 · DE LAS QUE VOLVIERON A CAER, ¿DE QUE HABLA EL MOTIVO?")
@@ -146,9 +187,14 @@ def main() -> int:
         salvo = t["informes"][1].get("veredicto") == "ACEPTADO"
         for c in cs:
             por_clase[c][0 if salvo else 1] += 1
-    print(f"  {'motivo del PRIMER rechazo':46s} {'salva':>6} {'cae':>5}")
+    print(f"  {'motivo del PRIMER rechazo':46s} {'salva':>6} {'cae':>5} "
+          f"{'base':>5}")
     for c, (s, f) in sorted(por_clase.items(), key=lambda x: -sum(x[1])):
-        print(f"  {c:46s} {s:>6} {f:>5}")
+        # LA BASE EN CADA CORTE. «3 de 3» sin el 3 delante se lee como un
+        # porcentaje, y no lo es.
+        print(f"  {c:46s} {s:>6} {f:>5} {s+f:>5}")
+    print(f"\n  Cada fila tiene su base en la ultima columna. Ninguna llega a")
+    print(f"  cuatro casos: son indicios, no proporciones.")
 
     print()
     print("=" * ANCHO)
@@ -166,8 +212,12 @@ def main() -> int:
 
     print()
     print("=" * ANCHO)
-    print(f"LA BASE: {len(con_dos)} consultas llegaron al segundo intento. Es MUY")
-    print("poca. Cualquier reparto de aqui puede darse la vuelta con diez mas.")
+    print(f"LA BASE: {len(con_dos)} consultas llegaron al segundo intento, y solo")
+    print(f"{len(vivas)} miden el sistema de hoy. Es MUY poca: cualquier reparto de")
+    print("aqui puede darse la vuelta con diez mas.")
+    print()
+    print("Y SON DE MI MAC, de consultas mias probando. Se reconfirman con las")
+    print("trazas de la oficina cuando lleguen, y no antes.")
     print("=" * ANCHO)
     return 0
 

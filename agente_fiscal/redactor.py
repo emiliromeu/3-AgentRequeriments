@@ -288,6 +288,46 @@ No hay apartado de advertencias: lo pone el sistema (regla 11).
 """
 
 
+def _chuleta_de_normas(registros: list, normas=None) -> list[str]:
+    """«articulo N -> NORMA», para los preceptos que el modelo tiene delante.
+
+    Solo se usa en el REINTENTO. En el primer intento cada precepto ya lleva su
+    ficha con la norma; repetirlo en una lista aparte seria pagar entrada por
+    algo que ya esta escrito dos lineas mas arriba. En el reintento si hace
+    falta, porque el reproche es exactamente ese y hay que ponerselo delante.
+
+    LOS REPETIDOS SE MARCAN. Un numero de articulo que existe en dos cuerpos
+    del material es precisamente el que el modelo no puede resolver por el
+    numero, y es donde se ha visto fallar: se dice cual es, en vez de dejar que
+    lo deduzca comparando la lista consigo misma.
+    """
+    if not registros:
+        return []
+    filas = []
+    for r in registros:
+        nombre = r.get("norma_titulo", "")
+        if normas is not None:
+            cuerpo = normas.por_clave(r.get("cuerpo_clave") or "")
+            if cuerpo:
+                nombre = cuerpo.etiqueta
+        filas.append((r.get("referencia", ""), nombre))
+
+    veces = {}
+    for ref, _n in filas:
+        veces[ref] = veces.get(ref, 0) + 1
+
+    lineas = [
+        "",
+        "DE QUE NORMA ES CADA PRECEPTO QUE TIENES. No lo busques ni lo",
+        "deduzcas: copialo de aqui, entero.",
+    ]
+    for ref, nombre in filas:
+        aviso = ("   <-- OJO: este numero esta repetido, la norma es lo unico "
+                 "que los distingue" if veces.get(ref, 0) > 1 else "")
+        lineas.append(f"  {ref} -> {nombre}{aviso}")
+    return lineas
+
+
 def bloque_precepto(registro: dict, ejercicio: int | None, grafo=None,
                     normas=None) -> str:
     """El material de UN precepto, tal como lo va a leer el modelo.
@@ -1036,6 +1076,28 @@ def construir_material(
             "Estos son los motivos, cita por cita:",
         ]
         cola += [f"  - {m}" for m in motivos_rechazo]
+        # LA CHULETA DE NORMAS: articulo -> norma, junto y delante.
+        #
+        # LO QUE LA MOTIVO, Y LO QUE RESULTO SER. De 7 consultas rechazadas en
+        # el primer intento, 3 cayeron por «la cita no dice de que norma es, y
+        # ese precepto existe en 3» y las 3 volvieron a caer por lo mismo en el
+        # segundo. Parecia un defecto vivo y no lo es: las tres son de la noche
+        # del 5 de agosto, ANTES de las 23:19, y a esa hora entro el arreglo que
+        # hace que la ficha diga el nombre del CUERPO en vez del titulo del
+        # documento del BOE. Hasta entonces se le pedia al modelo que nombrara
+        # la norma enseñandole un nombre que el verificador no acepta.
+        #
+        # O SEA QUE EL VALOR DE ESTA CHULETA ESTA SIN MEDIR. La comparacion que
+        # lo diria -mismo material, con y sin ella- no se ha hecho: el reensayo
+        # que salio 7 de 7 uso el material de hoy, que ya trae aquel arreglo, y
+        # no separa una cosa de la otra.
+        #
+        # Se deja porque es barata -solo en el reintento, unas lineas- y porque
+        # la ambigüedad de fondo es real y la creamos nosotros: con una norma
+        # cargada «articulo 24» identificaba un precepto; con diecisiete, el 24
+        # existe en varias. Pero NO se apunte a este comentario como prueba de
+        # que arreglo nada.
+        cola += _chuleta_de_normas(registros, normas)
         cola += [
             "",
             "Corrigelo. Si el fallo es que un fragmento no esta literalmente en",
@@ -1045,6 +1107,11 @@ def construir_material(
             "estaba bien pero le faltaba SU referencia pegada: reescribe esa",
             "linea con articulo + norma + enlace, o funde esas viNetas en una",
             "sola cita continua con una unica referencia al final.",
+            "Si el fallo es 'no dice de que norma es', NO tienes que adivinarlo",
+            "ni buscarlo: esta en la lista de aqui arriba. Copia el nombre de",
+            "la norma TAL CUAL aparece ahi, entero, dentro del parentesis de esa",
+            "cita. 'articulo 24' no vale; 'articulo 24 del Reglamento del",
+            "Impuesto sobre el Valor Añadido' si.",
             "Y aprovecha para quitar toda cita que no haga falta para contestar:",
             "menos citas, menos superficie de fallo.",
             "Si no queda respaldo suficiente, escribe NO HAY RESPALDO SUFICIENTE.",

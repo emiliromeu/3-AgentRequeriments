@@ -4510,6 +4510,59 @@ cada vuelta contra `RED.SISTEMA` — tienen que ser idénticos.
   pregunta va dentro del material, así que el redactor ya lo sabe; no hay nada
   que decidir aparte.
 
+## La rama del verificador: lo que se midió, y por qué no se toca
+
+La otra forma de acabar sin respuesta —el verificador rechazó— se dejó fuera de
+la orientación. La hipótesis a comprobar era que unos rechazos son de **forma**
+(el texto vale, el formato no; ahí el segundo intento funciona) y otros de
+**falta de material** (ahí el segundo intento va a fallar igual y orientar sería
+mejor).
+
+**No se distinguen, porque no hay ninguno de falta de material.** De 7 consultas
+rechazadas en el primer intento, 2 las salvó el segundo y 5 volvieron a caer. Los
+doce motivos son de forma: *el fragmento no lleva su referencia pegada* (7) y *la
+referencia no dice de qué norma es* (4), más un *ninguna cita con fragmento
+literal*. Cero por falta de material. La regla propuesta no se dispararía nunca.
+
+### Y luego, el dato que tira la mitad de la base
+
+Las 3 que caían por «no dice de qué norma» son de la noche del **5 de agosto,
+antes de las 23:19**. A esa hora entró el commit `3b963e6`, que hace que la ficha
+del material diga el nombre del **cuerpo** (*«Reglamento del Impuesto sobre el
+Valor Añadido»*) en vez del título del documento del BOE (*«Real Decreto
+1624/1992, de 29 de diciembre, por el que se aprueba…»*, 400 caracteres). Ese
+segundo nombre **el verificador no lo acepta**: en el corpus es otro cuerpo.
+
+O sea que a esas tres consultas se les pedía nombrar la norma **enseñándoles un
+nombre que no valía**. Su fallo no es un defecto vivo: es un fallo ya arreglado,
+tres semanas atrás, la misma noche.
+
+`medir_reintento.py` corta ahora por esa hora y lo dice antes que cualquier otro
+reparto. **La base viva es de 3 consultas, de las que cayeron 2** — y las dos por
+otra cosa: una por *sin referencia pegada* y otra por *ninguna cita*.
+
+### La chuleta de normas
+
+Se añadió igualmente al mensaje de reintento: para cada precepto del material,
+`artículo N → NORMA`, con marca en los números repetidos, más una instrucción de
+que ese nombre se copia de ahí y no se deduce. Sólo en el reintento — en el
+primer intento cada precepto ya lleva su ficha con la norma, y el prompt ya dice
+*«el nombre de la norma se copia de la línea NORMA: de la ficha, tal cual»*. Ese
+hueco ya estaba cerrado.
+
+**Su valor está sin medir, y conviene decirlo.** El reensayo de las 7 salió 7 de
+7 aceptadas, pero **no separa una cosa de la otra**: usó el material de hoy, que
+ya trae el arreglo del 5 de agosto y que además ha cambiado por el crecimiento
+del corpus (una traza pasó de 4 preceptos a 6). La comparación que lo diría
+—mismo material, con y sin chuleta— no se ha hecho.
+
+### La base, dicha en cada corte
+
+7 casos, en grupos de 3, 3 y 1; base viva de 3. `medir_reintento.py` imprime el
+tamaño en cada fila, porque «3 de 3» sin el 3 delante se lee como un porcentaje y
+no lo es. Y son números **de mi Mac**, de consultas mías probando: se reconfirman
+con las trazas de la oficina cuando lleguen, y no antes.
+
 ## El NO ENCONTRADO orienta (y lo que la medición dijo después)
 
 Cuando la búsqueda recupera preceptos pero ninguno resuelve el caso, hasta ahora
