@@ -97,10 +97,28 @@ _RE_ANEXO = re.compile(
 # no recuperamos -26 en Sucesiones, 13 en Sucesiones, 5 en ITP-, asi que en
 # Renta y Patrimonio, que es lo que se consulta, la perdida es casi nula.
 #
-# Si algun dia hace falta: la decision es del resolutor -que si tiene corpus- y
-# no de este patron. Se probaria el numero compuesto y, si ese articulo no
-# existe, se caeria al plano.
+# HECHO EL 18/08/2026, Y TAL COMO SE ANOTO AQUI: la decision la toma el grafo
+# -que si tiene corpus- y no este patron, que sigue siendo plano y puro. Ver
+# `_leer_articulos`.
+#
+# QUEDAN CINCO, Y NINGUNA ES UN NUMERO COMPUESTO. Se miraron una a una, porque
+# dar por hecho que eran «mas de lo mismo» es como se etiqueta por parecido:
+#
+#   3 · «articulo 7.2 RD646/20», en el anexo de tarifas de residuos. Es la
+#       MISMA cita repetida tres veces en una tabla, y apunta a un real decreto
+#       de residuos que no es tributario ni esta en el corpus.
+#   1 · «articulo 2» a secas, en el 631-34, para definir el grupo II de
+#       parentesco. Sin norma al lado: no hay forma de saber de cual es.
+#   1 · «articulo 12 del Real decreto 1629/1991», el Reglamento del ISD, QUE SI
+#       TENEMOS. Esta falla por otra cosa: la designacion resuelve al cuerpo #0
+#       -el decreto que aprueba, tres articulos- y el 12 vive en el #1. Es
+#       EXACTAMENTE el defecto que `dgt.py` corrige con `cuerpo_hermano_con`, y
+#       el grafo no tiene esa correccion. Queda anotado: no es del compuesto.
 _RE_NUMERO = re.compile(r"\s*(\d+)")
+# La segunda mitad de un numero compuesto, pegada al guion: «641-14» -> «14».
+# Solo se usa desde el grafo, que tiene corpus para decidir si eso es un
+# articulo o un apartado. Ver `_leer_articulos`.
+_RE_COMPUESTO = re.compile(r"-(\d+)")
 _RE_PALABRA_SUF = re.compile(r"\s+([a-zA-ZáéíóúÁÉÍÓÚ]+)")
 
 # Lo que puede ir detras de "disposicion adicional" y ser un ordinal de verdad.
@@ -579,6 +597,48 @@ class GrafoRemisiones:
                 break
             numero = m.group(1)
             cursor = m.end()
+
+            # EL NUMERO COMPUESTO, COMO ULTIMO RECURSO Y CON EL CORPUS DELANTE.
+            #
+            # «641-14» es un articulo entero del Codi tributari de Catalunya;
+            # «10-3» es el apartado 3 del articulo 10 en una norma estatal. La
+            # misma forma y dos cosas distintas, y por eso esto estuvo
+            # RECHAZADO: leer el compuesto siempre arreglaba lo catalan y
+            # rompia lo estatal.
+            #
+            # Lo desbloquean las dos cosas que se aprendieron con la
+            # abreviatura del Real Decreto:
+            #
+            #   · SE PRUEBA PRIMERO LO QUE SE LEE HOY. Si el numero plano
+            #     existe, se queda plano: «10» existe, luego «10-3» sigue
+            #     siendo el apartado. El compuesto solo llega a lo que hoy se
+            #     pierde, y por eso no puede mover nada que ya funcione.
+            #   · Y DECIDE EL CORPUS, no el patron. «641» a secas no existe en
+            #     ningun cuerpo y «641 14» si: ahi no hay ambiguedad que temer.
+            #
+            # SI EXISTEN LAS DOS LECTURAS no se elige: se deja el plano, que es
+            # lo que la fuente escribio. Medido sobre el corpus entero: eso no
+            # pasa NI UNA VEZ, asi que la rama esta por si acaso y no por
+            # necesidad.
+            #
+            # Y NO ALCANZA AL CAMPO DE LA DGT, que es donde vivia el peligro:
+            # ese lo lee `leer_numeros`, funcion PURA sin corpus, y sigue
+            # intacta. Las dos lecturas viven en dos caminos distintos, asi que
+            # no hay que elegir entre lo catalan y lo estatal.
+            #
+            # Medido: 48 de las 53 remisiones internas del Codi se recuperan,
+            # cero remisiones perdidas, cero mal resueltas y la despensa de la
+            # DGT no se mueve ni un precepto.
+            mc = _RE_COMPUESTO.match(texto, cursor)
+            if mc:
+                compuesto = B.normalizar(f"{numero}-{mc.group(1)}")
+                plano = B.normalizar(numero)
+                hay_plano = any(plano in a for a in self.articulos.values())
+                hay_compuesto = any(compuesto in a
+                                    for a in self.articulos.values())
+                if hay_compuesto and not hay_plano:
+                    numero = f"{numero}-{mc.group(1)}"
+                    cursor = mc.end()
 
             # Un sufijo latino solo cuenta si el articulo existe de verdad.
             ms = _RE_PALABRA_SUF.match(texto, cursor)
