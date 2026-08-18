@@ -671,20 +671,35 @@ class CacheDGT:
 
     def __init__(self, directorio: Path | None = None):
         self.dir = Path(directorio) if directorio else DIR_CONSULTAS
+        # LA DESPENSA SE LEE DE DOS SITIOS Y SE USA COMO UNO.
+        #
+        # `consultas/` viene sembrado por plan y viaja por git; `demanda/` lo
+        # llena la cola con lo que pregunta el departamento y NO viaja -ver
+        # `cola.py` para el motivo-. La separacion es de TRANSPORTE, no de uso:
+        # aqui abajo son la misma despensa, y quien lee no tiene que saber de
+        # donde salio cada consulta.
+        self.dirs = [self.dir]
+        if directorio is None:
+            from . import cola as _C
+            self.dirs.append(_C.DEMANDA)
         self._memo: dict[str, Consulta | None] = {}
 
     def leer(self, numero: str) -> Consulta | None:
         numero = (numero or "").upper()
         if numero in self._memo:
             return self._memo[numero]
-        f = self.dir / f"{numero}.json"
         consulta = None
-        if f.is_file():
+        for d in self.dirs:
+            f = d / f"{numero}.json"
+            if not f.is_file():
+                continue
             try:
                 consulta = Consulta.de_registro(
                     json.loads(f.read_text(encoding="utf-8")))
             except (json.JSONDecodeError, OSError):
                 consulta = None
+            if consulta:
+                break
         self._memo[numero] = consulta
         return consulta
 
@@ -692,13 +707,17 @@ class CacheDGT:
         return self.leer(numero) is not None
 
     def todas(self) -> list:
-        if not self.dir.is_dir():
-            return []
-        salida = []
-        for f in sorted(self.dir.glob("*.json")):
-            c = self.leer(f.stem)
-            if c:
-                salida.append(c)
+        vistos, salida = set(), []
+        for d in self.dirs:
+            if not d.is_dir():
+                continue
+            for f in sorted(d.glob("*.json")):
+                if f.stem in vistos:
+                    continue        # si esta en las dos, una sola vez
+                vistos.add(f.stem)
+                c = self.leer(f.stem)
+                if c:
+                    salida.append(c)
         return salida
 
     def buscar(self, terminos: str, tope: int = 3) -> list:

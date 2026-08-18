@@ -60,3 +60,22 @@ crudo/
 # escrito con la clave en linea acabaria dentro.
 .claude/settings.local.json
 .DS_Store
+
+# ---- LO QUE BAJA LA COLA NO SALE DEL DESPACHO -------------------------------
+# `datos/dgt/consultas/` viaja: esta sembrado POR PLAN y refleja lo que
+# decidimos sembrar, no lo que pregunta nadie.
+#
+# `datos/dgt/demanda/` lo llena la cola con lo que PREGUNTA el departamento. El
+# contenido de una consulta de la DGT es publico y no lleva datos de nadie,
+# pero EL CONJUNTO Y LAS FECHAS si: un commit del martes con tres consultas
+# sobre reduccion de empresa familiar dice que ese martes un cliente pregunto
+# por una sucesion de empresa familiar. Git guarda eso para siempre.
+#
+# Mismo criterio que el corpus y las trazas: VIAJA LO CARO QUE NO DICE NADA DE
+# NADIE; NO VIAJA LO BARATO QUE SI LO DICE. La siembra por plan son horas
+# contra un servicio publico; la demanda son una o dos consultas, y no hay nada
+# que ahorrar compartiendolas.
+#
+# Y LA COLA TAMPOCO, que dice que articulos se han preguntado.
+datos/dgt/demanda/
+datos/dgt/cola.json

@@ -1341,6 +1341,31 @@ class Ventana:
 
         threading.Thread(target=trabajar, daemon=True).start()
 
+    def _vaciar_cola_por_detras(self) -> None:
+        """Pide a PETETE lo apuntado, en un hilo, sin tocar la ventana.
+
+        NO BLOQUEA NI PUEDE BLOQUEAR, y hay tres cosas que lo garantizan:
+
+          · va en un hilo aparte, asi que la ventana sigue respondiendo;
+          · es lo ULTIMO del arranque: cuando empieza, ya se puede consultar;
+          · y no escribe en la ventana mientras trabaja. Lo que traiga se dira
+            MAÑANA, al abrir. Un cartel que aparece a media consulta es una
+            interrupcion, y esto no es urgente para nadie.
+
+        Si falla, se calla: `cola.vaciar` no levanta y el intento queda
+        apuntado. Lo que no se baje hoy se baja la proxima vez.
+        """
+        import threading
+
+        def trabajar() -> None:
+            try:
+                from agente_fiscal import cola as _COLA
+                _COLA.vaciar()
+            except Exception:                    # noqa: BLE001
+                pass
+
+        threading.Thread(target=trabajar, daemon=True).start()
+
     def _plegar_campos(self, _evento=None) -> None:
         """El año y la comunidad, al lado si caben; apilados si no.
 
@@ -1858,6 +1883,36 @@ class Ventana:
                                           "en la mesa.")
         except Exception:  # noqa: BLE001 - la guia nunca impide consultar
             pass
+
+        # ------------------------------------------------------- LA COLA
+        #
+        # LO ULTIMO DEL ARRANQUE, Y POR DETRAS. La ventana ya funciona cuando
+        # esto empieza: el motor esta listo, el texto escrito y los botones
+        # vivos. Si la cola tardara o fallara, el gestor ya puede consultar.
+        #
+        # SIN PROGRAMADOR DE TAREAS. El portatil de la oficina se apaga por la
+        # noche, asi que una tarea programada de madrugada no se ejecutaria
+        # nunca. Se vacia AL ABRIR, que es el unico momento en que el equipo
+        # esta encendido con seguridad.
+        #
+        # PRIMERO SE DICE LO QUE YA HAY, y luego se va a buscar: el aviso de lo
+        # que entro anoche es de la vez anterior y no depende de que esta salga
+        # bien.
+        try:
+            from agente_fiscal import cola as _COLA
+            traido = _COLA.recien_bajado()
+            if traido["articulos"]:
+                self.mostrar_cinta(
+                    f"Encontré criterio sobre {traido['articulos']} "
+                    f"artículo(s) que preguntasteis: "
+                    f"{traido['consultas']} consulta(s) nuevas. "
+                    f"Ya están en el segundo botón.")
+            silencio = _COLA.aviso_de_silencio()
+            if silencio:
+                self.mostrar_cinta(silencio)
+        except Exception:  # noqa: BLE001 - la cola nunca impide consultar
+            pass
+        self._vaciar_cola_por_detras()
         self._reajustar()
         self._revisar_boton()
 

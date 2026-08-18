@@ -534,6 +534,32 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
           f"preceptos al redactor")
     registros = seleccion.elegidos
     res["preceptos_enviados"] = [r["referencia"] for r in registros]
+
+    # SE APUNTA LO QUE VA AL REDACTOR Y NO TIENE CRITERIO.
+    #
+    # Aqui y no antes: es el momento en que se sabe QUE preceptos se van a usar
+    # de verdad. Apuntar los recuperados y no los enviados llenaria la cola de
+    # articulos que el corte descarto.
+    #
+    # NO BLOQUEA NI PUEDE BLOQUEAR. `cola.apuntar` no levanta nunca -lo dice su
+    # docstring y lo prueba su suite-, no sale a la red y no espera a nadie:
+    # escribe un JSON pequeño y vuelve. Cambiar la respuesta de un gestor por
+    # una mejora de la despensa seria exactamente al reves de lo que hace falta.
+    try:
+        from agente_fiscal import cola as _COLA
+        _cache_cob = DGT.CacheDGT()
+        _con_criterio = {(p.cuerpo, p.numero.lower())
+                         for c in _cache_cob.todas()
+                         for p in c.preceptos(ix.normas) if p.comparable}
+        _faltan = [(r.get("cuerpo_clave", ""),
+                    r["referencia"].replace("Articulo ", "").strip())
+                   for r in registros
+                   if (r.get("cuerpo_clave", ""),
+                       r["referencia"].replace("Articulo ", "").strip().lower())
+                   not in _con_criterio]
+        _COLA.apuntar([(c, a) for c, a in _faltan if c and a and a[0].isdigit()])
+    except Exception:                            # noqa: BLE001
+        pass
     res["preceptos_descartados"] = [d["referencia"] for d in seleccion.descartados]
 
     # ------------------------------------------------- CRITERIO (fase 9B)
