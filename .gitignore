@@ -79,3 +79,7 @@ crudo/
 # Y LA COLA TAMPOCO, que dice que articulos se han preguntado.
 datos/dgt/demanda/
 datos/dgt/cola.json
+
+# El diagnostico del equipo: se genera en cada maquina y es de esa maquina.
+diagnostico.txt
+datos/arranque_fallido.txt

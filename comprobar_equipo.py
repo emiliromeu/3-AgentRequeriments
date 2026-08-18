@@ -408,8 +408,22 @@ def ficha() -> None:
     # --- y el ultimo arranque fallido, si lo hubo
     fallo = RAIZ / "datos" / "arranque_fallido.txt"
     if fallo.is_file():
+        # DE CUANDO ES, Y SI ES DE HOY. Este fichero no se borra al arrancar
+        # bien -el de ayer puede hacer falta-, asi que sin la edad un fallo ya
+        # arreglado se lee igual que el de esta mañana y manda a perseguir algo
+        # que no existe.
+        from datetime import datetime
+        edad = (datetime.now()
+                - datetime.fromtimestamp(fallo.stat().st_mtime))
+        dias = edad.days
+        if dias == 0:
+            cuando = "DE HOY"
+        elif dias == 1:
+            cuando = "de ayer"
+        else:
+            cuando = f"de hace {dias} dias  <-- puede no ser el fallo de ahora"
         print()
-        print("  ULTIMO ARRANQUE QUE FALLO (esto es lo que hay que enviar):")
+        print(f"  ULTIMO ARRANQUE QUE FALLO, {cuando}:")
         for linea in fallo.read_text(encoding="utf-8",
                                      errors="replace").splitlines()[-12:]:
             print("    " + linea[:110])

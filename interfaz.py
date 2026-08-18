@@ -500,6 +500,10 @@ class Ventana:
         self.analisis_actual = None
         self.preceptos_actuales = []
         self.con_criterio = False
+        # La ventana esta bloqueada: el arranque no llego a dejar motor. Se
+        # guarda para que los botones NUEVOS -continuar, escribir para el
+        # cliente- puedan decirlo tambien en vez de no hacer nada.
+        self.bloqueada = False
         self.ix = None
         self.grafo = None
         self.motor = None
@@ -1909,15 +1913,25 @@ class Ventana:
         except Exception as e:                   # noqa: BLE001
             self._bloquear(
                 "El agente no ha podido prepararse. Haz doble clic en "
-                "«comprobar_equipo» y enséñale a Emili lo que salga.",
+                "«diagnostico»: deja un fichero diagnostico.txt en esta "
+                "misma carpeta. Envíaselo a Emili tal cual.",
                 f"{type(e).__name__}: {e}")
             # Y AL DISCO, que es lo unico que se puede leer despues cuando la
             # ventana se abre sin consola.
             try:
                 import traceback
+                from datetime import datetime
                 fallo = RAIZ / "datos" / "arranque_fallido.txt"
                 fallo.parent.mkdir(parents=True, exist_ok=True)
-                fallo.write_text(traceback.format_exc(), encoding="utf-8")
+                # CON LA FECHA DELANTE. Sin ella, un fallo de hace tres meses
+                # que ya se arreglo se lee igual que el de esta mañana, y manda
+                # a perseguir algo que no existe. El fichero se queda -no se
+                # borra al arrancar bien- porque quien lo lee puede necesitar
+                # el de ayer; lo que hace falta es saber de cuando es.
+                fallo.write_text(
+                    f"ARRANQUE FALLIDO el "
+                    f"{datetime.now():%d/%m/%Y a las %H:%M:%S}\n\n"
+                    + traceback.format_exc(), encoding="utf-8")
             except Exception:                    # noqa: BLE001
                 pass
 
@@ -2026,7 +2040,25 @@ class Ventana:
         self._revisar_boton()
 
     def _bloquear(self, frase: str, detalle_tecnico: str = "") -> None:
-        """Deja la ventana inservible pero explicada. Nunca con una traza."""
+        """Deja la ventana inservible pero explicada. Nunca con una traza.
+
+        LA EXPLICACION VA DONDE SE ESTA MIRANDO, Y ESE ERA EL FALLO.
+
+        `_pintar_estado` y `_escribir_texto` escriben los dos en la vista de
+        RESPUESTA. Al arrancar, la ventana esta en la de CONSULTA -es donde se
+        escribe la duda- y esa otra vista esta quitada del grid. O sea que el
+        mensaje se escribia entero, correcto y completo, EN UNA PANTALLA QUE NO
+        SE VE: lo que quedaba delante era el formulario con la duda, el año, la
+        comunidad y los dos botones en gris, sin una palabra.
+
+        Es exactamente lo que se reporto desde la oficina, y la suite lo daba
+        por bueno porque leia `self.texto` a pelo: la frase estaba: no estaba
+        A LA VISTA. Es el mismo error que dar por buena una comprobacion que en
+        realidad lee el comentario que explica por que algo no se hace.
+
+        Asi que ahora se dice en la CINTA, que vive en la vista de consulta, y
+        el estado se pinta ademas por si se pasa a la otra.
+        """
         self.boton.configure(state="disabled")
         # LOS DOS BOTONES, NO UNO. Aqui solo se apagaba el primero: el de
         # criterio se quedaba encendido sobre un motor que no existe, asi que
@@ -2034,9 +2066,26 @@ class Ventana:
         # que se podia pulsar. Se apagan juntos porque juntos se encienden.
         if getattr(self, "boton_criterio", None) is not None:
             self.boton_criterio.configure(state="disabled")
+        # Y LOS DOS NUEVOS: continuar y escribir para el cliente cuelgan de que
+        # haya motor igual que los otros dos. Dejarlos vivos sobre un motor que
+        # no existe es ofrecer algo que va a fallar al pulsarlo.
+        #
+        # ENVUELTO, y solo aqui: esta funcion es LA QUE EXPLICA LOS FALLOS. Si
+        # se cayera a mitad -porque la maqueta no llego a construirse entera-
+        # se llevaria por delante la unica frase que iba a leer alguien, y
+        # volveriamos al boton gris y mudo por otro camino.
+        try:
+            self._sin_nada_que_copiar()
+        except Exception:                        # noqa: BLE001
+            pass
+        self.mostrar_cinta(frase)
         self._pintar_estado("NO SE PUEDE CONSULTAR", frase,
                             EST.NO_ENCONTRADO)
         self._escribir_texto([(frase + "\n", "titulo")])
+        # Y LO QUE NO SE PUEDE HACER, QUE NO PAREZCA QUE SE PUEDE: si la
+        # ventana esta bloqueada, la caja no invita a escribir una duda que no
+        # se va a poder consultar.
+        self.bloqueada = True
         # El detalle tecnico va al log de la terminal, JAMAS a la pantalla.
         if detalle_tecnico:
             print(f"[arranque] {detalle_tecnico}", file=sys.stderr)
@@ -2065,10 +2114,18 @@ class Ventana:
             self._pintar_estado(
                 "NO SE PUEDE CONSULTAR",
                 "El agente no ha terminado de prepararse.", EST.NO_ENCONTRADO)
-            self.mostrar_cinta(
-                "Los botones están apagados porque el agente no ha podido "
-                "prepararse. Haz doble clic en «comprobar_equipo» y enséñale "
-                "a Emili lo que salga.")
+            # LA CAUSA CONCRETA MANDA SOBRE LA GENERICA. Si `_bloquear` ya ha
+            # dicho que falta la credencial, o que el corpus esta a medias, esa
+            # frase dice QUE HACER; la de aqui solo dice que algo pasa. Y esta
+            # se dispara al escribir en la caja, o sea SIEMPRE y despues, asi
+            # que sin esta guarda borraba la buena en cuanto el gestor tecleaba
+            # la primera letra.
+            if not self.bloqueada:
+                self.mostrar_cinta(
+                    "Los botones están apagados porque el agente no ha podido "
+                    "prepararse. Haz doble clic en «diagnostico»: deja un "
+                    "fichero diagnostico.txt en esta misma carpeta. "
+                    "Envíaselo a Emili tal cual.")
             return
         duda = self.caja.get("1.0", "end").strip()
         # LA REGLA DEL AÑO, UNA SOLA VEZ. Aqui habia una TERCERA copia escrita
@@ -2247,7 +2304,23 @@ class Ventana:
         """
         import threading
 
-        if self.trabajando or not getattr(self, "traza_actual", ""):
+        # NI UNA PULSACION MUDA, igual que en `_seguir`. Este boton solo se
+        # enciende con expediente delante, asi que llegar aqui sin el significa
+        # que algo ha cambiado por debajo; se dice, no se traga.
+        if self.trabajando:
+            self.mostrar_cinta(
+                "Espera a que termine lo que está en marcha.")
+            return
+        if self.motor is None or self.bloqueada:
+            self.mostrar_cinta(
+                "El agente no ha podido prepararse. Haz doble clic en "
+                "«diagnostico» y envíale a Emili el fichero diagnostico.txt "
+                "que deja al lado.")
+            return
+        if not getattr(self, "traza_actual", ""):
+            self.mostrar_cinta(
+                "No se puede reescribir porque no se ha podido guardar el "
+                "expediente de esta consulta. Suele ser el disco lleno.")
             return
         self.trabajando = True
         self.boton_cliente.configure(state="disabled",
@@ -2306,8 +2379,30 @@ class Ventana:
         Y POR DEBAJO ES UNA CONSULTA ENTERA. Ver `fase4.consultar`: se
         reanaliza, se vuelve a buscar y se redacta y verifica de cero.
         """
+        # NI UNA PULSACION MUDA. Un boton que se puede pulsar y no hace nada
+        # es peor que uno apagado: apagado al menos se ve que no toca.
         anadido = self.caja_seguir.get("1.0", "end").strip()
-        if not anadido or self.trabajando or not self.traza_actual:
+        if not anadido:
+            self.mostrar_cinta(
+                "Escribe primero qué quieres añadir o preguntar en la caja de "
+                "abajo, y vuelve a pulsar.")
+            self.caja_seguir.focus_set()
+            return
+        if self.trabajando:
+            self.mostrar_cinta(
+                "Espera a que termine la consulta que está en marcha.")
+            return
+        if self.bloqueada or self.motor is None:
+            self.mostrar_cinta(
+                "No se puede seguir preguntando porque el agente no ha podido "
+                "prepararse. Haz doble clic en «diagnostico» y envíale a "
+                "Emili el fichero diagnostico.txt que deja al lado.")
+            return
+        if not self.traza_actual:
+            self.mostrar_cinta(
+                "No se puede seguir sobre esta respuesta porque no se ha "
+                "podido guardar su expediente. Empieza una consulta nueva con "
+                "el contexto ya incluido. Suele ser el disco lleno.")
             return
         # LA PREGUNTA HEREDADA, escrita en la caja de siempre: lo que se
         # consulta tiene que estar A LA VISTA. Si se compusiera por dentro,
@@ -2787,6 +2882,18 @@ class Ventana:
             self.caja_seguir.delete("1.0", "end")
             if self.traza_actual:
                 self.boton_cliente.configure(state="normal")
+            else:
+                # SIN EXPEDIENTE NO SE PUEDE REESCRIBIR: el material vive
+                # dentro de la carpeta, y sin ella no hay de que partir. Pasa
+                # con el disco lleno, y antes el boton se quedaba gris sin una
+                # palabra justo cuando acababa de salir una respuesta buena:
+                # se lee como que la herramienta esta rota.
+                self.boton_cliente.configure(state="disabled")
+                self.mostrar_cinta(
+                    "No se ha podido guardar el expediente de esta consulta, "
+                    "así que «Escribirlo para el cliente» no está disponible. "
+                    "La respuesta de arriba es válida: cópiala antes de cerrar. "
+                    "Suele ser el disco lleno.")
         else:
             self._sin_nada_que_copiar()
             self._escribir_sin_respaldo(res)

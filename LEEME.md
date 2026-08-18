@@ -4510,6 +4510,67 @@ cada vuelta contra `RED.SISTEMA` — tienen que ser idénticos.
   pregunta va dentro del material, así que el redactor ya lo sabe; no hay nada
   que decidir aparte.
 
+## Los botones grises de Windows, y por qué el arreglo anterior no bastó
+
+**El síntoma:** en el PC de la oficina los dos botones salen en gris con la
+consulta, el año y la comunidad rellenados. Sin una palabra.
+
+Ya se había arreglado una vez: se envolvió el arranque entero para que ninguna
+excepción se perdiera, se escribió el detalle a disco, y `prueba_boton.py` se
+puso verde. **Y el fallo seguía.**
+
+**La causa real:** `_bloquear` escribía la explicación con `_pintar_estado` y
+`_escribir_texto`, y las dos escriben en la vista de **respuesta**. Al arrancar,
+la ventana está en la de **consulta** — es donde se escribe la duda — y la otra
+está quitada del grid. O sea que el mensaje se escribía entero, correcto y
+completo, **en una pantalla que no se ve**. Lo que quedaba delante era el
+formulario y dos botones grises.
+
+Y la suite lo daba por bueno porque leía `v.texto` a pelo: la frase *estaba*; no
+estaba **a la vista**. Es el mismo error que dar por buena una comprobación que
+en realidad lee el comentario que explica por qué algo no se hace — la tercera
+vez que ese patrón muerde.
+
+Ahora `_bloquear` lo dice en la **cinta**, que vive en la vista de consulta. Y la
+suite lee **sólo la vista que está puesta**: si el mensaje va a la otra, cuenta
+como no dicho. Con el arreglo quitado, las cuatro causas salen mudas.
+
+### Las causas, cada una con lo suyo
+
+| causa | lo que se lee en pantalla |
+|---|---|
+| pull a medias, dependencia que falta | «no ha podido prepararse… haz doble clic en *diagnostico*» |
+| no hay credencial | «Falta la configuración. Avisa a Emili» + el diálogo para ponerla |
+| la cuenta sin saldo | «La cuenta no tiene saldo. Avisa a Emili» |
+| corpus incompleto o sellos que no cuadran | «Falta el texto de las normas. Cierra y vuelve a abrir: se baja solo» |
+
+La causa concreta **manda sobre la genérica**. El mensaje de `_revisar_boton` se
+dispara al escribir en la caja — o sea siempre, y después — y borraba la buena en
+cuanto el gestor tecleaba la primera letra.
+
+### Los botones nuevos no añaden otro camino mudo
+
+`_seguir` y `_escribir_para_cliente` volvían en silencio con la caja vacía, con
+una consulta en marcha, sin motor o sin expediente. **Un botón que se puede
+pulsar y se queda quieto es peor que uno apagado**: apagado al menos se ve que no
+toca. Los cuatro casos lo dicen ahora.
+
+Y el caso que no existía antes: una respuesta **buena** cuyo expediente no se
+pudo escribir — disco lleno. «Escribirlo para el cliente» se apaga, porque el
+material vive dentro de la carpeta, y se explica diciendo lo que importa: *la
+respuesta de arriba es válida, cópiala antes de cerrar*.
+
+### La línea para la oficina
+
+«Haz doble clic en comprobar_equipo y enséñame lo que salga» pide leer una
+ventana negra y copiarla a mano, y por eso **no ha vuelto nunca nada**.
+`diagnostico.bat` (y `diagnostico.command` en Mac) ejecuta lo mismo, lo guarda en
+`diagnostico.txt` al lado del agente y lo abre en el Bloc de notas. Lo que se
+envía es un adjunto.
+
+Incluye el último arranque fallido **con su fecha**, y dice si es de hoy: sin eso
+un fallo de hace tres meses ya arreglado se lee igual que el de esta mañana.
+
 ## El botón de copiar
 
 Se lleva **la última respuesta**, no el hilo. Lo que se pega en un correo o en
