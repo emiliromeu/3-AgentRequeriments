@@ -4625,6 +4625,63 @@ Y un arreglo que hacía falta al invertirlos: **«Consultando...» iba fijo en e
 botón de la ley**, así que al subir el de criterio, quien pulsaba arriba veía
 cambiar el de abajo. Ahora la señal aparece donde se acaba de hacer clic.
 
+## `consolidado_hasta` es del BOE, no nuestro
+
+**Esto se malentendió una vez y va a volver a pasar, así que va escrito.**
+
+- **`consolidado_hasta`** es hasta dónde llega el texto consolidado **que el BOE
+  publica**: la fecha del último cambio que el BOE ha incorporado. El Reglamento
+  del ITPAJD lo tiene en 2018 y eso **no** son ocho años de retraso nuestro —
+  puede ser una norma estable.
+- **`sellado`** sí es nuestro, pero mide otra cosa: **el día que ejecutamos la
+  ingesta**. Mide nuestra diligencia.
+- **El retraso de verdad** es si el BOE lista **reformas posteriores que su
+  propio texto todavía no incorpora**. Eso lo calcula `pendientes.leer` al
+  ingerir, se guarda ahora en `sellos.json`, y **no tiene umbral que discutir**:
+  o hay reformas pendientes o no las hay.
+
+El aviso viejo miraba `sellado`, así que **reingerir lo ponía a cero** aunque no
+hubiéramos traído nada nuevo. Por eso no saltaba nunca.
+
+### Los 180 días se quedan, y no sobran
+
+`aviso_de_edad` y `DIAS_SOSPECHOSO = 180` **no se borran aunque lo parezca**. El
+aviso exacto necesita que alguien haya preguntado al BOE al ingerir; para un
+corpus que llegó copiado de otro equipo, o de una versión anterior a este cambio,
+lo único que hay es la edad. Los 180 días están medidos para ese caso —13 de 17
+normas ya han cambiado a esa altura— y borrarlos lo dejaría mudo.
+
+### Lo que salió al reingerir las 17
+
+Segundos de red: 4 peticiones por norma y sin pausa fija. **El corpus no cambió
+ni un byte** —los 17 sha256 idénticos, 2.504 preceptos antes y después—; lo único
+que gana es el dato.
+
+**14 de 17 normas tienen reformas publicadas sin incorporar**, afectando a **82
+preceptos**, que ya quedaban marcados como no citables.
+
+| norma | reformas | preceptos | consolidado hasta |
+|---|---|---|---|
+| Ley del IVA | **25** | 7 | 2026-02-28 |
+| Rgto. gestión e inspección | **25** | 8 | 2026-01-01 |
+| Rgto. del IVA | **24** | 10 | 2026-02-05 |
+| LGT | 14 | 9 | 2024-12-22 |
+| Ley del IRPF | 12 | 5 | 2026-04-30 |
+| TR del ITPAJD | 11 | 8 | 2026-03-22 |
+| Ley del IS | 11 | 6 | 2026-03-22 |
+| Rgto. del ITPAJD | 8 | 4 | 2018-11-09 |
+| Ley del IP | 7 | 1 | 2023-12-29 |
+| Rgto. de Recaudación | 7 | 2 | 2024-02-01 |
+| Ley del ISD | 5 | 2 | 2022-12-29 |
+| Rgto. del IRPF | 5 | 5 | 2026-02-28 |
+| Código trib. Catalunya | 2 | **14** | 2026-05-23 |
+| Rgto. del ISD | 1 | 1 | 2023-04-25 |
+
+**Y no se parece en nada a la columna de fechas**, que es exactamente el punto: la
+Ley del IVA, consolidada hace 174 días, es la que **más** reformas pendientes
+tiene (25); el Reglamento del ISD, con 1.214 días, tiene **una**. Ordenar por
+`consolidado_hasta` habría puesto a mirar justo las equivocadas.
+
 ## El goteo: el corpus entero, a ratos, desde el Mac
 
 La cola por demanda hace crecer la despensa con lo que se pregunta. El goteo

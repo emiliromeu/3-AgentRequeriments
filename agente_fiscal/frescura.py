@@ -84,8 +84,104 @@ def edad_del_corpus(dir_corpus: Path, hoy: date | None = None) -> dict:
             "sin_fecha": sin_fecha}
 
 
+def retraso_de_consolidacion(dir_corpus: Path) -> dict:
+    """LO QUE DE VERDAD MIDE SI VAMOS ATRASADOS. Sin red: ya esta en el sello.
+
+    -> {normas, con_reformas, preceptos, preguntado, sin_dato, detalle}
+
+    LA DISTINCION QUE COSTO UN DIAGNOSTICO ENTERO, escrita aqui para que no
+    vuelva a costar otro:
+
+        `consolidado_hasta` ES DEL BOE, NO NUESTRO. Es hasta donde llega el
+        texto consolidado QUE EL BOE PUBLICA. El Reglamento del ITPAJD lo tiene
+        en 2018 y eso NO significa que llevemos ocho años sin bajarlo: significa
+        que el BOE no ha incorporado nada nuevo desde entonces. Puede ser una
+        norma estable.
+
+        `sellado` ES NUESTRO, y mide OTRA COSA: el dia que ejecutamos la
+        ingesta. Mide nuestra diligencia. Por eso el aviso viejo no saltaba
+        nunca -reingerir lo ponia a cero aunque no hubieramos traido nada
+        nuevo- y por eso ya no se usa para esto.
+
+        LO QUE DICE EL RETRASO DE VERDAD es si el BOE lista reformas
+        POSTERIORES que su propio texto todavia no incorpora. Eso lo calcula
+        `pendientes.leer` al ingerir, y desde hoy se guarda en el sello.
+
+    Aqui no hay umbral que discutir: o hay reformas pendientes o no las hay.
+    """
+    ruta = Path(dir_corpus) / "sellos.json"
+    vacio = {"normas": 0, "con_reformas": 0, "preceptos": 0,
+             "preguntado": "", "sin_dato": 0, "detalle": []}
+    if not ruta.is_file():
+        return vacio
+    try:
+        sellos = json.loads(ruta.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return vacio
+
+    normas = con = preceptos = sin_dato = 0
+    preguntado = ""
+    detalle = []
+    for clave, valor in sorted(sellos.items()):
+        if not isinstance(valor, dict) or clave == "sellado":
+            continue
+        normas += 1
+        c = valor.get("consolidacion")
+        if not isinstance(c, dict):
+            # LOS SELLOS VIEJOS NO LO LLEVAN Y SE CUENTAN APARTE. Suponer que
+            # una norma sin dato esta al dia es exactamente lo que no se puede
+            # hacer: es la que no sabemos.
+            sin_dato += 1
+            continue
+        n = int(c.get("reformas_pendientes") or 0)
+        if c.get("preguntado", "") > preguntado:
+            preguntado = c.get("preguntado", "")
+        if n:
+            con += 1
+            tocados = c.get("preceptos_tocados") or []
+            preceptos += len(tocados)
+            detalle.append({"norma": clave, "reformas": n,
+                            "preceptos": len(tocados),
+                            "consolidado_hasta": c.get("consolidado_hasta", "")})
+    detalle.sort(key=lambda d: (-d["reformas"], d["norma"]))
+    return {"normas": normas, "con_reformas": con, "preceptos": preceptos,
+            "preguntado": preguntado, "sin_dato": sin_dato, "detalle": detalle}
+
+
+def aviso_de_consolidacion(dir_corpus: Path) -> str:
+    """Que normas tienen reformas publicadas sin incorporar. Vacio si ninguna.
+
+    NO DICE DIAS, dice QUE Y CUANTAS. Los dias eran el respaldo de cuando no
+    se podia preguntar; esto es el dato exacto.
+    """
+    r = retraso_de_consolidacion(dir_corpus)
+    if r["sin_dato"] and not r["normas"] - r["sin_dato"]:
+        return ""            # ningun sello lo lleva todavia: no se inventa
+    if not r["con_reformas"]:
+        return ""
+    nombres = ", ".join(d["norma"] for d in r["detalle"][:4])
+    mas = (f" y {r['con_reformas'] - 4} mas"
+           if r["con_reformas"] > 4 else "")
+    cola = ""
+    if r["preceptos"]:
+        cola = (f" Afectan a {r['preceptos']} precepto(s), que quedan marcados "
+                f"como no citables.")
+    return (f"{r['con_reformas']} de {r['normas']} normas tienen reformas "
+            f"publicadas que el texto consolidado del BOE todavía no "
+            f"incorpora: {nombres}{mas}.{cola} No es un fallo del agente: es "
+            f"que el BOE aún no las ha metido en el texto.")
+
+
 def aviso_de_edad(dir_corpus: Path, hoy: date | None = None) -> str:
-    """La frase para la ventana, o cadena vacia si no hay nada que decir.
+    """EL RESPALDO SIN RED. La frase para la ventana, o vacia si no hay nada.
+
+    NO SE BORRA AUNQUE PAREZCA QUE SOBRA, y esto va escrito porque va a
+    parecerlo: desde que el sello guarda las reformas pendientes, el aviso
+    exacto es `aviso_de_consolidacion` y este mide otra cosa -cuanto hace que
+    ingerimos-. Pero ese dato solo existe si ALGUIEN pregunto al BOE al
+    ingerir; para un corpus que llego copiado de otro equipo, o de una version
+    anterior a este cambio, lo unico que hay es la edad. Los 180 dias estan
+    MEDIDOS para eso -ver la cabecera- y borrarlos dejaria ese caso mudo.
 
     TRANQUILA Y NO BLOQUEANTE. Un corpus viejo no es una promesa rota: es un
     dato que envejece. Impedir abrir por eso dejaria a la gestoria sin

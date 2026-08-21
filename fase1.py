@@ -459,7 +459,11 @@ def modo_ingerir(norma_id: str, descargar: bool,
         destino,
         forzado=(f"ingerida con --forzar: {len(sin_reconocer)} de "
                  f"{total_bloques} bloques ({proporcion:.1%}) sin reconocer"
-                 if demasiados else ""))
+                 if demasiados else ""),
+        # LO QUE DIJO EL BOE SOBRE LA CONSOLIDACION. Se calculaba aqui arriba
+        # -para marcar los preceptos no citables- y se tiraba; es el dato que
+        # dice si nuestra copia va atrasada de verdad. Ver `sellos.sellar`.
+        informe=informe)
 
     print(f"\n  corpus      -> {destino}")
     print(f"  descartados -> {destino_desc}")

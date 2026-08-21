@@ -140,6 +140,80 @@ if VIEJO in FUENTE:
               "abriria", "corpus_roto" not in mod.que_falta(), mod.que_falta())
     shutil.rmtree(d4, ignore_errors=True)
 
+
+
+# ============ LA CONSOLIDACION: LO QUE MIDE EL RETRASO DE VERDAD
+print("\n=== EL SELLO GUARDA SI EL BOE TIENE REFORMAS SIN INCORPORAR ===")
+print("  `consolidado_hasta` ES DEL BOE, NO NUESTRO: es hasta donde llega su")
+print("  texto consolidado. El Reglamento del ITPAJD lo tiene en 2018 y eso")
+print("  NO son ocho años de retraso nuestro; puede ser una norma estable.")
+print("  Y `sellado` es nuestro pero mide otra cosa: el dia que ingerimos.")
+print("  Por eso el aviso viejo no saltaba: reingerir lo ponia a cero.")
+print("  Lo que dice el retraso es si el BOE lista reformas POSTERIORES que")
+print("  su propio texto todavia no incorpora. Se calculaba y se tiraba.\n")
+
+import types as _t
+from agente_fiscal import frescura as _F
+
+_corral2 = Path(tempfile.mkdtemp())
+try:
+    _r = _corral2 / "X.jsonl"
+    _r.write_text('{"a":1}\n', encoding="utf-8")
+
+    # SIN informe: el sello no se inventa el campo.
+    SL.sellar(_r, hoy="2026-08-21")
+    _s = json.loads((_corral2 / "sellos.json").read_text("utf-8"))
+    comprobar("sin informe, el sello NO se inventa la consolidacion",
+              "consolidacion" not in _s["X"], _s["X"])
+    comprobar("  y el retraso cuenta esa norma como SIN DATO, no como al dia",
+              _F.retraso_de_consolidacion(_corral2)["sin_dato"] == 1,
+              _F.retraso_de_consolidacion(_corral2))
+    comprobar("  y no dice nada: no se avisa de lo que no se sabe",
+              _F.aviso_de_consolidacion(_corral2) == "")
+
+    # CON informe y sin reformas: se guarda y se calla.
+    limpio = _t.SimpleNamespace(consolidado_hasta="2026-05-23",
+                                estado="Finalizado", pendientes=[],
+                                preceptos_tocados=set())
+    SL.sellar(_r, hoy="2026-08-21", informe=limpio)
+    _s = json.loads((_corral2 / "sellos.json").read_text("utf-8"))
+    comprobar("con informe, el sello guarda la consolidacion",
+              "consolidacion" in _s["X"], _s["X"])
+    comprobar("  con la fecha en que se PREGUNTO",
+              _s["X"]["consolidacion"]["preguntado"] == "2026-08-21")
+    comprobar("  sin reformas pendientes, no se avisa",
+              _F.aviso_de_consolidacion(_corral2) == "")
+
+    # CON reformas: se dice QUE normas y CUANTAS, no cuantos dias.
+    sucio = _t.SimpleNamespace(consolidado_hasta="2026-02-28",
+                               estado="Finalizado", pendientes=[1, 2, 3],
+                               preceptos_tocados={"20", "36"})
+    SL.sellar(_r, hoy="2026-08-21", informe=sucio)
+    _av = _F.aviso_de_consolidacion(_corral2)
+    comprobar("con reformas pendientes, SI se avisa", bool(_av))
+    comprobar("  y dice cuantas normas", "1 de 1 normas" in _av, _av)
+    comprobar("  y cuantos preceptos toca", "2 precepto" in _av, _av)
+    comprobar("  y NO habla de dias: los dias eran el respaldo sin red",
+              "días" not in _av and "dias" not in _av, _av)
+    comprobar("  y aclara que no es un fallo nuestro",
+              "no es un fallo del agente" in _av.lower(), _av)
+
+    # EL RETRASO NO SE PARECE A LA EDAD, y ese era todo el malentendido.
+    comprobar("`aviso_de_edad` sigue existiendo como respaldo sin red",
+              hasattr(_F, "aviso_de_edad") and _F.DIAS_SOSPECHOSO == 180)
+    comprobar("  y su motivo esta escrito para que nadie lo borre",
+              "NO SE BORRA AUNQUE PAREZCA QUE SOBRA" in
+              (RAIZ / "agente_fiscal" / "frescura.py").read_text("utf-8"))
+finally:
+    shutil.rmtree(_corral2, ignore_errors=True)
+
+
+# Y EL CORPUS DE VERDAD lo tiene, que es lo que importa despues de reingerir.
+_real = _F.retraso_de_consolidacion(RAIZ / "datos" / "corpus")
+comprobar("las 17 normas del disco llevan ya el dato",
+          _real["sin_dato"] == 0 and _real["normas"] == 17, _real)
+
+
 print("\n" + "=" * 62)
 print(f"COMPROBACIONES: {len(fallos)} fallos")
 for f in fallos:

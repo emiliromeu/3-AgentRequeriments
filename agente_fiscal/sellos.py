@@ -72,13 +72,28 @@ def leer(directorio: Path) -> dict:
         return {}
 
 
-def sellar(ruta: Path, hoy: str | None = None, forzado: str = "") -> dict:
+def sellar(ruta: Path, hoy: str | None = None, forzado: str = "",
+           informe=None) -> dict:
     """Apunta el estado de UNA norma recien ingerida. Devuelve su sello.
 
     `forzado` es por que se salto la puerta del troceo, si se salto. Se guarda
     EN EL SELLO a proposito, que es el sitio que se mira para saber si el
     corpus esta entero: una norma que entro saltandose una comprobacion tiene
     que poder verse meses despues sin acordarse de nada.
+
+    `informe` es lo que dijo el BOE sobre la consolidacion de esa norma
+    -`pendientes.leer`-. SE CALCULABA AL INGERIR Y SE TIRABA, y era el unico
+    dato que sabe si nuestra copia va atrasada DE VERDAD:
+
+        `consolidado_hasta` NO ES NUESTRO RETRASO. Es hasta donde llega el
+        texto consolidado QUE EL BOE PUBLICA, o sea la fecha del ultimo cambio
+        que el BOE ha incorporado. Una norma estable puede llevar ocho años
+        sin tocarse y estar perfectamente al dia. Lo que dice si vamos
+        atrasados es OTRA cosa: si el BOE lista reformas posteriores que su
+        propio texto todavia no incorpora.
+
+    Guardarlo aqui cuesta cero -ya esta calculado dos lineas mas arriba- y es
+    lo que permite que el aviso de frescura deje de medir nuestra diligencia.
     """
     ruta = Path(ruta)
     directorio = ruta.parent
@@ -87,6 +102,19 @@ def sellar(ruta: Path, hoy: str | None = None, forzado: str = "") -> dict:
     sello["sellado"] = hoy or date.today().isoformat()
     if forzado:
         sello["forzado"] = forzado
+    if informe is not None:
+        # CON LA FECHA EN QUE SE PREGUNTO. Sin ella, «0 reformas pendientes»
+        # de hace dos años se lee igual que el de esta mañana, que es el mismo
+        # error que ya costo un diagnostico entero con `arranque_fallido.txt`.
+        sello["consolidacion"] = {
+            "preguntado": hoy or date.today().isoformat(),
+            "consolidado_hasta": getattr(informe, "consolidado_hasta", "") or "",
+            "estado_boe": getattr(informe, "estado", "") or "",
+            "reformas_pendientes": len(getattr(informe, "pendientes", []) or []),
+            "preceptos_tocados": sorted(
+                str(x) for x in (getattr(informe, "preceptos_tocados", set())
+                                 or set())),
+        }
     sellos[_norma_de(ruta)] = sello
     ruta_de_sellos(directorio).write_text(
         json.dumps(sellos, ensure_ascii=False, indent=2, sort_keys=True) + "\n",

@@ -2723,6 +2723,17 @@ class Ventana:
                         else TINTA3),
                     font=self.fuente_menuda, anchor="w", padx=RELLENO
                 ).pack(fill="x")
+            # Y EL RETRASO DE VERDAD, QUE ES OTRA COSA. La linea de arriba dice
+            # cuando lo bajamos NOSOTROS -nuestra diligencia-; esta dice si el
+            # BOE tiene reformas publicadas que su propio texto consolidado
+            # todavia no incorpora. Una norma bajada ayer puede estar atrasada,
+            # y una de hace un año puede estar perfecta.
+            aviso_cons = _FR.aviso_de_consolidacion(RAIZ / "datos" / "corpus")
+            if aviso_cons:
+                tk.Label(c, text="   " + aviso_cons, bg=PAPEL2, fg=TINTA,
+                         font=self.fuente_menuda, anchor="w", justify="left",
+                         wraplength=560, padx=RELLENO
+                         ).pack(fill="x", pady=(2, 0))
 
             self._normas_abiertas = False
             boton_pliegue = ttk.Button(c, style="Discreto.TButton")
