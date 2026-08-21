@@ -274,10 +274,75 @@ FASE4b = (RAIZ / "fase4.py").read_text("utf-8")
 comprobar("`fase4` dice QUE apunto, para que la ventana no lo recalcule",
           'res["apuntados_en_cola"]' in FASE4b)
 
-print("\n" + "=" * 62)
-print(f"COMPROBACIONES: {len(fallos)} fallos")
-for f in fallos:
-    print("  -", f)
+
+
+# ==================== ATASCO: LA COLA QUE CRECE MAS DE LO QUE BAJA
+print("\n=== ATASCO · UNA COLA QUE NO DA ABASTO SE VE IGUAL QUE IR BIEN ===")
+print("  Baja de tres en tres por apertura y crece con lo que se pregunta,")
+print("  asi que una punta de uso puede acumularla semanas sin que nadie lo")
+print("  note. Desde dentro no se distingue de que todo vaya bien.\n")
+
+import shutil as _sh
+import tempfile as _tf
+from datetime import date as _date, timedelta as _td
+
+
+def _hace(dias):
+    return (_date.today() - _td(days=dias)).isoformat()
+
+
+_corral = Path(_tf.mkdtemp())
+_guardada = C.COLA
+C.COLA = _corral / "cola.json"
+try:
+    comprobar("el umbral son 14 dias, dicho como DECISION",
+              C.DIAS_ESPERANDO_AVISO == 14, C.DIAS_ESPERANDO_AVISO)
+    comprobar("con la cola vacia no hay nada que decir",
+              C.aviso_de_atasco() == "", C.aviso_de_atasco())
+
+    # EN USO NORMAL, CALLADA. Es la mitad del encargo: un aviso que sale
+    # siempre deja de leerse a la tercera vez.
+    C.apuntar([("c#0", "95"), ("c#0", "96")])
+    comprobar("dos articulos apuntados hoy: NO se avisa de nada",
+              C.aviso_de_atasco() == "", C.aviso_de_atasco())
+    comprobar("  y la espera del mas viejo es de cero dias",
+              C.espera_del_mas_viejo() == 0, C.espera_del_mas_viejo())
+
+    # Uno que lleva esperando mas de la cuenta.
+    _d = C.leer()
+    _d["entradas"][C.clave("c#0", "95")]["primera_vez"] = _hace(20)
+    C.guardar(_d)
+    comprobar("con el mas viejo a 20 dias, SI se avisa", bool(C.aviso_de_atasco()))
+    _av = C.aviso_de_atasco()
+    print(f"    «{_av}»")
+    comprobar("  y dice cuantos esperan", "2 artículo" in _av, _av)
+    comprobar("  cuantos dias lleva el mas viejo", "20 días" in _av, _av)
+    comprobar("  QUE SE PUEDE HACER: abrir el agente mas veces",
+              "abrirlo más a menudo" in _av, _av)
+    comprobar("  y A QUIEN avisar si corre prisa", "Emili" in _av, _av)
+
+    # UN REFRESCO NO ES UNA PROMESA y no puede disparar el aviso: a nadie se le
+    # dijo «lo estoy buscando» por algo de lo que YA hay criterio.
+    C.COLA = _corral / "cola2.json"
+    C.apuntar_refresco([("c#0", "20", _hace(900))])
+    _d = C.leer()
+    _d["entradas"][C.clave("c#0", "20")]["primera_vez"] = _hace(90)
+    C.guardar(_d)
+    comprobar("un refresco viejo NO dispara el aviso: no es una deuda con nadie",
+              C.aviso_de_atasco() == "", C.aviso_de_atasco())
+    comprobar("  aunque si esta en la cola para refrescarse",
+              "20" in {e["articulo"] for e in C.pendientes()})
+finally:
+    C.COLA = _guardada
+    _sh.rmtree(_corral, ignore_errors=True)
+
+
+# Y LA VENTANA ENSEÑA UNO SOLO, con el de la fuente por delante.
+_VEN = (Path(__file__).resolve().parent.parent / "interfaz.py").read_text("utf-8")
+comprobar("la ventana enseña UN aviso, y el de la fuente manda",
+          "_COLA.aviso_de_silencio() or _COLA.aviso_de_atasco()" in _VEN)
+
+
 
 
 # ============================== REFRESCO: LO QUE ENVEJECE, POR DETRAS
@@ -348,4 +413,10 @@ finally:
     _sh.rmtree(_corral, ignore_errors=True)
 
 
+
+
+print("\n" + "=" * 62)
+print(f"COMPROBACIONES: {len(fallos)} fallos")
+for f in fallos:
+    print("  -", f)
 sys.exit(1 if fallos else 0)

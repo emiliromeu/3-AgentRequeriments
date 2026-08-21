@@ -4582,6 +4582,73 @@ petición en mejorar lo que ya se le pudo contestar.
 Los dos controles negativos están en `pruebas/prueba_cola.py`: si el refresco
 pierde su prioridad, o si el reloj pasa a ser hoy, la suite se cae.
 
+## Cuando la cola no da abasto
+
+La cola crece con lo que se pregunta y baja **de tres en tres por apertura**. Una
+punta de uso puede acumularla durante semanas, y **desde dentro se ve igual que
+ir bien**: la ventana avisaba si llevaba cinco días sin poder bajar nada —la
+fuente caída— pero no si bajaba menos de lo que entraba.
+
+### La señal: la edad del más viejo pendiente
+
+No el tamaño de la cola, ni si crece. Tres motivos, y el primero manda:
+
+1. **Es la promesa, medida directamente.** Cuando alguien pregunta por un
+   artículo que no tenemos, la ventana le dice *«apuntado, lo estoy buscando»*.
+   La edad del más viejo es exactamente cuánto lleva esa frase sin cumplirse. El
+   tamaño no dice eso: veinte entradas de ayer son una tarde buena, y una sola de
+   hace un mes es una promesa rota.
+2. **No hace falta guardar nada nuevo.** `primera_vez` ya está en cada entrada.
+   Medir si la cola «baja de tamaño» pediría una serie de tamaños diarios: otro
+   fichero que mantener y otra cosa que puede quedarse vieja.
+3. **Se calla sola.** En cuanto el más viejo se baja, el aviso desaparece sin que
+   nadie lo apague. Un aviso de tendencia hay que decidir cuándo dejar de darlo.
+
+Y **sólo cuenta los pendientes**: un refresco no es una promesa. A nadie se le
+dijo «lo estoy buscando» por un artículo del que ya tenemos criterio.
+
+### El umbral: 14 días, y es una decisión
+
+**No se puede medir hoy**, y conviene decirlo: haría falta saber cuántas veces al
+día se abre el agente en la oficina, y de eso no hay ni un dato — las trazas que
+hay son mías probando.
+
+El razonamiento: la cola baja 3 por apertura; con una apertura por día laborable
+son ~15 a la semana, ~30 en dos. Si a los catorce días el más viejo sigue
+esperando, o la cola es mayor que eso o el agente no se está abriendo. **Las dos
+cosas hay que decirlas y las dos tienen la misma respuesta.** Y catorce días es
+también el límite de lo que «lo estoy buscando» se sostiene sin sonar a excusa.
+
+Se podrá medir cuando lleguen trazas de la oficina.
+
+### Lo que dice, con qué hacer y a quién avisar
+
+> Hay 2 artículo(s) esperando criterio, y el más antiguo lleva 20 días. Se traen
+> tres cada vez que se abre el agente, así que abrirlo más a menudo los va
+> sacando. Si tienes prisa, pídele a Emili una tanda de descarga.
+
+**Un aviso, no dos.** Si la fuente está caída y además hay cola, se enseña el de
+la fuente: los dos hablan de la cola pero de cosas distintas, y poner al lado un
+problema que no se resuelve desde la ventana y otro que sí acaba en que no se
+hace ninguna de las dos cosas. Además se solapan — si la fuente lleva dos semanas
+muda, el más viejo lleva dos semanas esperando *por eso*, y decir «abre el agente
+más veces» sería mandar a alguien a repetir algo que no va a funcionar.
+
+## Las suites llenaban la cola de producción
+
+Encontrado contando la cola para poner el aviso de arriba: **23 pendientes, y las
+23 mías**. La ventana ya se negaba a *salir* a PETETE con el motor de ensayo —«la
+suite va contra dobles y no toca la fuente»— pero la cola se seguía **llenando**
+desde cualquier motor, así que cada pasada de la batería metía entradas.
+
+No es sólo suciedad. La cola apuntada es una promesa hecha a alguien; una promesa
+que no le hemos hecho a nadie no puede ocupar el sitio de una que sí, **ni
+disparar un aviso de que la cola no da abasto**. Con el ruido dentro, la alarma
+recién puesta habría saltado por mi culpa el día que la oficina la estrenara.
+
+Ahora se aplica la misma regla en las dos direcciones: con motor de ensayo, ni se
+llena ni se vacía. Y la cola quedó limpia: 38 entradas → 0.
+
 ## Medir sobre un histórico mientras el código cambia
 
 **Describe un sistema que ya no existe.** Ha pasado tres veces, y las tres han

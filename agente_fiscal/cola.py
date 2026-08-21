@@ -110,6 +110,40 @@ REFRESCO = "refresco"
 # no crece.
 DIAS_SIN_BAJAR_AVISO = 5
 
+# CUANTOS DIAS PUEDE ESPERAR EL MAS VIEJO ANTES DE QUE LO DIGAMOS.
+#
+# LA SEÑAL ES LA EDAD DEL MAS VIEJO PENDIENTE, y no el tamaño de la cola ni si
+# crece. Tres motivos, y el primero es el que manda:
+#
+#   1. ES LA PROMESA, MEDIDA DIRECTAMENTE. Cuando alguien pregunta por un
+#      articulo que no tenemos, la ventana le dice «apuntado, lo estoy
+#      buscando». La edad del mas viejo es exactamente cuanto lleva esa frase
+#      sin cumplirse. El tamaño de la cola no dice eso: veinte entradas de ayer
+#      son una tarde buena, y una sola de hace un mes es una promesa rota.
+#
+#   2. NO HACE FALTA GUARDAR NADA NUEVO. `primera_vez` ya esta en cada entrada.
+#      Medir si la cola «baja de tamaño» pediria una serie de tamaños diarios,
+#      o sea un fichero mas que mantener y otra cosa que puede quedarse vieja.
+#
+#   3. SE CALLA SOLA. En cuanto el mas viejo se baja, el aviso desaparece sin
+#      que nadie lo apague. Un aviso de tendencia hay que decidir cuando dejar
+#      de darlo.
+#
+# EL NUMERO ES UNA DECISION, no una medida, y no se puede medir hoy: haria
+# falta saber cuantas veces al dia se abre el agente en la oficina, y de eso no
+# hay ni un dato -las trazas que tengo son mias probando-.
+#
+# El razonamiento: la cola baja 3 articulos por apertura. Con una apertura por
+# dia laborable son unos 15 a la semana, o sea unos 30 en dos semanas. Si a los
+# 14 dias el mas viejo sigue esperando, o la cola es mayor que eso o el agente
+# no se esta abriendo; las dos cosas hay que decirlas y las dos tienen la misma
+# respuesta. Y catorce dias es tambien el limite de lo que «lo estoy buscando»
+# se puede sostener delante de alguien sin que suene a excusa.
+#
+# SE PODRA MEDIR cuando haya trazas de la oficina: entonces se sabra cuantas
+# aperturas hay al dia de verdad y el numero saldra de ahi.
+DIAS_ESPERANDO_AVISO = 14
+
 PENDIENTE = "pendiente"
 SIN_RESULTADOS = "sin_resultados"   # se busco y la fuente no tiene nada
 BAJADA = "bajada"
@@ -336,6 +370,41 @@ def aviso_de_silencio() -> str:
                 f"artículos apuntados. Puede que la fuente esté caída: avisa "
                 f"a Emili si sigue igual.")
     return ""
+
+
+def espera_del_mas_viejo() -> int | None:
+    """Dias que lleva esperando el articulo PENDIENTE mas antiguo. None si no
+    hay ninguno.
+
+    SOLO LOS PENDIENTES, y esto importa: un refresco no es una promesa. A nadie
+    se le dijo «lo estoy buscando» por un articulo del que YA tenemos criterio,
+    asi que su espera no es una deuda con nadie y no puede disparar un aviso.
+    """
+    d = leer()
+    esperas = []
+    for e in d["entradas"].values():
+        if e.get("estado") != PENDIENTE:
+            continue
+        dias = _dias_desde(e.get("primera_vez", ""))
+        if dias is not None:
+            esperas.append(dias)
+    return max(esperas) if esperas else None
+
+
+def aviso_de_atasco() -> str:
+    """Vacio si la cola va al dia. La cola crece con lo que se pregunta y baja
+    de tres en tres por apertura, asi que una punta de uso puede acumularla
+    durante semanas sin que nadie lo note: desde dentro se ve igual que ir bien.
+    """
+    dias = espera_del_mas_viejo()
+    if dias is None or dias < DIAS_ESPERANDO_AVISO:
+        return ""
+    cuantos = len([e for e in leer()["entradas"].values()
+                   if e.get("estado") == PENDIENTE])
+    return (f"Hay {cuantos} artículo(s) esperando criterio, y el más antiguo "
+            f"lleva {dias} días. Se traen tres cada vez que se abre el agente, "
+            f"así que abrirlo más a menudo los va sacando. Si tienes prisa, "
+            f"pídele a Emili una tanda de descarga.")
 
 
 def recien_bajado() -> dict:

@@ -2049,9 +2049,20 @@ class Ventana:
                     f"artículo(s) que preguntasteis: "
                     f"{traido['consultas']} consulta(s) nuevas. "
                     f"Ya están en el segundo botón.")
-            silencio = _COLA.aviso_de_silencio()
-            if silencio:
-                self.mostrar_cinta(silencio)
+            # UNO SOLO, Y EL DE LA FUENTE MANDA. Los dos hablan de la cola pero
+            # de cosas distintas: «la fuente no responde» es una averia que hay
+            # que mirar, y «la cola no da abasto» se arregla abriendo el agente
+            # mas veces. Enseñar los dos a la vez pone al lado un problema que
+            # no se puede resolver desde la ventana y otro que si, y entonces
+            # no se hace ninguna de las dos cosas.
+            #
+            # Y ADEMAS SE SOLAPAN: si la fuente lleva dos semanas caida, el mas
+            # viejo llevara dos semanas esperando por ESA razon. Decir «abre el
+            # agente mas veces» ahi seria mandar a alguien a repetir algo que no
+            # va a funcionar.
+            aviso = _COLA.aviso_de_silencio() or _COLA.aviso_de_atasco()
+            if aviso:
+                self.mostrar_cinta(aviso)
         except Exception:  # noqa: BLE001 - la cola nunca impide consultar
             pass
         self._vaciar_cola_por_detras()
