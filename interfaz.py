@@ -497,6 +497,17 @@ COMUNIDADES = (
 RE_ENLACE = re.compile(r"https?://[^\s)\]}>,;]+")
 
 
+def _cobertura():
+    """`agente_fiscal.cobertura`, importado tarde.
+
+    Arriba no: `cobertura` trae el corpus por detras y el arranque de la
+    ventana tiene que pintar antes de cargar nada. Es el mismo motivo por el
+    que el corpus se carga en `_arrancar` y no en `__init__`.
+    """
+    from agente_fiscal import cobertura as C
+    return C
+
+
 # ------------------------------------------------------------------ ventana
 
 
@@ -527,7 +538,12 @@ class Ventana:
         self.grafo = None
         self.motor = None
 
-        raiz.title("Consulta fiscal — IVA")
+        # EL TITULO NO PUEDE NOMBRAR UN IMPUESTO. Decia «Consulta fiscal —
+        # IVA» con seis dentro: la cuarta frase de esta familia que envejece
+        # porque esta escrita a mano. Aqui va el nombre del agente y nada mas;
+        # cuando el corpus este cargado, `_arrancar` lo completa con la cuenta,
+        # que sale de el.
+        raiz.title("Consulta fiscal")
         # ABRE SEGUN LA PANTALLA QUE HAY, no segun un numero fijo.
         #
         # Estaba puesto a 1180x880 a pelo. En un portatil de 1280x800 eso es
@@ -799,9 +815,11 @@ class Ventana:
         tk.Label(centro, text="D E P A R T A M E N T O   F I S C A L",
                  bg=PAPEL, fg=TINTA3, font=self.fuente_rotulo,
                  anchor="w").pack(anchor="w")
-        tk.Label(centro, text="Consulta fiscal sobre el IVA", bg=PAPEL,
-                 fg=TINTA, font=self.fuente_titular, anchor="w"
-                 ).pack(anchor="w", pady=(AIRE, 0))
+        # El titular tambien: se rellena en `_arrancar` con lo que diga el
+        # corpus. Aqui solo se deja el sitio, sin nombrar ningun impuesto.
+        self.titular = tk.Label(centro, text="Consulta fiscal", bg=PAPEL,
+                                fg=TINTA, font=self.fuente_titular, anchor="w")
+        self.titular.pack(anchor="w", pady=(AIRE, 0))
 
         self.marco_motor = tk.Frame(centro, bg=PAPEL2)
         tk.Frame(self.marco_motor, width=3, bg=LILA).pack(side="left", fill="y")
@@ -920,23 +938,36 @@ class Ventana:
         # DOS BOTONES, SIEMPRE LOS DOS. Ya no dependen de ningun fichero: si
         # se decide usar solo la ley, se decide aqui -no pulsando el segundo-,
         # no editando configuracion.
-        fila_ley = tk.Frame(tarjeta, bg=PAPEL2)
-        fila_ley.grid(row=4, column=0, sticky="ew")
-        self.boton = ttk.Button(fila_ley, text=BOTON_LEY,
-                                style="Primario.TButton",
-                                command=lambda: self._lanzar(False),
-                                state="disabled")
-        self.boton.pack(side="left")
-        self._pinchable(self.boton)
-
-        # El segundo va DEBAJO y en su propia fila: con los dos al lado se
-        # pulsa el que queda mas a mano, no el que se queria. Debajo, en gris,
-        # QUE ANADE: fuentes, no precio.
+        #
+        # ────────────────────────────────────────────────────────────────
+        # EL DE CRITERIO ES EL PRINCIPAL. CAMBIADO EL 21/08/2026.
+        # ────────────────────────────────────────────────────────────────
+        #
+        # ESTO INVIERTE UNA DECISION DELIBERADA, y el motivo viejo se borra
+        # entero a proposito: dejarlo aqui haria que alguien lo «arreglara» de
+        # vuelta dentro de tres meses leyendo un razonamiento que ya no aplica.
+        #
+        # LO QUE DECIA ANTES, y por que valia entonces: el de criterio era el
+        # caro -0,24 $ contra 0,14 $-, el dinero escaseaba y el precio estaba
+        # en pantalla, asi que se puso debajo y en gris para que no se pulsara
+        # por inercia. Era lo correcto cuando cada consulta se pensaba dos
+        # veces.
+        #
+        # LO QUE VALE AHORA: paga el despacho, el gasto esta asumido -por eso
+        # se quito el bloque de precios de «Que hay dentro»- y lo que el
+        # departamento quiere es EL CRITERIO. La ley sola contesta que dice la
+        # norma; el criterio dice como se ha venido aplicando, que es lo que
+        # hace falta para decidir. Poner el mas util debajo y en gris es
+        # esconder el producto.
+        #
+        # EL DE LA LEY NO DESAPARECE Y SIGUE PRIMERO EN EL ORDEN DE TABULACION:
+        # hay dudas -de puro texto de la norma- donde el criterio solo añade
+        # ruido y espera.
         fila_criterio = tk.Frame(tarjeta, bg=PAPEL2)
-        fila_criterio.grid(row=5, column=0, sticky="ew", pady=(HUECO2, 0))
+        fila_criterio.grid(row=4, column=0, sticky="ew")
         fila_criterio.columnconfigure(0, weight=1)
         self.boton_criterio = ttk.Button(
-            fila_criterio, text=BOTON_CRITERIO, style="Segundo.TButton",
+            fila_criterio, text=BOTON_CRITERIO, style="Primario.TButton",
             command=lambda: self._lanzar(True), state="disabled")
         self.boton_criterio.grid(row=0, column=0, sticky="w")
         self._pinchable(self.boton_criterio)
@@ -948,6 +979,21 @@ class Ventana:
             fg=TINTA2, font=self.fuente_menuda, anchor="w",
             justify="left", wraplength=ANCHO_TARJETA - 40)
         self.pie_criterio.grid(row=1, column=0, sticky="ew", pady=(AIRE, 0))
+
+        # Y el de la ley DEBAJO y en su propia fila: con los dos al lado se
+        # pulsa el que queda mas a mano, no el que se queria.
+        fila_ley = tk.Frame(tarjeta, bg=PAPEL2)
+        fila_ley.grid(row=5, column=0, sticky="ew", pady=(HUECO2, 0))
+        self.boton = ttk.Button(fila_ley, text=BOTON_LEY,
+                                style="Segundo.TButton",
+                                command=lambda: self._lanzar(False),
+                                state="disabled")
+        self.boton.pack(side="left")
+        self._pinchable(self.boton)
+        self.pie_ley = tk.Label(
+            fila_ley, text="sin criterio: mas rapido, para dudas de puro texto",
+            bg=PAPEL2, fg=TINTA2, font=self.fuente_menuda, anchor="w")
+        self.pie_ley.pack(side="left", padx=(HUECO2, 0))
 
         # --- progreso ---
         self.marco_progreso = tk.Frame(centro, bg=PAPEL)
@@ -1988,6 +2034,16 @@ class Ventana:
             return
         self.motor = motor
 
+        # AHORA QUE HAY CORPUS, EL TITULO PUEDE DECIR LO QUE CUBRE. Sale de
+        # `cobertura`, que lo cuenta del corpus: un impuesto cuenta cuando hay
+        # un cuerpo dedicado a el, no cuando aparece un articulo suelto.
+        try:
+            _c = _cobertura()
+            self.raiz.title(_c.titulo(self.ix))
+            self.titular.configure(text=_c.titulo(self.ix))
+        except Exception:                        # noqa: BLE001
+            pass          # un titulo viejo no puede impedir consultar
+
         if not motor.es_modelo_real:
             self.mostrar_cinta(
                 "MODO DE PRUEBA: las respuestas las fabrica una regla fija, "
@@ -2221,9 +2277,16 @@ class Ventana:
             return
         self.trabajando = True
         self.con_criterio = con_criterio
-        self.boton.configure(state="disabled", text="Consultando...")
-        if self.boton_criterio is not None:
-            self.boton_criterio.configure(state="disabled")
+        # «CONSULTANDO...» VA EN EL BOTON QUE SE HA PULSADO. Estaba fijo en el
+        # de la ley, asi que al invertir el orden quien pulsaba arriba veia
+        # cambiar el de abajo: la señal aparecia en un sitio que no era donde
+        # acababa de hacer clic.
+        pulsado = (self.boton_criterio if con_criterio and self.boton_criterio
+                   is not None else self.boton)
+        otro = self.boton if pulsado is self.boton_criterio else self.boton_criterio
+        pulsado.configure(state="disabled", text="Consultando...")
+        if otro is not None:
+            otro.configure(state="disabled")
         self.boton_copiar.configure(state="disabled")
         self.copiado.configure(text="")
         self.respuesta_actual = ""
@@ -3335,9 +3398,10 @@ class Ventana:
         else:
             self.texto.insert(
                 "end",
-                "No se encontro ningun articulo. Esta herramienta solo tiene "
-                "la Ley y el Reglamento del IVA: si la duda es de otro "
-                "impuesto, no puede contestarla.\n",
+                "No se encontro ningun articulo. " + (
+                    _cobertura().frase_de_la_ley(self.ix).capitalize() + ". "
+                    if self.ix is not None else "") +
+                "Si la duda es de otro impuesto, no puede contestarla.\n",
             )
         self._columna()
         self.texto.configure(state="disabled")

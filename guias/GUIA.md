@@ -2,7 +2,7 @@
 <!-- GENERADA desde guias/GUIA.md. NO se edita GUIA.md a mano: se edita esta y
      se vuelve a lanzar `python configurar.py --regenerar-guia`. Si una frase
      de la ventana no esta aqui dentro, el agente NO ABRE. -->
-# Consulta fiscal sobre el IVA — guía de uso
+# Consulta fiscal — guía de uso
 
 Se abre con doble clic en **abrir_agente**. Escribes la duda como se la
 contarías a un compañero, pones el año del caso y **eliges con qué consultar**.
@@ -41,10 +41,10 @@ Si pulsas el segundo y la herramienta no tiene nada guardado sobre esos
 artículos, **te lo dice**. No se queda callada ni finge que ha mirado.
 
 **Qué hace:** busca el respaldo de tu duda y te lo da **con el texto exacto y el
-enlace a la fuente**. Tiene dentro tres normas —la **Ley del IVA** (37/1992), el
-**Reglamento del IVA** (RD 1624/1992) y la **Ley General Tributaria**— y además
-una copia de **criterio de la DGT** y de **resoluciones económico-administrativas**.
-Te ahorra el rato de buscar, no el de decidir.
+enlace a la fuente**. Dentro tiene las leyes y reglamentos de los impuestos que
+se listan abajo, y además una copia de **criterio de la DGT** y de
+**resoluciones económico-administrativas**. Te ahorra el rato de buscar, no el
+de decidir.
 
 ---
 
@@ -200,8 +200,8 @@ de artículo que no venga de lo que ha encontrado**, y si lo intentara no saldr�
 se comprueba igual que una respuesta y, además, se le mira que no afirme nada sin
 citar. Si no pasa, no lo verás. Puedes seguir preguntando en la caja de abajo con
 el dato que te pida. Casi siempre es porque la
-duda no es de IVA ni de procedimiento (IRPF, Sociedades y Sucesiones no están
-dentro), porque la norma que lo resuelve no la tiene, o porque la pregunta va en
+duda es de un impuesto que no está dentro —los que sí están se listan arriba—,
+porque la norma que lo resuelve no la tiene, o porque la pregunta va en
 lenguaje de la calle: «un cliente no me paga» no se parece a «modificación de la
 base imponible por créditos incobrables». Reformular con los términos de la ley
 suele bastar.

@@ -4582,6 +4582,115 @@ petición en mejorar lo que ya se le pudo contestar.
 Los dos controles negativos están en `pruebas/prueba_cola.py`: si el refresco
 pierde su prioridad, o si el reloj pasa a ser hoy, la suite se cae.
 
+## El título y los botones: dos frases que envejecieron
+
+**El título decía «Consulta fiscal — IVA» con seis impuestos dentro.** La cuarta
+de esta familia. Ahora sale del corpus: `cobertura.titulo(ix)` cuenta los
+impuestos cubiertos y da *«Consulta fiscal — 6 impuestos»*.
+
+**Un impuesto cuenta cuando hay un cuerpo dedicado a él**, no cuando aparece un
+artículo suelto que habla de él. Contando precepto a precepto salían **nueve**, y
+dos con un solo artículo: el 661-1 y el 671-1 del libro sexto del Código
+tributario de Catalunya, adaptaciones autonómicas dentro de otra norma. Decir que
+el agente «cubre el impuesto sobre determinados medios de transporte» porque
+tiene un artículo sobre su tipo de gravamen es la clase de promesa que este
+proyecto existe para no hacer. La regla es estructural y da seis.
+
+Barridas también: el titular de la ventana, el «esta herramienta solo tiene la
+Ley y el Reglamento del IVA» del no-encontrado, el título de la guía y su
+párrafo de «tres normas dentro».
+
+### El botón del criterio pasa a ser el principal — 21/08/2026
+
+**Esto invierte una decisión deliberada, y el motivo viejo se borra entero a
+propósito**: dejarlo escrito haría que alguien lo «arreglara» de vuelta en tres
+meses leyendo un razonamiento que ya no aplica — como estuvo a punto de pasar con
+el orden de los botones.
+
+*Lo que decía antes, y por qué valía:* el de criterio era el caro —0,24 $ contra
+0,14 $—, el dinero escaseaba y el precio estaba en pantalla, así que se puso
+debajo y en gris para que no se pulsara por inercia. Correcto cuando cada
+consulta se pensaba dos veces.
+
+*Lo que vale ahora:* paga el despacho, el gasto está asumido —por eso ya se quitó
+el bloque de precios de «Qué hay dentro»— y lo que el departamento quiere es **el
+criterio**. La ley sola contesta qué dice la norma; el criterio dice cómo se ha
+venido aplicando, que es lo que hace falta para decidir. **Poner el más útil
+debajo y en gris es esconder el producto.**
+
+El de la ley no desaparece: baja a secundario, con su pie —*«sin criterio: más
+rápido, para dudas de puro texto»*— y sigue primero en el orden de tabulación.
+
+Y un arreglo que hacía falta al invertirlos: **«Consultando...» iba fijo en el
+botón de la ley**, así que al subir el de criterio, quien pulsaba arriba veía
+cambiar el de abajo. Ahora la señal aparece donde se acaba de hacer clic.
+
+## El goteo: el corpus entero, a ratos, desde el Mac
+
+La cola por demanda hace crecer la despensa con lo que se pregunta. El goteo
+recorre **todo el corpus** —2.033 artículos, sin el corte de `plan_siembra`— a
+ratos, y **corre en el Mac, no en la oficina**.
+
+**Por qué aquí.** Lo que baja viaja por git, igual que la siembra por plan: son
+consultas públicas de la DGT, no dicen nada de ningún cliente y cuestan horas
+contra un servicio público. Bajarlo una vez y repartirlo es **una** petición; que
+lo baje cada equipo son seis, y seis despensas divergiendo. En la oficina sigue
+sólo la cola por demanda, que baja a `demanda/` y **no** viaja — sus fechas
+dirían qué preguntó un cliente y cuándo.
+
+### El límite es de tiempo: 90 minutos por sesión
+
+Un artículo sin consultas se resuelve en una petición —unos diez segundos— y uno
+con cinco necesita seis, o sea un minuto largo. **Con tope por número, dos
+sesiones «de cincuenta» duran diez minutos o una hora**, y entonces no se puede
+decir cuándo termina ni encajarlo en un hueco.
+
+Noventa minutos es una decisión, no una medida: es un hueco real —se lanza al ir
+a comer y ha terminado al volver—, son unas 540 peticiones, y son 6 peticiones
+por minuto sostenidas, que para un servicio público es un goteo y no una
+descarga. **Si se quisiera ir más deprisa, lo que sube es el número de sesiones,
+no el ritmo**: la pausa de 10 s no se toca.
+
+El tiempo se comprueba **antes de empezar cada artículo**, nunca en mitad:
+cortar a medias dejaría sus consultas incompletas y habría que decidir si eso
+cuenta como buscado.
+
+### Cuánto tarda cubrirlo entero
+
+Quedan **1.186 artículos**. Los 630 del plan dieron 2,4 consultas cada uno, pero
+eran los más citados; el tramo que queda es la cola, así que lo probable está
+cerca del extremo bajo.
+
+| si cada artículo diera | horas | 1 sesión/día | 2 sesiones/día |
+|---|---|---|---|
+| 0,3 consultas | 4,3 h | **3 días** | 1 día |
+| 1,0 | 6,6 h | **4 días** | 2 días |
+| 2,4 (como el plan) | 11,2 h | **7 días** | 4 días |
+
+### El orden y la memoria
+
+Recorre todo, pero **por utilidad**: banco × 12 + remisiones entrantes, la misma
+cuenta que `plan_siembra` —extraída a `puntos_del_banco` para que haya una sola—.
+Si el goteo se para para siempre a mitad, lo bajado es lo útil.
+
+Los plazos salen de `cola.py` y no se copian: 90 días para reintentar un vacío,
+180 para refrescar. Dos copias de una regla son dos reglas en cuanto alguien
+cambie una.
+
+### Dos cosas que la primera versión hacía mal
+
+**El ensayo apuntaba.** `--ensayo` marcó los 2.033 artículos como «buscados», y
+la sesión de verdad se los habría saltado todos. Una prueba que deja el sistema
+creyendo que el trabajo está hecho es peor que no probar. Ahora no escribe nada —
+y sí duerme un poco, para que el corte por tiempo se ejercite de verdad: sin
+pausa, `--minutos 1 --ensayo` recorría el corpus en un segundo y decía
+«terminado», probando el recorrido y no el límite.
+
+**El orden se quedaba a medias en silencio.** Llamaba a `puntos_del_banco` con un
+`try/except AttributeError` y, al no existir esa función, caía a cero: el orden
+salía sólo por remisiones y nadie se enteraba. Un respaldo que devuelve algo
+cuando la consulta falla es exactamente lo que este proyecto no admite.
+
 ## Cuando la cola no da abasto
 
 La cola crece con lo que se pregunta y baja **de tres en tres por apertura**. Una

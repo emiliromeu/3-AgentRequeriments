@@ -154,18 +154,64 @@ def frase(ix) -> str:
     return "ahora mismo hay criterio guardado de " + ", ".join(trozos)
 
 
+def impuestos_cubiertos(ix) -> list:
+    """LOS IMPUESTOS QUE EL AGENTE CUBRE DE VERDAD. Los siglas, sin traducir.
+
+    UN IMPUESTO CUENTA CUANDO HAY UN CUERPO DEDICADO A EL, no cuando aparece
+    un articulo suelto que habla de el. La regla es estructural y sale del
+    corpus, no de una lista escrita aqui.
+
+    POR QUE HACE FALTA EL SUELO. Contando precepto a precepto salian NUEVE
+    impuestos, y dos de ellos con UN articulo cada uno: el 661-1 y el 671-1 del
+    libro sexto del Codigo tributario de Catalunya, que son adaptaciones
+    autonomicas dentro de otra norma. Decir que el agente «cubre el impuesto
+    sobre determinados medios de transporte» porque tiene un articulo sobre su
+    tipo de gravamen es la misma clase de promesa que este proyecto existe para
+    no hacer: quien pregunte por ese impuesto no va a encontrar nada.
+
+    Hoy da seis, que son los seis de verdad.
+    """
+    vistos = {ix.normas.impuesto_de_cuerpo(c) for c in ix.normas.cuerpos}
+    return sorted(v for v in vistos if v)
+
+
 def impuestos_del_corpus(ix) -> list:
-    """De que impuestos hay LEY cargada. Contado igual: precepto a precepto.
+    """[(nombre en cristiano, cuantos preceptos)] de lo que el agente cubre.
 
     Es otra frase que estaba escrita a mano -«responde solo con la Ley y el
     Reglamento del IVA»- con trece normas y cuatro impuestos dentro.
+
+    Se cuentan TODOS los preceptos, incluidos los sueltos de un impuesto que no
+    llega al suelo: van a «normas generales», que es donde el agente los va a
+    buscar de todas formas. Lo que el suelo decide es que se ANUNCIA, no que se
+    ignora.
     """
+    cubiertos = set(impuestos_cubiertos(ix))
     cuenta: dict = {}
     for d in ix.docs:
         i = ix.normas.impuesto_de_precepto(d.registro) or GENERAL
+        if i not in cubiertos:
+            i = GENERAL
         cuenta[i] = cuenta.get(i, 0) + 1
     filas = sorted(cuenta.items(), key=lambda f: (f[0] == GENERAL, -f[1]))
     return [(EN_CRISTIANO.get(c, c), n) for c, n in filas]
+
+
+def titulo(ix) -> str:
+    """EL TITULO DE LA VENTANA. Con la cuenta, no con la lista.
+
+    Decia «Consulta fiscal — IVA» con seis impuestos dentro: la cuarta frase de
+    esta familia que envejecio porque estaba escrita a mano. Poner los seis
+    nombres tampoco vale -no caben en una barra de titulo y volveria a
+    quedarse vieja de otra manera-, asi que va la cuenta, que se recalcula
+    sola.
+    """
+    n = len(impuestos_cubiertos(ix))
+    if n == 0:
+        return "Consulta fiscal"
+    if n == 1:
+        return f"Consulta fiscal — {EN_CRISTIANO.get(impuestos_cubiertos(ix)[0], '')}"
+    return f"Consulta fiscal — {n} impuestos"
 
 
 def frase_de_la_ley(ix) -> str:

@@ -114,6 +114,37 @@ def preguntas_del_banco() -> list:
     return fuera
 
 
+def puntos_del_banco(ix, grafo) -> "collections.Counter":
+    """Cuantas veces el banco manda cada precepto al redactor, de verdad.
+
+    ESTA APARTE PARA QUE `gotear.py` USE LA MISMA CUENTA. Estaba dentro de
+    `plan()` y el goteo intentaba llamarla con un `try/except AttributeError`
+    que, al no existir, se quedaba en cero: el orden salia solo por remisiones
+    y nadie se enteraba. Un respaldo que devuelve algo cuando la consulta falla
+    es exactamente lo que este proyecto no admite en un guion de medida.
+
+    POR LA MISMA PUERTA QUE EL AGENTE. Aqui hubo un `ix.buscar` suelto que
+    medía lo que el sistema hacia ANTES del filtro por impuesto: la lista de
+    siembra salia de una recuperacion que ya no existe.
+
+    El impuesto sale de la NORMA que declara cada caso del banco, que es un
+    dato del caso; sin norma no se filtra, que es la regla de siempre.
+    """
+    import fase4
+    from agente_fiscal import estado as EST
+
+    N = ix.normas
+    cuenta: collections.Counter = collections.Counter()
+    for p, norma in preguntas_del_banco():
+        cuerpo, _m = N.resolver(norma)
+        imp = N.impuesto_de_cuerpo(cuerpo) if cuerpo else ""
+        res, _h, reserva = fase4.recuperar(ix, grafo, p, imp)
+        sel = EST.seleccionar_material(ix, p, res, grafo, reserva=reserva)
+        for reg in sel.elegidos:
+            cuenta[reg["clave"]] += 1
+    return cuenta
+
+
 def plan() -> dict:
     """{impuesto: [ {clave, referencia, cuerpo, puntos, porque} ]}"""
     ix = Indice(CORPUS)
@@ -125,22 +156,7 @@ def plan() -> dict:
     recuperables = set(N.impuestos()) | {""}
 
     # 1. lo que el banco manda al redactor, de verdad, corriendo la busqueda.
-    del_banco: collections.Counter = collections.Counter()
-    # POR LA MISMA PUERTA QUE EL AGENTE. Aqui habia un `ix.buscar` suelto y
-    # medía lo que el sistema hacia ANTES del filtro por impuesto: la lista de
-    # siembra salia de una recuperacion que ya no existe.
-    #
-    # El impuesto sale de la NORMA que declara cada caso del banco, que es un
-    # dato del caso; sin norma no se filtra, que es la regla de siempre.
-    import fase4
-    from agente_fiscal import estado as EST
-    for p, norma in preguntas_del_banco():
-        cuerpo, _m = N.resolver(norma)
-        imp = N.impuesto_de_cuerpo(cuerpo) if cuerpo else ""
-        res, _h, reserva = fase4.recuperar(ix, grafo, p, imp)
-        sel = EST.seleccionar_material(ix, p, res, grafo, reserva=reserva)
-        for reg in sel.elegidos:
-            del_banco[reg["clave"]] += 1
+    del_banco = puntos_del_banco(ix, grafo)
 
     puntos: collections.Counter = collections.Counter()
     porque: dict = {}
