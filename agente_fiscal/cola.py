@@ -77,6 +77,34 @@ DEMANDA = RAIZ / "datos" / "dgt" / "demanda"
 # despues de dos o tres vueltas.
 DIAS_REINTENTO = 90
 
+# CADA CUANTO SE VUELVE A MIRAR UN ARTICULO QUE YA TIENE CRITERIO.
+#
+# ESTE SI ESTA MEDIDO, sobre las 1.501 consultas de la despensa y sus fechas.
+# La pregunta que se midio: si refresco un articulo cada N dias, ¿que
+# proporcion de esos refrescos trae algo nuevo?
+#
+#   de los 848 articulos con criterio, se han movido en 24 meses:  477 (56%)
+#   ...en 12 meses: 411 (48%)   ...en 6 meses: 342 (40%)
+#
+#   refrescando SOLO los 480 que se mueven:
+#      cada  30 dias -> 13% de los refrescos trae algo   (~5.800 peticiones/año)
+#      cada  90 dias -> 28%                              (~1.900)
+#      cada 120 dias -> 33%                              (~1.500)
+#      cada 180 dias -> 39%                              (~1.000)
+#
+# 180. Cuatro de cada diez refrescos traen algo, que para una cola que va por
+# detras de todo lo demas es buena proporcion, y el coste es calderilla porque
+# la cola SOLO refresca lo que el departamento pregunta, no los 848.
+#
+# LA MITAD DE LOS ARTICULOS NO SE MUEVEN NUNCA -su ultima consulta es de 2020 o
+# antes en el percentil 25- y por eso el refresco no barre la despensa entera:
+# barrerla seria gastar seis de cada diez peticiones en articulos muertos.
+DIAS_REFRESCO = 180
+
+# Lo que se apunta para refrescar. Es una entrada de cola como las otras, pero
+# nace ya BAJADA -tiene criterio- y solo la mira `_toca_refrescar`.
+REFRESCO = "refresco"
+
 # Cuantos dias sin poder bajar nada antes de decirlo en la ventana. Una cola
 # desatendida que falla en silencio es peor que no tenerla: parece que crece y
 # no crece.
@@ -148,14 +176,93 @@ def apuntar(faltan: list) -> int:
         return 0
 
 
-def _toca_reintentar(e: dict) -> bool:
-    if e.get("estado") != SIN_RESULTADOS or not e.get("buscado"):
-        return e.get("estado") == PENDIENTE
+def apuntar_refresco(usados: list) -> int:
+    """Apunta `[(cuerpo, articulo, fecha_del_criterio_mas_nuevo)]` para releer.
+
+    SON LOS QUE SI TIENEN CRITERIO, y por eso van por otra puerta que
+    `apuntar`. Nacen ya BAJADA -no hay nada pendiente que traer- y con
+    `buscado` puesto A LA FECHA DEL CRITERIO QUE TENEMOS, no a hoy.
+
+    ESA FECHA ES EL RELOJ, Y ES LO QUE HACE QUE ESTO SIRVA. Si se pusiera hoy,
+    un articulo cuya ultima consulta es de 2020 esperaria otros 180 dias para
+    que alguien lo mirara: seis años de retraso mas medio año. Poniendo la
+    fecha del criterio, ese sale a refrescar la primera vez que alguien
+    pregunta por el, y uno con criterio de la semana pasada no sale hasta
+    dentro de seis meses. Que es exactamente lo que se quiere.
+
+    SOLO LO QUE SE PREGUNTA. No barre la despensa: un refresco de un articulo
+    que nadie usa es sembrar a ciegas por la puerta de atras, que es justo lo
+    que se decidio no hacer.
+
+    NUNCA LEVANTA, por lo mismo que `apuntar`: corre dentro de una consulta
+    real. Devuelve cuantas entradas nuevas ha creado.
+    """
+    if not usados:
+        return 0
     try:
-        buscado = date.fromisoformat(e["buscado"])
+        d = leer()
+        nuevas = 0
+        for cuerpo, articulo, fecha in usados:
+            if not cuerpo or not str(articulo).strip():
+                continue
+            k = clave(cuerpo, articulo)
+            e = d["entradas"].get(k)
+            if e is None:
+                d["entradas"][k] = {
+                    "cuerpo": cuerpo, "articulo": str(articulo).strip(),
+                    "veces": 1, "primera_vez": _hoy(), "ultima_vez": _hoy(),
+                    "estado": BAJADA, "buscado": fecha or _hoy(),
+                    "intentos": 0, "motivo": REFRESCO}
+                nuevas += 1
+            else:
+                # YA ESTABA. No se toca ni el estado ni `buscado`: si estaba
+                # PENDIENTE, sigue pendiente y con su prioridad; si ya se bajo,
+                # su reloj es el de la ultima vez que se pidio de verdad, y
+                # pisarlo con la fecha del criterio lo haria reintentar sin fin.
+                e["veces"] = e.get("veces", 0) + 1
+                e["ultima_vez"] = _hoy()
+        guardar(d)
+        return nuevas
+    except Exception:                            # noqa: BLE001
+        return 0
+
+
+def _dias_desde(cuando: str) -> int | None:
+    if not cuando:
+        return None
+    try:
+        return (date.today() - date.fromisoformat(cuando)).days
     except ValueError:
+        return None
+
+
+def _toca_reintentar(e: dict) -> bool:
+    """¿Toca pedir esta entrada hoy? Los tres casos, en un solo sitio."""
+    estado = e.get("estado")
+    if estado == PENDIENTE:
         return True
-    return date.today() - buscado >= timedelta(days=DIAS_REINTENTO)
+    if estado == SIN_RESULTADOS:
+        # Se busco y no habia. Se vuelve a los 90 dias: PETETE publica cada
+        # semana y un articulo vacio hoy puede tener criterio en unos meses.
+        dias = _dias_desde(e.get("buscado", ""))
+        return dias is None or dias >= DIAS_REINTENTO
+    if estado == BAJADA:
+        # YA SE BAJO, Y ESO NO LO DEJA CERRADO PARA SIEMPRE. Un articulo con
+        # criterio de agosto se queda con el de agosto mientras la fuente
+        # publica cada semana. Se vuelve a mirar a los 180 dias -medido arriba-
+        # y SOLO si alguien lo ha preguntado: refrescar lo que nadie usa es
+        # sembrar a ciegas por la puerta de atras.
+        dias = _dias_desde(e.get("buscado", ""))
+        return dias is not None and dias >= DIAS_REFRESCO
+    return False
+
+
+def _prioridad(e: dict) -> int:
+    """PRIMERO LO QUE FALTA, LUEGO LO QUE ENVEJECE. Sin esto, un refresco de
+    algo que ya tiene criterio podria colarse delante de un articulo del que no
+    hay nada, y quien pregunto por el segundo se queda sin nada mientras se
+    gasta la peticion en mejorar lo que ya se le pudo contestar."""
+    return {PENDIENTE: 0, SIN_RESULTADOS: 1, BAJADA: 2}.get(e.get("estado"), 3)
 
 
 def pendientes(normas=None, cobertura=None) -> list:
@@ -174,7 +281,10 @@ def pendientes(normas=None, cobertura=None) -> list:
                                       e["articulo"].lower()) in cobertura:
             continue
         fuera.append(e)
-    return sorted(fuera, key=lambda e: (-e.get("veces", 0), e["articulo"]))
+    # Por prioridad primero y por veces despues: dentro de cada grupo manda lo
+    # mas preguntado.
+    return sorted(fuera, key=lambda e: (_prioridad(e), -e.get("veces", 0),
+                                        e["articulo"]))
 
 
 def marcar(cuerpo: str, articulo: str, estado: str, bajadas: int = 0) -> None:

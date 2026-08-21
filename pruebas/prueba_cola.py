@@ -278,4 +278,74 @@ print("\n" + "=" * 62)
 print(f"COMPROBACIONES: {len(fallos)} fallos")
 for f in fallos:
     print("  -", f)
+
+
+# ============================== REFRESCO: LO QUE ENVEJECE, POR DETRAS
+print("\n=== REFRESCO · NADA VOLVIA A MIRAR UN ARTICULO YA SEMBRADO ===")
+print("  PETETE y DYCTEA publican cada semana, asi que un articulo con")
+print("  criterio de agosto se quedaba con el de agosto para siempre.")
+print("  El umbral esta MEDIDO: de los 848 articulos con criterio, 480 se")
+print("  mueven en 24 meses; refrescando solo esos cada 180 dias, 39 de cada")
+print("  100 refrescos traen algo. Cada 30 dias serian 13 de cada 100.\n")
+
+import shutil as _sh
+import tempfile as _tf
+from datetime import date as _date, timedelta as _td
+
+_corral = Path(_tf.mkdtemp())
+_guardada = C.COLA
+C.COLA = _corral / "cola.json"
+try:
+    comprobar("el umbral de refresco es de 180 dias, y esta medido",
+              C.DIAS_REFRESCO == 180, C.DIAS_REFRESCO)
+
+    def _hace(dias):
+        return (_date.today() - _td(days=dias)).isoformat()
+
+    # Uno con criterio RECIENTE y otro con criterio VIEJO.
+    C.apuntar_refresco([("c#0", "95", _hace(10)),
+                           ("c#0", "20", _hace(400))])
+    ks = {e["articulo"]: e for e in C.leer()["entradas"].values()}
+    comprobar("los dos nacen BAJADA: tienen criterio, no hay nada pendiente",
+              all(e["estado"] == C.BAJADA for e in ks.values()),
+              {k: e["estado"] for k, e in ks.items()})
+    comprobar("  y su reloj es LA FECHA DEL CRITERIO, no hoy",
+              ks["20"]["buscado"] == _hace(400), ks["20"]["buscado"])
+
+    p = {e["articulo"] for e in C.pendientes()}
+    comprobar("el de criterio VIEJO sale a refrescar", "20" in p, p)
+    comprobar("  y el RECIENTE no: no hay nada que mirar todavia",
+              "95" not in p, p)
+
+    # PRIMERO LO QUE FALTA. Un refresco no puede colarse delante de un
+    # articulo del que no hay NADA: quien pregunto por ese se quedaria sin
+    # nada mientras se gasta la peticion en mejorar lo que ya se pudo
+    # contestar.
+    C.apuntar([("c#0", "7")])
+    orden = [e["articulo"] for e in C.pendientes()]
+    comprobar("lo que FALTA va delante de lo que envejece",
+              orden.index("7") < orden.index("20"), orden)
+
+    # Y NO SE VUELVE A PEDIR LO MISMO: la memoria de siempre.
+    C.marcar("c#0", "20", C.BAJADA, bajadas=2)
+    comprobar("refrescado hoy, no vuelve a salir manana",
+              "20" not in {e["articulo"] for e in C.pendientes()})
+
+    # Y APUNTARLO OTRA VEZ NO REINICIA SU RELOJ hacia atras: si lo hiciera,
+    # cada consulta lo devolveria a la cola y se pediria sin fin.
+    C.apuntar_refresco([("c#0", "20", _hace(400))])
+    e = C.leer()["entradas"][C.clave("c#0", "20")]
+    comprobar("  y volver a apuntarlo no lo devuelve a la cola",
+              "20" not in {x["articulo"] for x in C.pendientes()},
+              e)
+    comprobar("  aunque si cuenta que se ha preguntado otra vez",
+              e.get("veces", 0) >= 2, e.get("veces"))
+
+    comprobar("apuntar_refresco NUNCA levanta, como apuntar",
+              C.apuntar_refresco([(None, None, None)]) == 0)
+finally:
+    C.COLA = _guardada
+    _sh.rmtree(_corral, ignore_errors=True)
+
+
 sys.exit(1 if fallos else 0)

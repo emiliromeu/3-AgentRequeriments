@@ -4510,6 +4510,78 @@ cada vuelta contra `RED.SISTEMA` — tienen que ser idénticos.
   pregunta va dentro del material, así que el redactor ya lo sabe; no hay nada
   que decidir aparte.
 
+## La siembra no gasta tokens
+
+**Cero llamadas a la API de Anthropic.** La duda vuelve cada pocas semanas, así
+que queda escrito aquí.
+
+Sembrar es bajar consultas de la DGT de **PETETE** y resoluciones de **DYCTEA**:
+dos servicios públicos, por HTTP, sin modelo de por medio. Lo que cuesta es
+**tiempo y respeto a la fuente** — pausa de 10 s entre peticiones, User-Agent que
+nos identifica, TLS nunca desactivado— no dinero.
+
+Lo que gasta tokens es **contestar**: analizar la pregunta y redactar la
+respuesta. Eso son dos llamadas por consulta y está medido aparte. La despensa
+puede crecer toda la noche sin que la cuenta se mueva un céntimo.
+
+## El refresco: lo que envejece, por detrás de lo que falta
+
+Nada volvía a mirar un artículo ya sembrado. PETETE y DYCTEA publican cada
+semana, así que un artículo con criterio de agosto se quedaba con el de agosto
+para siempre.
+
+### El umbral, medido
+
+Sobre las 1.501 consultas de la despensa y sus fechas. La pregunta: *si refresco
+un artículo cada N días, ¿qué proporción de esos refrescos trae algo nuevo?*
+
+De los **848** artículos con criterio, se han movido:
+
+| en los últimos | artículos |
+|---|---|
+| 6 meses | 342 (40 %) |
+| 12 meses | 411 (48 %) |
+| 24 meses | 477 (56 %) |
+
+**La mitad no se mueve nunca** — en el percentil 25, su última consulta es de
+2020 o antes. Refrescando sólo los 480 que sí se mueven:
+
+| cada | refrescos que traen algo | peticiones/año si se barriera |
+|---|---|---|
+| 30 días | 13 % | ~5.800 |
+| 90 días | 28 % | ~1.900 |
+| 120 días | 33 % | ~1.500 |
+| **180 días** | **39 %** | ~1.000 |
+
+**180 días.** Cuatro de cada diez refrescos traen algo, que para una cola que va
+por detrás de todo lo demás es buena proporción.
+
+### Y sólo lo que se pregunta
+
+La cola **no barre la despensa**: apunta para refrescar únicamente los artículos
+que aparecen en una consulta real. Refrescar lo que nadie usa es sembrar a ciegas
+por la puerta de atrás, que es justo lo que se decidió no hacer.
+
+### El reloj es la fecha del criterio, no la de hoy
+
+Un artículo se apunta con `buscado` puesto a **la fecha de la consulta más nueva
+que tenemos de él**. Si se pusiera hoy, uno cuya última consulta es de 2020
+esperaría otros 180 días para que alguien lo mirara: seis años de retraso más
+medio año. Con la fecha del criterio, ese sale a refrescar **la primera vez que
+alguien pregunta por él**, y uno con criterio de la semana pasada no sale hasta
+dentro de seis meses.
+
+### Primero lo que falta
+
+Tres prioridades en la cola: **pendiente** (no hay nada) → **sin resultados**
+(se buscó y no había, se reintenta a los 90 días) → **refresco** (hay, pero es
+viejo). Sin ese orden, un refresco podría colarse delante de un artículo del que
+no hay nada, y quien preguntó por ése se queda sin nada mientras se gasta la
+petición en mejorar lo que ya se le pudo contestar.
+
+Los dos controles negativos están en `pruebas/prueba_cola.py`: si el refresco
+pierde su prioridad, o si el reloj pasa a ser hoy, la suite se cae.
+
 ## Medir sobre un histórico mientras el código cambia
 
 **Describe un sistema que ya no existe.** Ha pasado tres veces, y las tres han

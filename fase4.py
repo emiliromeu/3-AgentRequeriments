@@ -707,6 +707,33 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
                    not in _con_criterio]
         _apuntados = [(c, a) for c, a in _faltan if c and a and a[0].isdigit()]
         _COLA.apuntar(_apuntados)
+        # Y LOS QUE SI TIENEN CRITERIO, PARA REFRESCARLO. Nada volvia a mirar un
+        # articulo ya sembrado, asi que uno con criterio de agosto se quedaba
+        # con el de agosto mientras la fuente publica cada semana. Van por otra
+        # puerta, con la fecha del criterio que tenemos como reloj, y por
+        # DETRAS de todo lo demas en la cola: primero lo que falta.
+        _nuevo_de = {}
+        for _c in _cache_cob.todas():
+            _f = getattr(_c, "fecha", "") or ""
+            try:
+                _dd, _mm, _aa = _f.split("/")
+                _iso = f"{_aa}-{_mm}-{_dd}"
+            except ValueError:
+                continue
+            for _p in _c.preceptos(ix.normas):
+                if not _p.comparable:
+                    continue
+                _k = (_p.cuerpo, _p.numero.lower())
+                if _iso > _nuevo_de.get(_k, ""):
+                    _nuevo_de[_k] = _iso
+        _viejos = []
+        for r in registros:
+            _cu = r.get("cuerpo_clave", "")
+            _ar = r["referencia"].replace("Articulo ", "").strip()
+            _k = (_cu, _ar.lower())
+            if _k in _nuevo_de and _cu and _ar and _ar[0].isdigit():
+                _viejos.append((_cu, _ar, _nuevo_de[_k]))
+        _COLA.apuntar_refresco(_viejos)
         # QUE SE HA APUNTADO, para que la ventana pueda decir «todavia no» en
         # vez de «no lo tengo». Se guarda AQUI y no se recalcula en la ventana:
         # recalcularlo seria una segunda version de la misma cuenta, y las dos
