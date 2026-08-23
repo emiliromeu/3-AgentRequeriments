@@ -212,7 +212,7 @@ def gotear(minutos: int, ensayo: bool) -> int:
     print(f"  articulos del corpus : {len(todos)}")
     print(f"  por mirar hoy        : {len(cola_hoy)}")
     print(f"  sesion de            : {minutos} minutos"
-          + ("   (ENSAYO: no se sale a la red)" if ensayo else ""))
+          + ("   (ENSAYO: no se sale a la red)" if ensayo else ""), flush=True)
     if not cola_hoy:
         print("\n  No queda nada por mirar. El corpus esta al dia.")
         return 0
@@ -287,8 +287,14 @@ def gotear(minutos: int, ensayo: bool) -> int:
             vacios += 1
         if hechos % 10 == 0:
             guardar_avance(avance)        # RETOMABLE: si se corta, no se pierde
+            # CON `flush`, Y NO ES UN DETALLE EN UNA SESION DE 90 MINUTOS.
+            # Redirigido a fichero, Python guarda la salida en un buffer de
+            # varios KB: el log se queda VACIO media hora y desde fuera no se
+            # distingue de un proceso colgado. Lo unico que decia que iba bien
+            # era contar ficheros en `consultas/`.
             print(f"    {hechos} articulos · {bajadas} consultas · "
-                  f"{(fin - time.monotonic())/60:.0f} min restantes")
+                  f"{(fin - time.monotonic())/60:.0f} min restantes",
+                  flush=True)
         time.sleep(petete.PAUSA)
 
     if ensayo:
