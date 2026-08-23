@@ -41,6 +41,27 @@ import petete                                   # noqa: E402
 import sembrar                                  # noqa: E402
 
 DESTINO = RAIZ / "casos" / "petete_vacias"
+
+# Cuanto puede medir el nombre de un caso guardado. 60 deja la ruta relativa
+# en unos 85 caracteres, que con la carpeta del usuario de Windows por delante
+# sigue lejos de los 260.
+TOPE_NOMBRE = 60
+
+
+def _nombre_de_fichero(etiqueta: str) -> str:
+    """`Ley 27/2014 art. 15 bis` -> `Ley_27_2014_art_15_bis.html`, con tope.
+
+    LA COLA IMPORTA MAS QUE LA CABEZA: lo que distingue dos casos es el numero
+    de articulo, que va al final. Asi que si hay que recortar se recorta por
+    en medio, no por el final.
+    """
+    import re as _re
+    limpio = _re.sub(r"[^A-Za-z0-9]+", "_", etiqueta).strip("_")
+    if len(limpio) <= TOPE_NOMBRE:
+        return limpio + ".html"
+    cola = limpio[-24:].lstrip("_")
+    cabeza = limpio[:TOPE_NOMBRE - len(cola) - 3].rstrip("_")
+    return f"{cabeza}__{cola}.html"
 PAUSA = 10          # la de la cadena: no se acelera porque esto sea corto
 SALIDA = RAIZ / "datos" / "siembra" / "medicion_sin_resultados.json"
 
@@ -93,7 +114,13 @@ def main() -> int:
             time.sleep(PAUSA)
             continue
 
-        nombre = re.sub(r"[^A-Za-z0-9]+", "_", etiqueta).strip("_") + ".html"
+        # EL NOMBRE, CON TOPE. Sin el salieron nueve ficheros de 216
+        # caracteres -el Reglamento General de gestion e inspeccion tiene un
+        # titulo de 200- y en Windows el limite de ruta son 260 CONTANDO la
+        # carpeta del usuario: `git checkout` aborta a medias con «unable to
+        # checkout working tree» y deja el arbol roto. El nombre aqui es una
+        # etiqueta para mirar a mano, no un identificador: se recorta y ya.
+        nombre = _nombre_de_fichero(etiqueta)
         (DESTINO / nombre).write_text(crudo, encoding="utf-8")
         tiene_doc = "viewDocument" in crudo
         print(f"  [{n:2d}/{len(objetivo)}] {etiqueta:38s} "

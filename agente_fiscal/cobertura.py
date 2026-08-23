@@ -223,3 +223,69 @@ def frase_de_la_ley(ix) -> str:
         return f"responde con la ley de {filas[0]}"
     return ("responde con la ley de " + ", ".join(filas[:-1])
             + f" y {filas[-1]}")
+
+
+# --------------------------------------------------- que ha entrado desde ayer
+
+# LA CUENTA DE LA ULTIMA VEZ QUE SE ABRIO. Vive con la despensa y no en el
+# corpus: es un dato de ESTE equipo -cuando lo vio esta persona por ultima
+# vez- y no algo que deba viajar por git.
+def _ruta_marca():
+    from pathlib import Path
+    return (Path(__file__).resolve().parent.parent / "datos" / "dgt"
+            / "visto.json")
+
+
+def novedades(ix) -> dict:
+    """{antes, ahora, nuevas, cuando} y DEJA LA MARCA PUESTA.
+
+    POR QUE HACE FALTA. La despensa la lleno yo en el Mac y viaja por git; en
+    la oficina crece de golpe cuando alguien hace pull. Hoy no hay nada que se
+    lo diga: el criterio nuevo esta ahi y nadie se entera de que esta.
+
+    NO PREGUNTA A LA RED NI TOCA GIT. Compara la cuenta de ahora con la de la
+    ultima vez que se abrio, que es todo lo que hace falta para decirlo.
+
+    NUNCA LEVANTA: se llama al arrancar la ventana.
+    """
+    import json
+    from datetime import date
+
+    salida = {"antes": None, "ahora": 0, "nuevas": 0, "cuando": ""}
+    try:
+        cuenta = resumen(ix)
+        ahora = sum(n["dgt"] + n["teac"] for n in cuenta.values())
+        salida["ahora"] = ahora
+        f = _ruta_marca()
+        if f.is_file():
+            try:
+                d = json.loads(f.read_text(encoding="utf-8"))
+                salida["antes"] = int(d.get("documentos"))
+                salida["cuando"] = str(d.get("cuando") or "")
+            except (ValueError, TypeError, OSError):
+                pass
+        if salida["antes"] is not None:
+            salida["nuevas"] = max(0, ahora - salida["antes"])
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps({"documentos": ahora,
+                                 "cuando": date.today().isoformat()},
+                                ensure_ascii=False),
+                     encoding="utf-8")
+    except Exception:                            # noqa: BLE001
+        pass
+    return salida
+
+
+def aviso_de_novedades(ix) -> str:
+    """«Han entrado N consultas nuevas». Vacio si no hay nada que decir.
+
+    LA PRIMERA VEZ NO DICE NADA, y es a proposito: sin marca anterior, la
+    unica cuenta honrada seria «hay 2.400», que no es una novedad sino un
+    inventario, y el inventario ya esta en «Que hay dentro».
+    """
+    n = novedades(ix)
+    if not n["nuevas"]:
+        return ""
+    desde = f" desde el {n['cuando'][8:10]}/{n['cuando'][5:7]}" if n["cuando"] else ""
+    return (f"Han entrado {n['nuevas']} documentos de criterio nuevos"
+            f"{desde}. Ya se usan al pulsar «Consultar también el criterio».")

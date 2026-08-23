@@ -4625,6 +4625,60 @@ Y un arreglo que hacía falta al invertirlos: **«Consultando...» iba fijo en e
 botón de la ley**, así que al subir el de criterio, quien pulsaba arriba veía
 cambiar el de abajo. Ahora la señal aparece donde se acaba de hacer clic.
 
+## Cómo se entera la oficina de que hay criterio nuevo
+
+La despensa la llena el Mac y viaja por git, así que en la oficina el criterio
+nuevo aparece **de golpe al hacer pull** — y hasta ahora no había nada que lo
+dijera ni nada con que traerlo sin terminal. Dos piezas, y **ninguna actualiza
+sola**.
+
+### (a) El aviso
+
+Al abrir: *«Han entrado 40 documentos de criterio nuevos desde el 20/08. Ya se
+usan al pulsar Consultar también el criterio.»* Compara con la cuenta de la
+última apertura, guardada en `datos/dgt/visto.json` — que **no viaja**: es de ese
+equipo. No toca git ni la red.
+
+**La primera vez no dice nada**, a propósito: sin marca anterior la única cuenta
+honrada sería «hay 2.400», que es un inventario y no una novedad, y el inventario
+ya está en «Qué hay dentro».
+
+### (b) `actualizar.bat`, que lo pulsa una persona
+
+El orden de las comprobaciones **es el arreglo**: todo lo que sólo *mira* va
+antes de lo que puede *romper*.
+
+1. hay git · 2. es un repositorio · 3. **`core.longpaths`** · 4. **nada sin
+guardar** · 5. **`git fetch`**, que no toca el árbol de trabajo · 6. y sólo
+entonces `git pull --ff-only`.
+
+- **Si el remoto no contesta** —repositorio privado sin credenciales, red de la
+  oficina, contraseña caducada— falla en el paso 5, **sin haber movido nada**, y
+  se dice en cristiano: *«No se ha tocado nada: el agente sigue igual que
+  antes»*.
+- **Si hay cambios sin guardar**, se para y los lista. No decide por nadie.
+- **Si el pull falla igualmente**, dice que el agente sigue funcionando con la
+  versión que ya tenía, y manda a `diagnostico`.
+
+`--ff-only` a propósito: no inventa una fusión en el equipo de nadie.
+
+### Lo de los nombres largos: no se había hecho, y era esto
+
+**Nueve ficheros de 216 caracteres** en `casos/petete_vacias/`, todos en git.
+Windows corta a 260 **contando la carpeta del usuario**, así que `git checkout`
+habría abortado a mitad —*«unable to checkout working tree»*— dejando medio árbol
+escrito. `actualizar.bat` habría chocado ahí en su primer uso.
+
+Arreglado en los dos sitios: los nueve renombrados (216 → 85) y **el generador
+capado**, porque si no volverían a aparecer. Se recorta **por en medio**: lo que
+distingue un caso es el número de artículo, que va al final. Ninguna ruta del
+repositorio pasa ya de 150.
+
+Los 53 ficheros de esa carpeta son **byte a byte idénticos** —es la misma página
+de «sin resultados»—, así que git emparejó los renombrados a ojo por contenido y
+el `status` muestra parejas raras (`art_127 -> art_73`). Los nombres en disco son
+los correctos; da igual con cuál los emparejara.
+
 ## `consolidado_hasta` es del BOE, no nuestro
 
 **Esto se malentendió una vez y va a volver a pasar, así que va escrito.**

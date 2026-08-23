@@ -2119,6 +2119,16 @@ class Ventana:
             aviso = _COLA.aviso_de_silencio() or _COLA.aviso_de_atasco()
             if aviso:
                 self.mostrar_cinta(aviso)
+            # Y SI HA ENTRADO CRITERIO NUEVO, QUE SE SEPA. La despensa la
+            # llena el Mac y viaja por git: en la oficina crece de golpe al
+            # hacer pull, y hasta ahora no habia nada que lo dijera. Compara
+            # con la cuenta de la ultima apertura; no toca git ni la red.
+            try:
+                nuevo = _cobertura().aviso_de_novedades(self.ix)
+                if nuevo:
+                    self.mostrar_cinta(nuevo)
+            except Exception:                    # noqa: BLE001
+                pass
         except Exception:  # noqa: BLE001 - la cola nunca impide consultar
             pass
         self._vaciar_cola_por_detras()
