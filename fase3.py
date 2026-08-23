@@ -133,8 +133,18 @@ def modo_verificar(args) -> int:
     texto = ruta.read_text(encoding="utf-8")
 
     ix = Indice(CORPUS)
-    v = VF.Verificador(ix, cache_dgt=_cache_dgt_de_prueba(),
-                       cache_teac=_cache_teac_de_prueba())
+    # LAS CACHES DE VERDAD, Y AQUI ESTABAN LAS DE PRUEBA.
+    #
+    # `verificar` comprueba un texto REAL: tiene que mirarlo contra el criterio
+    # real -`datos/dgt`, `datos/teac`-. Con las de prueba delante, una cita de
+    # una consulta autentica salia NO_VERIFICABLE porque esa consulta no esta
+    # en `casos/dgt_prueba/`, y una cita a un caso adversario inventado habria
+    # salido VERIFICADA. Las dos direcciones son falsas.
+    #
+    # Las de prueba son SOLO de `probar`, que es donde tienen sentido: los
+    # casos adversarios necesitan criterio inventado contra el que comprobar, y
+    # meterlo en la cache de verdad lo haria indistinguible del autentico.
+    v = VF.Verificador(ix)
     informe = v.verificar_texto(texto, args.ejercicio, args.exigir_norma)
 
     pinta_informe(informe, ruta.name)

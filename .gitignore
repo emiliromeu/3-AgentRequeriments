@@ -86,3 +86,8 @@ datos/arranque_fallido.txt
 
 # La marca de «ya lo vi»: es de ESTE equipo, no viaja.
 datos/dgt/visto.json
+
+# El avance del goteo: es de ESTE Mac, del proceso que solo corre aqui.
+# Si viajara, la oficina tendria el avance de un barrido que no hace, y una
+# copia de alla podria pisar el mio.
+datos/dgt/goteo.json

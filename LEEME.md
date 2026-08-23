@@ -4625,6 +4625,73 @@ Y un arreglo que hacía falta al invertirlos: **«Consultando...» iba fijo en e
 botón de la ley**, así que al subir el de criterio, quien pulsaba arriba veía
 cambiar el de abajo. Ahora la señal aparece donde se acaba de hacer clic.
 
+## La entrada de máquina del verificador
+
+`verificar_json.py` existe para que otro programa pregunte *«¿esto se
+sostiene?»* y se fíe de la respuesta sin leer una pantalla. `fase3.py verificar`
+es para una persona; esto es lo mismo por dentro y otra cosa por fuera.
+
+```
+echo "texto con citas" | .venv/bin/python verificar_json.py --ejercicio 2023
+```
+
+**El contrato**, que es lo que otro programa da por hecho:
+
+| | |
+|---|---|
+| entrada | el texto por stdin, nada más |
+| **stdout** | **sólo el JSON**, una línea, nunca nada más |
+| stderr | el informe legible, sólo con `--humano` |
+| código 0 | ACEPTADO |
+| código 2 | RECHAZADO |
+| otro código | fallo — y entonces **el JSON no lleva veredicto de ninguna clase** |
+
+**Un fallo interno nunca emite JSON de aceptación.** Un verificador que ante un
+fallo suyo pudiera decir «aceptado» no es un verificador. Probado con el corpus
+ausente y con el corpus ilegible.
+
+**Cachés reales** (`datos/dgt`, `datos/teac`). La suite comprueba dos cosas: que
+el código no nombra ninguna ruta con `prueba`, y —en ejecución— que no abre ni un
+fichero cuya ruta la contenga.
+
+**Sólo lectura**, escrito en el contrato y con prueba: se espía con qué **modo**
+abre cada fichero y no puede haber ninguno de escritura. Verificar es mirar; un
+verificador que deja rastro cambia lo que verifica la próxima vez.
+
+**Procedencia** en el JSON: versión del contrato y huella del corpus —normas,
+sellado más reciente, sha de `sellos.json`—. Un «verificada» sin eso no dice
+contra qué se verificó.
+
+`verificar_texto` no se ha tocado. RECHAZADO por no llevar ninguna cita se queda
+igual: es correcto y es útil tal cual.
+
+### El fallo que salió al preguntarlo
+
+`fase3.py verificar` **inyectaba las cachés de prueba** (línea 136). Quien
+verificara un texto real con ese comando lo comparaba contra criterio inventado,
+y falso en las dos direcciones: una cita auténtica saldría NO_VERIFICABLE por no
+estar en `casos/dgt_prueba/`, y una cita a un caso adversario saldría VERIFICADA.
+
+**La ventana del departamento no pasa por ahí**: las tres construcciones del
+verificador en `fase4.py` son `VF.Verificador(ix)` con los defectos, que son las
+cachés reales. Arreglado igualmente; las de prueba se quedan sólo en `probar`,
+que es donde tienen sentido.
+
+### Y la cuarta vez del mismo patrón
+
+La comprobación de «no nombra rutas de prueba» salió **roja en falso**: leía el
+docstring que explica *por qué no* se usan. Ya nos había dado verdes falsos dos
+veces —«resumelo», «pythonw»— y ahora un rojo falso. Se pregunta al **árbol de
+sintaxis**, que sabe distinguir un docstring de una orden. Y luego otra vez, más
+fino: «no se com**prueba** la versión» contiene la palabra, así que el patrón
+busca el **segmento de ruta** (`_prueba`, `prueba/`), con su control de que caza
+lo que dice cazar.
+
+La prueba de sólo-lectura también salió intermitente al principio: vigilaba
+`datos/dgt` entera y **el goteo estaba corriendo**, dejando consultas nuevas cada
+pocos segundos. Se acotó a lo que este programa lee, y la comprobación fuerte
+—los modos de apertura— no depende de quién más esté corriendo.
+
 ## Cómo se entera la oficina de que hay criterio nuevo
 
 La despensa la llena el Mac y viaja por git, así que en la oficina el criterio
