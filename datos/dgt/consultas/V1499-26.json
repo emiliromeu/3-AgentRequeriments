@@ -1,0 +1,15 @@
+{
+ "numero": "V1499-26",
+ "fecha": "12/06/2026",
+ "organo": "SG de Impuestos sobre la Renta de las Personas Físicas",
+ "normativa": "LIRPF. Ley 35/2006. Art. 99.",
+ "cuestion_planteada": "Posibilidad de deducirse en la declaración del IRPF-2025 las retenciones procedentes.",
+ "descripcion_hechos": "El consultante manifiesta que se incorporó a su empresa en agosto de\n 2025, con una retribución anual bruta esperada de 48.000 euros. Manifiesta que \n dicha empresa le ha practicado unas retenciones sobre los rendimientos del trabajo\n inferiores a las procedentes",
+ "contestacion": "El artículo 99 de la Ley 35/2006, de 28 de noviembre, del Impuesto sobre la Renta\n de las Personas Físicas y de modificación parcial de las leyes de los Impuestos sobre\n Sociedades, sobre la Renta de no Residentes y sobre el Patrimonio, después\n de establecer en su apartado 2 la obligación de retener, dispone en su apartado\n 5 lo siguiente: \n\n “El perceptor de rentas sobre las que deba retenerse a cuenta de este impuesto computará\n aquéllas por la contraprestación íntegra devengada. \n\n Cuando la retención no se hubiera practicado o lo hubiera sido por un\n importe inferior al debido, por causa imputable al retenedor u obligado a ingresar\n a cuenta, el perceptor deducirá de la cuota la cantidad que debió ser retenida. \n\n En el caso de retribuciones legalmente establecidas que hubieran sido satisfechas\n por el sector público, el perceptor sólo podrá deducir las cantidades efectivamente\n retenidas. \n\n (…)”. \n\n Respecto a qué se entiende por “retribuciones legalmente establecidas”, el Tribunal Económico-Administrativo-Central resolviendo un recurso extraordinario\n de alzada para la unificación de criterio determinó por resolución de 7 de julio\n de 1999, respecto a estas retribuciones en un supuesto de personal laboral contratado\n por una Administración Pública, que se refiere a “las retribuciones satisfechas al personal funcionario o laboral, por aquellos\n Entes públicos cuyos créditos para gastos tengan carácter limitativo, ya sean de\n la Administración estatal, autonómica o local”. \n\n En el presente caso, según resulta de lo indicado en el escrito de consulta, no\n se trata de unas retribuciones satisfechas por el sector público, por lo que —en\n aplicación de lo dispuesto en el segundo párrafo del precepto legal antes transcrito\n y siempre que las retenciones practicadas por el pagador de los rendimientos hubieran\n sido inferiores a las procedentes y por causa imputable al retenedor— el consultante\n podrá deducirse de la cuota la cantidad que debió ser retenida. \n\n Lo que comunico a usted con efectos vinculantes, conforme a lo dispuesto en el apartado\n 1 del artículo 89 de la Ley 58/2003, de 17 de diciembre, General Tributaria.",
+ "doc_id": "75494",
+ "tab": "2",
+ "url_navegador": "https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V1499-26",
+ "descargado": "2026-08-24T19:51:16Z",
+ "sha256_crudo": "0c958ad3be11053c15d3e2e57f60221c15ff247335f55594d52021b4aea845aa",
+ "crudo": "datos/dgt/crudo/V1499-26.html"
+}
