@@ -1,0 +1,15 @@
+{
+ "numero": "V2531-05",
+ "fecha": "21/12/2005",
+ "organo": "SG de Tributos",
+ "normativa": "Ley 58/2003, artº. 76 y RD 939/2005, artº 63",
+ "cuestion_planteada": "Posibilidad de que la deuda sea cobrada por el procedimiento administrativo de apremio.",
+ "descripcion_hechos": "El consultante tiene una deuda impagada de hace más de diez años y ahora va a recibir\n unos ingresos.",
+ "contestacion": "El artículo 76 de la Ley 58/2003, de 17 de diciembre, General Tributaria establece\n lo siguiente:\n\n “1. Las deudas tributarias que no hayan podido hacerse efectivas en los respectivos\n procedimientos de recaudación por insolvencia probada, total o parcial, de los obligados\n tributarios se darán de baja en cuentas en la cuantía procedente, mediante la declaración\n del crédito como incobrable, total o parcial, en tanto no se rehabiliten dentro del\n plazo de prescripción de acuerdo con lo dispuesto en el apartado 2 del artículo 173\n de esta Ley. \n\n 2. La deuda tributaria se extinguirá si, vencido el plazo de prescripción, no se hubiera\n rehabilitado.”\n\n Además, el artículo 63 del Reglamento General de Recaudación, aprobado por Real Decreto\n 939/2005, de 29 de julio señala:\n\n “1. El órgano de recaudación vigilará la posible solvencia sobrevenida de los obligados\n al pago declarados fallidos.\n\n 2. En caso de producirse tal circunstancia y de no mediar prescripción, procederá\n la rehabilitación de los créditos declarados incobrables, reanudándose el procedimiento\n de recaudación partiendo de la situación en que se encontraban en el momento de la\n declaración de crédito incobrable o de la baja por referencia.”\n\n De acuerdo con lo expuesto, si la deuda se hubiera declarado incobrable, podría rehabilitarse,\n si el órgano de recaudación tuviera conocimiento de la solvencia sobrevenida del consultante.\n No obstante, dicha rehabilitación sólo sería posible si no hubiera transcurrido el\n plazo de prescripción del derecho de la Administración para exigir el pago de la citada\n deuda, conforme a los artículos 64 a 66 de la Ley 230/1963, de 28 de diciembre, General\n Tributaria.",
+ "doc_id": "23282",
+ "tab": "2",
+ "url_navegador": "https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V2531-05",
+ "descargado": "2026-08-25T13:31:48Z",
+ "sha256_crudo": "4337fc40b320bbf1b1671824c8055cf76b99907908959d7e38d067940452c799",
+ "crudo": "datos/dgt/crudo/V2531-05.html"
+}
