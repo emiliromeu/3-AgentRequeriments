@@ -262,6 +262,34 @@ class Verificador:
         if ref.cuerpo:
             enel = [c for c in encontrados
                     if self.ix.por_clave[c].registro.get("cuerpo_clave") == ref.cuerpo]
+            if not enel:
+                # EL TERCER CONSUMIDOR DE LA MISMA REGLA. La cita nombra el
+                # REAL DECRETO -«articulo 28 del Real Decreto 1624/1992»- y el
+                # articulo 28 vive en el Reglamento que ese real decreto
+                # aprueba. La designacion resuelve limpiamente al decreto, que
+                # tiene seis articulos; no hay empate que la regla de
+                # unanimidad pueda ver, hay una sola norma resuelta y es el
+                # cuerpo equivocado.
+                #
+                # LA REGLA NO SE COPIA: vive en `normas.cuerpo_hermano_con` y
+                # ya la preguntaban la DGT y el grafo de remisiones. Aqui
+                # faltaba, y no fallaba en silencio -eso seria menos grave-:
+                # fallaba MINTIENDO. El motivo que salia era «la cita no dice
+                # de que norma es», cuando la cita lo decia con nombre y
+                # numero. Ver el LEEME: un motivo equivocado manda a alguien a
+                # arreglar lo que no esta roto.
+                #
+                # Medido el 25/08/2026: 1174 de los 2043 articulos del corpus
+                # -el 57%- viven en un cuerpo aprobado y no se podian citar
+                # por el numero de su decreto; en las trazas guardadas, 328
+                # citas de 31 consultas reales, cinco de ellas NO ENCONTRADO
+                # sin ningun otro motivo.
+                hermano = self.ix.normas.cuerpo_hermano_con(
+                    ref.cuerpo, B.normalizar(ref.numero))
+                if hermano:
+                    enel = [c for c in encontrados
+                            if self.ix.por_clave[c].registro.get("cuerpo_clave")
+                            == hermano]
             return (enel[0] if enel else ""), encontrados
         return ("" if len(encontrados) != 1 else encontrados[0]), encontrados
 
@@ -564,6 +592,18 @@ class Verificador:
         d.clave = clave
         d.referencia_corpus = reg["referencia"]
         d.enlace_correcto = reg["url"]
+        # SI LA CITA SE LEYO EN EL CUERPO HERMANO, SE DICE. La correccion es
+        # correcta pero NO es lo que la cita escribio, y una comprobacion que
+        # no se ve es una correccion a espaldas de quien audita el expediente.
+        cuerpo_leido = reg.get("cuerpo_clave") or ""
+        if ref.cuerpo and cuerpo_leido and cuerpo_leido != ref.cuerpo:
+            citado = self.ix.normas.por_clave(ref.cuerpo)
+            leido = self.ix.normas.por_clave(cuerpo_leido)
+            d.comprobaciones.append(
+                f"la cita nombra «{citado.etiqueta if citado else ref.cuerpo}» "
+                f"y ese precepto vive en «{leido.etiqueta if leido else cuerpo_leido}», "
+                f"que aquel aprueba: se comprueba ahi"
+            )
         d.comprobaciones.append(f"precepto localizado: {self.nombrar(clave)}")
 
         # -- 3. vigencia en el ejercicio del caso --

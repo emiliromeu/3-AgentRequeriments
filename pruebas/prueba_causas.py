@@ -215,9 +215,27 @@ comprobar("  y el desdoblado de verdad NO lo toca, que es la diferencia",
 # control, es una excepcion al arrancar la suite.
 m2 = roto(r'r"\b(?:Ley\s+Org[aá]nica|Ley|Real\s+Decreto(?:\s+Legislativo|-ley)?|"',
           r'r"\b(?:Ley\s+Org[aá]nica|Ley|Real\s+Decreto(?:-ley)?|"')
-comprobar("(b) sin «Legislativo», el ITPAJD con sigla deja de resolver y el "
-          "bloque 1 lo caza",
-          not [p for p in m2.pares_de_normativa(campo_ok, N) if p.comparable])
+# LA MUTACION SE MIDE CON UN CAMPO SIN SIGLA DE NORMA, y ese cambio es del
+# 25/08/2026. Antes se medía con `campo_ok` -«TRLITPAJD RDLeg 1/1993»- y
+# valia: ninguna de sus designaciones resolvia sola, asi que todo dependia de
+# que el patron supiera leer «RDLeg». Desde que los nombres cortos se derivan
+# del titulo oficial, «TRLITPAJD» ES un alias del texto refundido y resuelve
+# por su cuenta: el campo sigue resolviendo aunque se rompa el patron, y la
+# mutacion dejo de demostrar nada.
+#
+# NO SE HA PERDIDO LA GUARDA: se mide donde sigue siendo la unica via. Un
+# campo que solo lleva la sigla del IMPUESTO -«ITPAJD», que no nombra ninguna
+# norma- depende entero del patron, y ahi la mutacion tumba la resolucion
+# igual que el primer dia.
+campo_sin_sigla_de_norma = "ITPAJD RDLeg 1/1993 art. 7"
+comprobar("(b) sin «Legislativo», el RDLeg sin sigla de norma deja de resolver "
+          "y el bloque 1 lo caza",
+          not [p for p in m2.pares_de_normativa(campo_sin_sigla_de_norma, N)
+               if p.comparable])
+comprobar("  (control) con el patron intacto SI resuelve",
+          [p.cuerpo for p in D.pares_de_normativa(campo_sin_sigla_de_norma, N)
+           if p.comparable] == [next(c for c in N.cuerpos
+                                     if c.endswith("25359#1"))])
 
 # (c) la causa vuelve a etiquetar por parecido
 FC = (RAIZ / "agente_fiscal" / "causas.py").read_text("utf-8")

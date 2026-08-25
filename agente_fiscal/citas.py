@@ -20,6 +20,10 @@ import re
 import unicodedata
 from dataclasses import dataclass, field
 
+# El vocabulario de rangos es UNO y vive en `normas`, que es quien lee los
+# titulos oficiales. Aqui se importa; no se copia.
+from .normas import _TIPOS as _TIPOS_NORMA
+
 # --------------------------------------------------------------- normalizacion
 
 # Comillas tipograficas y espacios raros que cambian segun quien escriba.
@@ -120,14 +124,84 @@ _RE_DERIVADA = re.compile(
     re.IGNORECASE,
 )
 
+# DONDE EMPIEZA EL NOMBRE DE UNA NORMA. Solo eso: donde EMPIEZA.
+#
+# Aqui no se decide de que norma se trata -eso lo hace el registro, que saca
+# los alias del titulo oficial de cada norma del corpus-. Este patron solo
+# tiene que encontrar el arranque de la designacion y arrastrar el texto que
+# la puede acompanar; el registro se queda con el alias mas largo que case y
+# la regla de oro juzga lo que sobre.
+#
+# LOS RANGOS SALEN DE `normas._TIPOS`, no de una segunda lista escrita aqui.
+# Tenerlos por duplicado era el fallo: el registro sabia resolver «Real
+# Decreto Legislativo 1/1993» -tiene su alias, sacado del titulo- pero este
+# patron cortaba en «Real Decreto» y le pasaba media designacion, asi que la
+# norma se declaraba ajena al corpus. Lo mismo con el Decreto Legislativo
+# 1/2024. Se anaden los rangos de normas que NO pueden estar en el corpus
+# -Directiva, Tratado, Convenio-: hay que reconocerlas para poder decir que
+# son externas, que es distinto de no verlas.
+_RANGOS_FORANEOS = ("Directiva", "Tratado", "Convenio", "Carta")
+
+
+def _rango_a_patron(rango: str) -> str:
+    """«Codigo» -> «C(?i:[oó]d[ií]g[oó])»: la inicial manda, lo demas da igual.
+
+    LA INICIAL EN MAYUSCULA ES LA UNICA GUARDA que separa nombrar una norma de
+    escribir prosa: «la ley aplicable al caso» no designa nada, y admitirlo
+    convertiria media respuesta en designaciones que luego no resuelven. De la
+    segunda letra en adelante no distingue, porque el BOE escribe «Texto
+    refundido de la Ley...» y «Reglamento general del regimen...» con la
+    segunda palabra en minuscula.
+
+    Las tildes se admiten en las dos formas: los titulos se copian de sitios
+    distintos y no siempre las llevan.
+    """
+    equivalentes = {"a": "[aá]", "e": "[eé]", "i": "[ií]", "o": "[oó]",
+                    "u": "[uü]", "n": "[nñ]"}
+    fuera = []
+    for ch in rango[1:]:
+        if ch == " ":
+            fuera.append(r"\s+")
+        elif ch.lower() in equivalentes:
+            fuera.append(equivalentes[ch.lower()])
+        else:
+            fuera.append(re.escape(ch))
+    return re.escape(rango[0]) + "(?i:" + "".join(fuera) + ")"
+
+
+# De mas largo a mas corto: «Real Decreto Legislativo» tiene que intentarse
+# antes que «Real Decreto», o el numero se queda fuera del nombre.
+_RANGOS = sorted(set(_TIPOS_NORMA) | set(_RANGOS_FORANEOS),
+                 key=len, reverse=True)
+
+# LA CABECERA VA EN MAYUSCULA Y LA COLA NO DISTINGUE.
+#
+# La cabecera se deja sensible a mayusculas a proposito: «la ley aplicable» en
+# medio de una frase no nombra ninguna norma, y admitirla convertiria prosa
+# corriente en designaciones que despues no resuelven. La COLA si es
+# insensible, porque el BOE titula «Reglamento general del regimen sancionador
+# tributario» -con la «g» minuscula- y el patron anterior, que exigia
+# mayuscula detras de «de|del», cortaba en «Reglamento» a secas: nueve cuerpos
+# encajan con eso y la cita se quedaba sin norma.
 _RE_NOMBRE_NORMA = re.compile(
-    r"\b(?:LIVA|RIVA|L\.I\.V\.A\.|"
-    r"(?:Ley|Reglamento|Real\s+Decreto(?:-ley)?|Decreto|C[oó]digo|Tratado|"
-    r"Directiva|Orden|Estatuto|Texto\s+Refundido|Convenio)"
-    r"(?:\s+(?:Org[aá]nica|General|Concursal|Civil|Tributaria|de\s+Ejecuci[oó]n))*"
+    r"\b(?:" + "|".join(_rango_a_patron(t) for t in _RANGOS) + r")"
     r"(?:\s+\d+/\d+)?"
-    r"(?:\s+(?:de|del)\s+(?:la\s+|el\s+)?[A-ZÁÉÍÓÚ][^,.;:()]{0,50})?)",
+    # La cola se para en la puntuacion, que es donde acaban los nombres del
+    # BOE. Sin tope de caracteres: el nombre del Reglamento del ITPAJD tiene
+    # 88 y con el tope de 50 se cortaba en «...Patrimoniales y Actos», que
+    # arrastraba «Juridicos Documentados» a la regla de oro y hacia que la
+    # designacion BUENA se rechazara por nombrar otra norma.
+    r"(?i:(?:\s+(?:de\s+|del\s+|de\s+la\s+|de\s+los\s+|de\s+las\s+)?"
+    r"[\w\u00c0-\u024f]+){0,24})",
 )
+
+# SIGLAS. Antes habia dos escritas a mano -LIVA y RIVA- y solo esas dos se
+# reconocian: «LGT» o «RGR» no las veia nadie, aunque el registro las genera
+# igual que genera «liva». Aqui solo se detecta la FORMA de una sigla; si
+# corresponde a una norma cargada lo dice el registro, y si no, la cita se
+# queda como estaba (sin norma indicada), que es lo prudente: «AEAT» o «BOE»
+# tambien son mayusculas seguidas.
+_RE_SIGLA = re.compile(r"\b(?:[A-ZÁÉÍÓÚÑ]\.){2,9}|\b[A-ZÁÉÍÓÚÑ]{2,10}\b")
 
 _RE_ES_LIVA_VIEJO = re.compile(
     r"\b(LIVA|L\.I\.V\.A\.|Ley\s+37/1992|BOE-A-1992-28740|"
@@ -297,18 +371,40 @@ def _leer_referencia(
         m_der = _RE_DERIVADA.search(cabeza)
         if m_der:
             bruto = (" ".join(m_der.group(0).split()) + " " + bruto).strip()
-        clave, porque = registro.resolver(bruto, cola=fragmento[m_nombre.end():])
+        clave, porque, nombrado = registro.nombrar(
+            bruto, cola=fragmento[m_nombre.end():])
+        # SE ENSENA LO QUE EL REGISTRO LEYO COMO NOMBRE, no el recorte del
+        # patron: el patron arrastra a proposito lo que sigue -ahi puede estar
+        # la mitad del nombre- y quien decide donde acaba es el registro.
+        ref.norma_bruta = nombrado or bruto
         if clave:
-            ref.norma, ref.norma_bruta, ref.cuerpo = "cargada", bruto, clave
+            ref.norma, ref.cuerpo = "cargada", clave
         else:
-            ref.norma, ref.norma_bruta = "externa", bruto
+            ref.norma = "externa"
             ref.motivo_norma = porque or ""
     elif m_nombre:
         ref.norma, ref.norma_bruta = "externa", m_nombre.group(0)
     else:
-        # Sin norma expresa. Con varias normas cargadas esto es AMBIGUO, y
-        # quien decide que hacer es el verificador.
-        ref.norma, ref.norma_bruta = "asumida", ""
+        # NI RANGO NI NOMBRE: puede quedar la sigla. «art. 3 LGT» no lleva
+        # delante ninguna palabra de rango, y el registro sabe resolver «lgt»
+        # porque la genera del titulo. Se pregunta por las siglas que aparecen
+        # en el fragmento y se acepta la que resuelva; si ninguna lo hace, la
+        # cita se queda sin norma indicada, igual que antes.
+        clave = ""
+        if registro is not None:
+            for m_sig in _RE_SIGLA.finditer(fragmento):
+                sigla = m_sig.group(0).replace(".", "")
+                if len(sigla) < 2:
+                    continue
+                clave, _porque = registro.resolver(sigla)
+                if clave:
+                    ref.norma, ref.norma_bruta = "cargada", m_sig.group(0)
+                    ref.cuerpo = clave
+                    break
+        if not clave:
+            # Sin norma expresa. Con varias normas cargadas esto es AMBIGUO, y
+            # quien decide que hacer es el verificador.
+            ref.norma, ref.norma_bruta = "asumida", ""
     return ref
 
 

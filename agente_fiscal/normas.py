@@ -31,22 +31,44 @@ from dataclasses import dataclass, field
 
 from . import bloques as B
 
-# Rangos que encabezan el nombre de un cuerpo normativo.
+# Rangos que encabezan el nombre de un cuerpo normativo. Es vocabulario del
+# castellano juridico -los rangos que existen-, no una lista de las normas del
+# corpus: aqui no se escribe ninguna norma concreta.
+#
+# EL ORDEN IMPORTA: se comprueba con `startswith` y gana el primero que casa,
+# asi que un rango largo tiene que ir ANTES del corto que lo prefija. Sin
+# «Decreto Legislativo» delante de «Decreto», el Decreto Legislativo 1/2024 se
+# leia como un «Decreto» cuya materia era «Legislativo 1/2024, de 12 de marzo»,
+# y con esa materia no habia forma de nombrarlo.
 _TIPOS = (
     "Reglamento", "Ley Organica", "Ley", "Real Decreto-ley",
     "Real Decreto Legislativo", "Real Decreto", "Texto Refundido",
-    "Decreto-ley", "Decreto", "Orden", "Estatuto", "Codigo",
+    "Decreto-ley", "Decreto Legislativo", "Decreto", "Orden", "Estatuto",
+    "Codigo",
 )
 
+# «POR EL QUE» Y «POR LA QUE», las dos. Una Orden se aprueba «por la que», y
+# con solo el masculino su reglamento no llegaba a tener nombre: se quedaba en
+# «Anexo 1 de la Orden», que no lo escribe nadie y no resuelve.
 _RE_APRUEBA = re.compile(
-    r"por el que se aprueban?\s+(?:el|la)\s+(?P<nombre>.+?)"
+    r"por (?:el|la) que se aprueban?\s+(?:el|la)\s+(?P<nombre>.+?)"
     r"(?:\s+y se modifica|\s*[,\.]|$)",
     re.IGNORECASE,
 )
-_RE_NUMERO = re.compile(r"\b(\d+/\d{4})\b")
+# El numero de una norma. Las ordenes ministeriales llevan delante la sigla del
+# departamento -«Orden HFP/417/2017»- y esa sigla ES parte del numero: sin
+# ella, la norma se llamaba «Orden 417/2017», que no es su nombre.
+_RE_NUMERO = re.compile(r"\b((?:[A-ZÁÉÍÓÚ]{2,5}/)?\d+/\d{4})\b")
 # "Ley 37/1992, de 28 de diciembre, del Impuesto sobre el Valor Anadido."
 _RE_MATERIA = re.compile(
     r"\b(?:de|del|de la|sobre)\s+(?P<materia>[A-ZÁÉÍÓÚ][^,.;]{4,90})\s*$"
+)
+
+# La misma materia, sin exigir mayuscula inicial. Solo se usa cuando la
+# estricta no encuentra nada; ver `_analizar_nombre`.
+_RE_MATERIA_LAXA = re.compile(
+    r"\b(?:de|del|de la|sobre)\s+(?P<materia>[^\s,.;][^,.;]{3,90})\s*$",
+    re.IGNORECASE,
 )
 
 PALABRAS_VACIAS_MATERIA = {"de", "del", "la", "el", "los", "las", "sobre", "y", "a"}
@@ -135,6 +157,18 @@ def _analizar_nombre(nombre: str) -> tuple[str, str, str]:
     mm = _RE_MATERIA.search(plano.rstrip("."))
     if mm:
         materia = mm.group("materia").strip()
+    elif tipo and not numero and _RE_MATERIA_LAXA.search(nombre.rstrip(".")):
+        # UN NOMBRE QUE ES TODO CLAUSULA. «Reglamento por el que se regulan
+        # las obligaciones de facturacion» se queda en «Reglamento» al cortar
+        # por «por el que», y un cuerpo llamado «Reglamento» a secas encaja
+        # con los nueve reglamentos del corpus: no se puede citar.
+        #
+        # La condicion es estrecha a proposito -solo si no quedo ni numero ni
+        # materia- porque la version laxa, aplicada a cualquier titulo, leeria
+        # la fecha: de «Real Decreto 939/2005, de 29 de julio» sacaria la
+        # materia «julio». Los cuerpos con numero no pasan por aqui.
+        materia = _RE_MATERIA_LAXA.search(
+            nombre.rstrip(".")).group("materia").strip()
     elif tipo:
         resto = plano[len(tipo):].lstrip(" ,")
         # SE QUITA EL PREAMBULO DE NUMERO Y FECHA. «Ley 35/2006, de 28 de
@@ -143,7 +177,8 @@ def _analizar_nombre(nombre: str) -> tuple[str, str, str]:
         # acronimo era «322NIRPFMPLISRNRP». Con la Ley del IVA no se notaba
         # porque su titulo acaba en la materia y la cogia la otra rama.
         resto = re.sub(
-            r"^\d+/\d{4}\s*,?\s*(?:de\s+\d{1,2}\s+de\s+[a-záéíóú]+\s*,?\s*)?",
+            r"^(?:[A-ZÁÉÍÓÚ]{2,5}/)?\d+/\d{4}\s*,?\s*"
+            r"(?:de\s+\d{1,2}\s+de\s+[a-záéíóú]+\s*,?\s*)?",
             "", resto, flags=re.I)
         resto = re.sub(r"^(?:de[l]?\s+|la\s+|el\s+)", "", resto, flags=re.I)
         materia = resto.strip(" .,")
@@ -194,22 +229,124 @@ def _solo_la_materia(texto: str) -> str:
     return t
 
 
-def _generar_alias(tipo: str, numero: str, materia: str) -> set:
+# PALABRAS QUE NO CUENTAN AL SIGLAR UN NOMBRE. Aparte de las de la materia,
+# porque un nombre entero lleva conectores que una materia no lleva
+# («Reglamento General DE las actuaciones Y los procedimientos DE gestion E
+# inspeccion»). Se mantiene separada a proposito: `PALABRAS_VACIAS_MATERIA`
+# decide las siglas de los impuestos -IVA, IRPF, ITPAJD- y esas ya estan
+# medidas en todo el proyecto; tocarlas para arreglar los nombres cambiaria de
+# paso la clasificacion por impuesto.
+_VACIAS_NOMBRE = PALABRAS_VACIAS_MATERIA | {
+    "e", "en", "para", "por", "que", "se", "su", "sus", "al", "con", "un",
+    "una", "unos", "unas", "o", "u",
+}
+
+# Una sigla mas larga que esto no la escribe nadie: el Reglamento General de
+# las actuaciones y los procedimientos de gestion e inspeccion... daria
+# veintitantas letras, y eso ya no es una forma corta, es ruido.
+TOPE_SIGLA = 12
+
+# UN ROTULO ESTRUCTURAL DELANTE NO ES PARTE DEL NOMBRE DE LA NORMA.
+#
+# El titulo del Decreto Legislativo 1/2024 dice «por el que se aprueba el libro
+# sexto del Codigo tributario de Catalunya». Lo aprobado se llama «Codigo
+# tributario de Catalunya»; «libro sexto del» dice QUE PARTE se aprueba. Sin
+# quitarlo, la unica forma de nombrarlo seria repitiendo el libro, que no lo
+# escribe nadie.
+# «Anexo» NO va en esta lista, y no es un olvido: «Anexo 1 de la Ley 27/2014»
+# es el rotulo que ponemos NOSOTROS a un cuerpo sin nombre propio, y quitarselo
+# dejaria «Ley 27/2014» como alias del anexo. La ley entera pasaria a encajar
+# con dos cuerpos y dejaria de resolverse. Los de esta lista son divisiones que
+# el BOE escribe dentro del nombre de lo que aprueba.
+_RE_ROTULO_DELANTE = re.compile(
+    r"^(?:libro|titulo|capitulo|seccion|subseccion|parte)\b[^,.]{0,40}?"
+    r"\s+de[l]?\s+(?:la\s+|el\s+)?",
+    re.IGNORECASE,
+)
+
+
+def _sigla_de_nombre(nombre: str) -> str:
+    """«Reglamento General de Recaudacion» -> «RGR».
+
+    La inicial de cada palabra que cuenta. Es la misma cuenta que `_acronimo`,
+    pero sobre el nombre ENTERO y no sobre la materia: asi salen las siglas que
+    escribe un gestor y que la materia sola no da -la materia del RGR es solo
+    «Recaudacion», que siglada es «R» y no vale para nada-.
+    """
+    palabras = re.findall(r"[\wÁÉÍÓÚáéíóúñÑ]+", B.sin_tildes(nombre or ""))
+    iniciales = [w[0] for w in palabras
+                 if w not in _VACIAS_NOMBRE and not w[0].isdigit()]
+    sigla = "".join(iniciales).upper()
+    return sigla if 3 <= len(sigla) <= TOPE_SIGLA else ""
+
+
+def _formas_del_nombre(nombre: str) -> set:
+    """Las formas de nombrar a un cuerpo que salen de su NOMBRE OFICIAL.
+
+    POR QUE HACE FALTA, si ya se generan alias de tipo + materia. Porque la
+    materia se lee del final del titulo y se deja por el camino lo que la
+    califica: la del Reglamento General de Recaudacion es «Recaudacion», y los
+    alias salian «reglamento de recaudacion» y «reglamento del recaudacion»,
+    ninguno de los cuales es como se llama la norma. «Reglamento General de
+    Recaudacion» -su nombre, tal cual lo escribe el BOE y tal cual lo escribe
+    un gestor- no era alias de nada, y sus 135 articulos no se podian citar.
+
+    Medido antes de esto: de los once cuerpos que las normas del corpus
+    aprueban -reglamentos y textos refundidos, donde vive el articulado que se
+    cita-, SEIS no se podian nombrar. Son 704 de los 2043 articulos.
+
+    NO HAY LISTA. Todo sale del titulo que ya guarda el corpus.
+    """
+    formas: set[str] = set()
+    base = re.sub(r"\s+", " ", nombre or "").strip(" .,;:")
+    if not base:
+        return formas
+    formas.add(base)
+    sin_rotulo = _RE_ROTULO_DELANTE.sub("", base).strip()
+    if sin_rotulo and sin_rotulo != base:
+        formas.add(sin_rotulo)
+    siglas = {s for s in (_sigla_de_nombre(f) for f in list(formas)) if s}
+    return {B.sin_tildes(f) for f in formas | siglas}
+
+
+def _generar_alias(tipo: str, numero: str, materia: str,
+                   nombre: str = "") -> set:
     """Formas con las que el BOE puede nombrar a este cuerpo.
 
     Se generan del propio nombre, no de una lista. De "Ley 37/1992 ... del
     Impuesto sobre el Valor Anadido" salen "ley 37/1992", "ley del impuesto
     sobre el valor anadido", "ley del impuesto", "ley del iva" y "liva".
     """
-    alias: set[str] = set()
+    # EL NOMBRE OFICIAL, EL PRIMERO Y SIN CONDICIONES. Va antes del corte por
+    # `tipo` a proposito: un cuerpo cuyo nombre no empieza por un rango
+    # conocido -«libro sexto del Codigo tributario de Catalunya»- se quedaba
+    # sin un solo alias, o sea sin manera de citarlo.
+    alias: set[str] = set(_formas_del_nombre(nombre))
     if not tipo:
         return alias
     t = B.sin_tildes(tipo)
     alias.add(t)
     if numero:
-        alias.add(f"{t} {numero}")
+        # El numero se normaliza como todo lo demas: desde que puede llevar
+        # letras -«HFP/417/2017»- pegarlo en crudo dejaba un alias a medio
+        # normalizar, que no casa con nada porque la busqueda va en minusculas.
+        alias.add(f"{t} {B.sin_tildes(numero)}")
+        # AQUI NO SE GENERA EL RANGO ABREVIADO -«RD 1619/2012»- Y ES A
+        # PROPOSITO. Se probo, y el alias resolvia; lo que rompia estaba dos
+        # modulos mas alla: `dgt.py` trata las abreviaturas como
+        # INTERPRETACION NUESTRA y no como lo que escribio la fuente, y por eso
+        # las somete a una contencion extra -si el articulo no existe donde
+        # aterriza la abreviatura, la cita no entra-. Con «RD 1619/2012» ya
+        # resuelto por alias, esa contencion dejaba de aplicarse y volvian a
+        # entrar citas a articulos que no existen. La abreviatura se expande
+        # donde ya se sabia expandir: `dgt._expandir_abreviatura`.
     if materia:
         m = B.sin_tildes(materia)
+        # LAS TRES FORMAS, Y LA DE SIN CONECTOR NO ES UN CAPRICHO: la Ley
+        # 58/2003 se llama «Ley General Tributaria» -sin «de»- y sin esta
+        # linea su nombre entero no era alias suyo. Igual el «Reglamento
+        # general del regimen sancionador tributario».
+        alias.add(f"{t} {m}")
         alias.add(f"{t} de {m}")
         alias.add(f"{t} del {m}")
         # Prefijos cada vez mas cortos: "impuesto sobre el valor anadido",
@@ -239,7 +376,7 @@ def cuerpos_de_norma(norma_titulo: str, norma_id: str, n_cuerpos: int) -> list:
 
     cuerpos = [
         Cuerpo(norma_id, 0, nombre0, tipo0, numero0, materia0, norma_titulo,
-               _generar_alias(tipo0, numero0, materia0))
+               _generar_alias(tipo0, numero0, materia0, nombre0))
     ]
 
     # Los cuerpos siguientes son lo que la norma APRUEBA, y su nombre esta en
@@ -253,7 +390,7 @@ def cuerpos_de_norma(norma_titulo: str, norma_id: str, n_cuerpos: int) -> list:
         t, n, mat = _analizar_nombre(nombre)
         cuerpos.append(
             Cuerpo(norma_id, i, nombre, t, n or numero0, mat, norma_titulo,
-                   _generar_alias(t, n, mat))
+                   _generar_alias(t, n, mat, nombre))
         )
     return cuerpos
 
@@ -593,20 +730,48 @@ class Registro:
 
     def resolver(self, designacion: str, cuerpo_actual: str = "",
                  cola: str = "") -> tuple:
-        """Nombre de norma -> (clave_de_cuerpo, motivo).
+        """Nombre de norma -> (clave_de_cuerpo, motivo). Ver `nombrar`."""
+        clave, motivo, _consumido = self.nombrar(designacion, cuerpo_actual, cola)
+        return clave, motivo
 
-        Devuelve (None, motivo) si no se puede decidir. ANTE LA DUDA, NADA:
-        una remision sin resolver es un aviso visible; una remision resuelta a
-        la norma equivocada es un articulo real, con texto real, que no es el
-        que toca, y el verificador la daria por buena.
+    def nombrar(self, designacion: str, cuerpo_actual: str = "",
+                cola: str = "") -> tuple:
+        """Igual que `resolver`, y ademas QUE PARTE del texto era el nombre.
+
+        Devuelve (clave_de_cuerpo, motivo, designacion_consumida).
+
+        Lo tercero hace falta porque quien llama no sabe donde acaba el nombre:
+        recorta un trozo de texto corrido y lo manda entero. El que sabe donde
+        acaba es este metodo, que es el que busca el alias mas largo. Sin
+        devolverlo, el motivo que lee un fiscalista nombraba el recorte -prosa
+        incluida- en vez de la norma.
+
+        Devuelve (None, motivo, ...) si no se puede decidir. ANTE LA DUDA,
+        NADA: una remision sin resolver es un aviso visible; una remision
+        resuelta a la norma equivocada es un articulo real, con texto real, que
+        no es el que toca, y el verificador la daria por buena.
         """
         if not designacion:
-            return None, "sin designacion"
-        d = B.sin_tildes(re.sub(r"\s+", " ", designacion)).strip(" .,;:")
+            return None, "sin designacion", ""
+        # Se lleva la cuenta de las palabras ORIGINALES en paralelo a las
+        # normalizadas: los indices de la busqueda son de la version sin
+        # tildes y sin articulo delante, y lo que se ensena por pantalla -y lo
+        # que se devuelve como nombre consumido- tiene que ser el texto tal
+        # cual se escribio.
+        crudas = re.sub(r"\s+", " ", designacion).strip(" .,;:").split()
+        d = B.sin_tildes(" ".join(crudas))
+        # LA PUNTUACION DE FINAL DE PALABRA NO CUENTA PARA BUSCAR EL ALIAS.
+        # «Reglamento General de Recaudacion, https://...» traia la coma pegada
+        # a la ultima palabra del nombre, y por esa coma el alias no casaba. Se
+        # quita solo de la copia normalizada y sin partir palabras, para que
+        # `crudas` siga teniendo las mismas y los indices sigan valiendo.
+        d = re.sub(r"[,;:]+(?=\s|$)", "", d)
+        antes = len(d.split())
         d = re.sub(r"^(?:de[l]?\s+|en\s+)?(?:la|el|los|las)\s+", "", d).strip()
         d = re.sub(r"^(?:est[ae]|presente)\s+", "", d).strip()
+        saltadas = antes - len(d.split()) if d else antes
         if not d:
-            return None, "designacion vacia"
+            return None, "designacion vacia", ""
 
         # La designacion viene recortada de un texto corrido y suele arrastrar
         # cola ("Ley del Impuesto se considerara..."). Se busca el alias MAS
@@ -627,9 +792,8 @@ class Registro:
             # propio, la designacion es de OTRA norma y acortar seria
             # inventarse la coincidencia. "Ley 58/2003" no es "la Ley";
             # "Reglamento (UE) 282/2011" no es el Reglamento del IVA.
-            resto_original = " ".join(
-                re.sub(r"\s+", " ", designacion).strip(" .,;:").split()[consumidas:]
-            )
+            nombrado = " ".join(crudas[saltadas:saltadas + consumidas]).strip(" .,;:")
+            resto_original = " ".join(crudas[saltadas + consumidas:])
             sobra = (resto_original + " " + (cola or "")).strip(" ,;:.")
 
             # LO QUE SOBRA PUEDE SER SU PROPIO NOMBRE, DICHO OTRA VEZ.
@@ -653,7 +817,7 @@ class Registro:
                              or (nombre_suyo and sobra_plana.startswith(nombre_suyo))):
                     return candidatos[0].clave, (
                         f"designa a {candidatos[0].etiqueta} (su nombre "
-                        f"repetido detras del numero)")
+                        f"repetido detras del numero)"), nombrado
 
             # LO QUE SOBRA PUEDE SER LA MATERIA DE OTRO CUERPO CARGADO, y
             # entonces no es prosa que arrastra: es OTRA NORMA.
@@ -680,7 +844,7 @@ class Registro:
                 return None, (
                     f"«{designacion.strip()[:38]}» encaja por el principio "
                     f"con {candidatos[0].etiqueta}, pero sigue nombrando "
-                    f"«{ajena}»: es OTRA norma, no se resuelve")
+                    f"«{ajena}»: es OTRA norma, no se resuelve"), nombrado
 
             if _RE_DISCRIMINANTE.match(sobra):
                 # Se dice QUE alias caso y QUE sobro: sin las dos mitades el
@@ -689,25 +853,27 @@ class Registro:
                 # Del texto ORIGINAL, no de la version normalizada: el motivo
                 # lo lee una persona, y «reglamento del iva» en minusculas
                 # parece un error de otra cosa.
-                alias = " ".join(
-                    re.sub(r"\s+", " ", designacion).strip(" .,;:").split()[:consumidas]
-                )
                 return None, (
-                    f"«{alias}» es alias de una norma cargada, pero la "
+                    f"«{nombrado}» es alias de una norma cargada, pero la "
                     f"designacion sigue con «{sobra[:34]}»: es OTRA norma, "
                     f"no se resuelve"
-                )
+                ), nombrado
 
+        nombrado = " ".join(crudas[saltadas:saltadas + consumidas]).strip(" .,;:")
         if len(candidatos) == 1:
-            return candidatos[0].clave, f"designa a {candidatos[0].etiqueta}"
+            return (candidatos[0].clave,
+                    f"designa a {candidatos[0].etiqueta}", nombrado)
         if len(candidatos) > 1:
             # Un demostrativo desempata a favor del cuerpo en que estamos.
             propio = [c for c in candidatos if c.clave == cuerpo_actual]
             if propio:
-                return propio[0].clave, f"designa al propio {propio[0].etiqueta}"
+                return (propio[0].clave,
+                        f"designa al propio {propio[0].etiqueta}", nombrado)
             return None, (
-                f"«{designacion.strip()}» encaja con "
+                f"«{nombrado}» encaja con "
                 f"{len(candidatos)} cuerpos ({', '.join(c.etiqueta for c in candidatos)}): "
                 f"no se resuelve"
-            )
-        return None, f"«{designacion.strip()}» no corresponde a ninguna norma cargada"
+            ), nombrado
+        return (None,
+                f"«{designacion.strip()}» no corresponde a ninguna norma cargada",
+                "")

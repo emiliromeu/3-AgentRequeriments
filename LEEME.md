@@ -5194,3 +5194,95 @@ un fallo de hace tres meses ya arreglado se lee igual que el de esta mañana.
 
 Se lleva **la última respuesta**, no el hilo. Lo que se pega en un correo o en
 el expediente del cliente tiene que ser **una** respuesta verificada.
+
+## El día que no se sabía nombrar media biblioteca — 25/08/2026
+
+Dos defectos del mismo día, y el segundo es el que deja lección.
+
+### (a) Nueve de las diecisiete son reglamentos, y no se podían nombrar
+
+El verificador reconocía «Ley 58/2003» y no «Reglamento General de
+Recaudación». Medido antes de tocar nada, sobre las diecisiete:
+
+* de las **diecisiete designaciones oficiales**, dos no resolvían —«Real
+  Decreto Legislativo 1/1993» y «Decreto Legislativo 1/2024»—, porque el patrón
+  que lee el nombre cortaba en «Real Decreto» y en «Decreto»;
+* de los **once cuerpos que las normas aprueban** —donde vive el articulado que
+  se cita—, **seis** no se podían nombrar: Recaudación, el RGAT, el sancionador,
+  el de facturación, el del ITPAJD por su nombre entero y el libro sexto del
+  Codi. Son **704 de los 2.043** artículos;
+* y la Ley 58/2003 no se podía citar como «Ley General Tributaria», que es como
+  la titula el BOE.
+
+Dos causas, una en cada capa. `citas.py` llevaba **una segunda lista de rangos
+escrita a mano** —con calificativos a mano, tope de 50 caracteres y sensible a
+mayúsculas—, así que truncaba el nombre antes de que el registro lo viera. Y
+`normas.py` generaba alias solo como `{tipo} de/del {materia}`, nunca el nombre
+tal y como lo escribe el BOE.
+
+El arreglo no añade alias: **el nombre oficial de cada cuerpo es alias de sí
+mismo**, sacado del título que ya guarda el corpus, con su forma sin conector
+(«Ley General Tributaria») y la sigla del nombre entero («RGR», «TRLITPAJD»).
+El vocabulario de rangos pasa a ser **uno**: `citas.py` importa `normas._TIPOS`
+en vez de repetirlo, y **quién decide dónde acaba el nombre es el registro**
+(`Registro.nombrar`), no el patrón. `pruebas/prueba_nombres.py` recorre los
+cuerpos que haya, no diecisiete escritos: el día que entre una norma nueva, esa
+suite dice si se la sabe nombrar.
+
+Lo que se probó y se **deshizo a propósito**: el rango abreviado («RD
+1619/2012») como alias. Resolvía, pero `dgt.py` trata las abreviaturas como
+interpretación nuestra y las somete a una contención extra; con el alias, esa
+contención dejaba de aplicarse y volvían a entrar citas a artículos que no
+existen. Queda escrito en el código, donde alguien lo va a volver a intentar.
+
+### (b) Un motivo equivocado es peor que un fallo
+
+Al cerrar lo anterior salió una cita que nombraba el real decreto —«artículo 2
+del Real Decreto 939/2005»— y el verificador contestaba:
+
+> la cita no dice de qué norma es, y ese precepto existe en 19: …
+
+**La cita sí lo decía**, con nombre y número. Lo que pasaba es que el artículo 2
+vive en el Reglamento General de Recaudación, que ese real decreto aprueba, y
+`_buscar_clave` no preguntaba `cuerpo_hermano_con` —la regla que ya usaban la
+DGT y el grafo de remisiones—.
+
+Un fallo con su motivo correcto cuesta un rato. **Un motivo equivocado cuesta
+mucho más y sigue costando después**: manda a alguien a arreglar lo que no está
+roto —aquí, a revisar cómo se escriben las citas, que estaban bien—, y cuando se
+descubre, lo que se pierde no es esa tarde: es la confianza en **todos** los
+motivos. Un verificador al que hay que verificarle los motivos no sirve para
+firmar nada. Por eso la corrección, además de aplicarse, **se dice**: la
+comprobación deja escrito que la cita nombra el decreto y que el precepto se
+leyó en el reglamento que aquel aprueba. Una corrección que no se ve es una
+corrección a espaldas de quien audita el expediente.
+
+Lo que costaba, medido antes del arreglo:
+
+* **1.174 de los 2.043** artículos —el 57%— viven en un cuerpo aprobado por
+  otro, y no se podían citar por el número de su decreto. De ellos, **953**
+  salían con el motivo falso «la cita no dice de qué norma es» y **221** con
+  «no existe el artículo … en las normas cargadas», que también es falso;
+* en las trazas guardadas: **328 citas de 31 consultas reales**; cinco acabaron
+  en NO ENCONTRADO **sin ningún otro motivo que este**. Revalidadas con el
+  código de hoy, cuatro pasan a ACEPTADO; la quinta verifica quince de sus
+  dieciséis citas y se cae por **un error de verdad** —cita el artículo 62 y el
+  texto es del 63—, que antes estaba escondido detrás de dieciséis motivos
+  falsos.
+
+### El tercero, y el cuarto que apareció al contarlos
+
+La regla vivía en `normas.py` y la preguntaban dos. Al ponerla en el
+verificador —el tercero— se buscó quién más debería preguntarla, y apareció un
+**cuarto**: `teac.Criterio.preceptos`, que empareja norma y artículo igual que
+el campo de la DGT. Hoy no muerde —cero pares mal atribuidos en los 909
+criterios cacheados, porque DYCTEA nombra el reglamento y no el real decreto—,
+pero la vía lo permitía, y lo que decide no es cuántos fallan hoy.
+
+`pruebas/prueba_hermano.py` no prueba la regla —eso ya lo hace
+`prueba_cuerpo.py`—: prueba **quién la pregunta**. Cada consumidor resuelve un
+caso que solo sale con ella; con la regla desactivada los cuatro se caen —si
+uno siguiera en verde es que no la preguntaba—; y el inventario lee del código
+quién convierte una designación en un cuerpo y exige que esté clasificado, o
+consumidor o excepción razonada. **El día que aparezca un quinto, la suite se
+pone roja hasta que alguien decida cuál es.**

@@ -455,8 +455,23 @@ class Criterio:
                                            ref.get("codigo", ""))
             for p in ref.get("preceptos") or []:
                 num = _numero_articulo(p)
-                if num:
-                    salida.append((cuerpo, num))
+                if not num:
+                    continue
+                # EL CUARTO CONSUMIDOR DE LA MISMA REGLA, y el que aparecio al
+                # buscarlos: si la fuente nombra el REAL DECRETO y el articulo
+                # vive en el reglamento que aprueba, el par sale apuntando al
+                # decreto -que tiene uno o seis articulos- y se compara contra
+                # el precepto equivocado. Es el defecto que costo 92 preceptos
+                # en la DGT, en el modulo de al lado.
+                #
+                # HOY NO MUERDE: medido el 25/08/2026 sobre los 909 criterios
+                # cacheados, CERO pares mal atribuidos, porque DYCTEA nombra el
+                # reglamento y no el real decreto. Se pone igual, porque lo que
+                # decide no es cuantos fallan hoy sino que la via lo permite, y
+                # la fuente puede cambiar de estilo sin avisar.
+                if normas is not None and cuerpo:
+                    cuerpo = normas.cuerpo_hermano_con(cuerpo, num) or cuerpo
+                salida.append((cuerpo, num))
         return salida
 
     @property
