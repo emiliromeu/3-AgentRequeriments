@@ -1,0 +1,15 @@
+{
+ "numero": "V0283-16",
+ "fecha": "25/01/2016",
+ "organo": "SG de Impuestos sobre el Consumo",
+ "normativa": "Ley 37/1992 art. 78-160",
+ "cuestion_planteada": "Base imponible del recargo de equivalencia correspondiente a las entregas objeto del\n comercio habitual del consultante.",
+ "descripcion_hechos": "El consultante es un comerciante minorista acogido al régimen especial del recargo\n de equivalencia. En las facturas emitidas por sus proveedores se desglosa el importe\n de los gastos de transporte a los que se aplica el Impuesto sobre el Valor Añadido\n y el recargo de equivalencia correspondiente.",
+ "contestacion": "1.- De acuerdo con lo previsto en el artículo 160 de la Ley 37/1992, de 28 de diciembre,\n del Impuesto sobre el Valor Añadido (Boletín Oficial del Estado del 29), la base imponible\n del recargo de equivalencia será la misma que resulte para el Impuesto sobre el Valor\n Añadido.\n\n 2.- En virtud de lo dispuesto en el artículo 78, apartados uno y dos, número 1º de\n la misma Ley, la base imponible de las entregas de bienes estará constituida por el\n importe total de la contraprestación de las mismas, incluyéndose en el concepto de\n contraprestación, entre otros importes, los correspondientes a portes y transportes\n y, en general, a cualquier otro crédito efectivo a favor de quien realice la entrega\n gravada, derivado de dicha operación o de otras prestaciones accesorias a la misma.\n\n Según parece desprenderse del escrito de consulta, los gastos de transporte de los\n bienes objeto de consulta que el proveedor factura al consultante, tienen carácter\n accesorio de las entregas de bienes objeto de su comercio habitual efectuadas por\n el primero a favor del consultante. En tal caso, el importe de los referidos gastos\n se integraría en la base imponible de las entregas de bienes, tanto a efectos de la\n liquidación del Impuesto sobre el Valor Añadido como, en su caso, del recargo de equivalencia.\n\n 3.- Lo que comunico a Vd. con efectos vinculantes, conforme a lo dispuesto en el apartado\n 1 del artículo 89 de la Ley 58/2003, de 17 de diciembre, General Tributaria.",
+ "doc_id": "17833",
+ "tab": "2",
+ "url_navegador": "https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V0283-16",
+ "descargado": "2026-08-26T07:33:27Z",
+ "sha256_crudo": "b78466c69e5d2218df513b17f49bba959054975898cfe68cdd4baeb7bf53758a",
+ "crudo": "datos/dgt/crudo/V0283-16.html"
+}

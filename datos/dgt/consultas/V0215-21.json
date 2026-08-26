@@ -1,0 +1,15 @@
+{
+ "numero": "V0215-21",
+ "fecha": "10/02/2021",
+ "organo": "SG de Impuestos sobre el Consumo",
+ "normativa": "Ley 37/1992 art. 78-160",
+ "cuestion_planteada": "Base imponible del recargo de equivalencia correspondiente a las entregas objeto del\n comercio habitual del consultante.",
+ "descripcion_hechos": "El consultante ejerce como autónomo estando dado de alta en los epígrafes 665 y 647.1\n del Impuesto sobre Actividades Económicas para la venta a través de Internet de aceite\n de oliva virgen extra. Este aceite lo compra a sus proveedores y lo vende a particulares\n a través de una página web. El producto va directo del proveedor al cliente final\n al que le cobra gastos de envío. A tal efecto tributa por el Impuesto sobre el Valor\n Añadido por el régimen especial del recargo de equivalencia.\n\n Los proveedores le cobran al consultante el importe del producto y, además, por el\n envío del mismo al cliente final.\n\n En las facturas emitidas por sus proveedores unas veces se desglosa el importe de\n los gastos de transporte a los que se aplica el Impuesto sobre el Valor Añadido y\n el recargo de equivalencia correspondiente y, en otras, se factura aparte los gastos\n de envío del producto al cliente final.",
+ "contestacion": "1.- De acuerdo con lo previsto en el artículo 160 de la Ley 37/1992, de 28 de diciembre,\n del Impuesto sobre el Valor Añadido (BOE del 29 de diciembre), la base imponible del\n recargo de equivalencia será la misma que resulte para el Impuesto sobre el Valor\n Añadido.\n\n 2.- Por otro lado, el artículo 78, apartados uno y dos, número 1º de la misma Ley,\n establece que la base imponible de las entregas de bienes estará constituida por el\n importe total de la contraprestación de las mismas, incluyéndose en el concepto de\n contraprestación, entre otros importes, los correspondientes a portes y transportes\n y, en general, a cualquier otro crédito efectivo a favor de quien realice la entrega\n gravada, derivado de dicha operación o de otras prestaciones accesorias a la misma.\n\n Según parece desprenderse del escrito de consulta, los gastos de transporte de los\n bienes objeto de consulta (aceite) que el proveedor factura al consultante, tienen\n carácter accesorio de las entregas de bienes objeto de su comercio habitual efectuadas\n por el primero a favor del consultante. En tal caso, el importe de los referidos gastos\n se integraría en la base imponible de las entregas de aceite al consultante, tanto\n a efectos de la liquidación del Impuesto sobre el Valor Añadido como, en su caso,\n del recargo de equivalencia.\n\n 3.- Lo que comunico a Vd. con efectos vinculantes, conforme a lo dispuesto en el apartado\n 1 del artículo 89 de la Ley 58/2003, de 17 de diciembre, General Tributaria.",
+ "doc_id": "43594",
+ "tab": "2",
+ "url_navegador": "https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V0215-21",
+ "descargado": "2026-08-26T07:32:11Z",
+ "sha256_crudo": "a9da5530fe655634f0c530386e81b768fbb99fffc287b0599a18e5438a9d742c",
+ "crudo": "datos/dgt/crudo/V0215-21.html"
+}
