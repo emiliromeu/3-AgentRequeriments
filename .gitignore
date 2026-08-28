@@ -91,3 +91,8 @@ datos/dgt/visto.json
 # Si viajara, la oficina tendria el avance de un barrido que no hace, y una
 # copia de alla podria pisar el mio.
 datos/dgt/goteo.json
+
+# El cerrojo de la sesion de goteo. Dice que hay un proceso corriendo EN ESTE
+# Mac; en otra maquina seria mentira desde el primer momento, y una mentira que
+# impediria gotear.
+datos/dgt/goteo.cerrojo

@@ -169,11 +169,162 @@ VEN = (RAIZ / "interfaz.py").read_text("utf-8")
 comprobar("la ventana NO lanza el goteo: no es cosa de la oficina",
           "gotear" not in VEN, "la ventana llama al goteo")
 
+# ==================================== 6. EL CERROJO Y EL CUADERNO
+print("\n=== 6. UNA SESION A LA VEZ, Y EL CUADERNO NO SE PIERDE ===")
+print("  Once sesiones de barrido son dieciseis horas de peticiones a un")
+print("  servicio publico. Lo que las protege son tres cosas, y ninguna")
+print("  existia: el cerrojo, la escritura que no deja a medias, y no dar por")
+print("  «primer arranque» un cuaderno que esta ahi y no se puede leer.\n")
+
+import os                                        # noqa: E402
+import subprocess                                # noqa: E402
+import time                                      # noqa: E402
+
+# ESTA SECCION TOCA EL CUADERNO DE VERDAD, asi que no se puede pasar con una
+# sesion de goteo en marcha: le pisaria el fichero mientras trabaja. Se
+# pregunta al MISMO cerrojo que se esta probando, que es la forma honrada de
+# saberlo, y si esta ocupado NO se salta en silencio: se dice arriba, se dice
+# abajo y se cuenta aparte de los OK. Una prueba que se salta callando es peor
+# que una que falla.
+saltadas = []
+en_marcha = gotear._quien_lo_tiene() if gotear.CERROJO.exists() else None
+if en_marcha is not None:
+    saltadas.append("el cerrojo y el cuaderno del goteo")
+    print(f"  SALTADA: hay una sesion de goteo corriendo (pid "
+          f"{en_marcha['pid']}, desde las {en_marcha['desde']}).")
+    print("  Esta seccion escribe en el cuaderno de verdad y le pisaria el")
+    print("  fichero. Para esa sesion y vuelve a lanzar la suite.\n")
+
+if en_marcha is None:
+    # (a) DOS SESIONES A LA VEZ: la segunda rebota. Se lanzan de verdad, en ensayo,
+    # que no sale a la red. Con dos vivas leen el mismo cuaderno, piden lo mismo y
+    # al guardar gana la ultima: el trabajo de la otra no queda en ninguna parte.
+    uno = subprocess.Popen([sys.executable, str(RAIZ / "gotear.py"),
+                            "--minutos", "1", "--ensayo"],
+                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                           text=True, cwd=str(RAIZ))
+    try:
+        for _ in range(300):
+            if gotear.CERROJO.exists():
+                break
+            time.sleep(0.05)
+        comprobar("una sesion viva pone el cerrojo", gotear.CERROJO.exists())
+        dos = subprocess.run([sys.executable, str(RAIZ / "gotear.py"),
+                              "--minutos", "1", "--ensayo"],
+                             capture_output=True, text=True, cwd=str(RAIZ))
+        comprobar("  la segunda no arranca", dos.returncode == 1, dos.returncode)
+        comprobar("  y dice quien lo tiene y desde cuando",
+                  "pid" in dos.stdout and "desde las" in dos.stdout,
+                  dos.stdout[:120])
+        # EL ESTADO NO COGE EL CERROJO: esperar noventa minutos para poder
+        # preguntar por donde va es lo contrario de para lo que sirve.
+        est = subprocess.run([sys.executable, str(RAIZ / "gotear.py"), "--estado"],
+                             capture_output=True, text=True, cwd=str(RAIZ))
+        comprobar("  pero `--estado` sigue contestando: solo mira",
+                  est.returncode == 0, est.returncode)
+    finally:
+        uno.wait(timeout=240)
+    comprobar("  y al terminar lo suelta", not gotear.CERROJO.exists())
+
+    # (b) UN CERROJO DE UN PROCESO MUERTO NO ES UN CERROJO. Es lo que queda cuando
+    # se cierra el portatil a mitad de sesion, y hacer volver a alguien a borrar un
+    # fichero a mano garantiza que el dia que estorbe se borre sin mirar.
+    gotear.CERROJO.write_text(json.dumps({"pid": 999999, "desde": "ayer"}),
+                              encoding="utf-8")
+    try:
+        r = subprocess.run([sys.executable, str(RAIZ / "gotear.py"),
+                            "--minutos", "1", "--ensayo"],
+                           capture_output=True, text=True, cwd=str(RAIZ))
+        comprobar("un cerrojo de un proceso que ya no existe no bloquea",
+                  r.returncode == 0, r.returncode)
+        comprobar("  y se dice que se retira, no se hace en silencio",
+                  "se retira" in r.stdout, r.stdout[:120])
+    finally:
+        gotear.CERROJO.unlink(missing_ok=True)
+
+    # (c) EL CUADERNO A MEDIAS NO ES UN CUADERNO VACIO. Antes lo era: `leer_avance`
+    # se tragaba el JSONDecodeError y devolvia el diccionario vacio, o sea que un
+    # `goteo.json` truncado se leia como «no se ha mirado nada todavia» y la sesion
+    # siguiente volvia a pedirle a PETETE el corpus entero. Sin un aviso.
+    copia = gotear.AVANCE.read_bytes() if gotear.AVANCE.is_file() else None
+    try:
+        gotear.AVANCE.write_bytes((copia or b'{"articulos": {"a": 1}}')[:40])
+        reventado = False
+        try:
+            gotear.leer_avance()
+        except gotear.AvanceIlegible:
+            reventado = True
+        comprobar("un cuaderno a medias PARA, no se lee como vacio", reventado)
+        r = subprocess.run([sys.executable, str(RAIZ / "gotear.py"),
+                            "--minutos", "1", "--ensayo"],
+                           capture_output=True, text=True, cwd=str(RAIZ))
+        comprobar("  y la sesion no arranca", r.returncode == 1, r.returncode)
+        comprobar("  diciendo que lo bajado NO se pierde",
+                  "NO SE PIERDE" in r.stdout, r.stdout[:200])
+        # NO PROMETE UN `git checkout` QUE NO EXISTE: el cuaderno esta excluido de
+        # git a proposito -es de este Mac- asi que no hay copia de la que sacarlo,
+        # y decir que la hay seria peor que no decir nada.
+        comprobar("  y no promete recuperarlo de git, porque no viaja",
+                  "git checkout" not in r.stdout, r.stdout[:200])
+    finally:
+        if copia is None:
+            gotear.AVANCE.unlink(missing_ok=True)
+        else:
+            gotear.AVANCE.write_bytes(copia)
+
+    # (d) LA ESCRITURA NO DEJA EL FICHERO BUENO A MEDIAS. Se escribe al lado y se
+    # renombra: el fichero bueno es siempre uno entero, el de antes o el de ahora.
+    FUENTE_GOTEO = (RAIZ / "gotear.py").read_text("utf-8")
+    comprobar("el avance se guarda renombrando, no escribiendo encima",
+              "os.replace(provisional, AVANCE)" in FUENTE_GOTEO)
+    comprobar("  y el cerrojo no viaja por git",
+              subprocess.run(["git", "check-ignore", "datos/dgt/goteo.cerrojo"],
+                             cwd=str(RAIZ), capture_output=True).returncode == 0)
+
+
+
+# ==================================== CONTROL NEGATIVO
+print("\n=== CONTROL NEGATIVO: la suite tiene que ponerse roja ===")
+print("  Ninguna prueba se da por buena sin verla fallar cuando debe fallar.\n")
+
+# Sin cerrojo puesto, la comprobacion (a) tiene que dar el resultado contrario:
+# si `_quien_lo_tiene` dijera siempre «hay alguien», bloquearia el goteo para
+# siempre, y si dijera siempre «no hay nadie», el cerrojo no serviria de nada.
+if en_marcha is None:
+    gotear.CERROJO.write_text(json.dumps({"pid": os.getpid(),
+                                          "desde": "ahora"}), encoding="utf-8")
+    try:
+        comprobar("un cerrojo de un proceso VIVO si lo reconoce como ocupado",
+                  gotear._quien_lo_tiene() is not None)
+    finally:
+        gotear.CERROJO.unlink(missing_ok=True)
+    gotear.CERROJO.write_text("esto no es json", encoding="utf-8")
+    try:
+        # Un cerrojo ilegible no puede sostener que haya alguien: no sabe de
+        # quien es. Bloquear con el dejaria el goteo parado sin poder decir
+        # por que.
+        comprobar("un cerrojo ilegible no bloquea",
+                  gotear._quien_lo_tiene() is None)
+    finally:
+        gotear.CERROJO.unlink(missing_ok=True)
+else:
+    # EL CONTROL NEGATIVO SIN CERROJO SI SE PUEDE HACER: no lo toca. El de un
+    # proceso vivo es el que hay puesto ahi fuera.
+    comprobar("el cerrojo de la sesion en marcha se reconoce como ocupado",
+              gotear._quien_lo_tiene() is not None)
+
+
 print("\n" + "=" * 74)
 if fallos:
     print(f"{len(fallos)} FALLO(S):")
     for f in fallos:
         print(f"   - {f}")
     sys.exit(1)
+if saltadas:
+    print(f"TODO EN VERDE, PERO {len(saltadas)} SECCION(ES) SIN PROBAR:")
+    for x in saltadas:
+        print(f"   - {x}   (hay una sesion de goteo en marcha)")
+    print("\nPara una suite entera: para el goteo y vuelve a lanzarla.")
+    sys.exit(0)
 print("TODO EN VERDE · el goteo recorre todo, por utilidad y a ratos")
 sys.exit(0)
