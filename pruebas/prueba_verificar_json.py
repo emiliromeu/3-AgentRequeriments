@@ -20,7 +20,6 @@ exactamente lo que vera quien lo llame. Importandolo se probaria otra cosa.
 """
 import hashlib
 import json
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -112,9 +111,42 @@ print("\n=== 3. UN FALLO INTERNO NUNCA EMITE JSON DE ACEPTACION ===")
 print("  Un verificador que ante un fallo suyo pudiera decir «aceptado» no es")
 print("  un verificador. Se prueba rompiendo el corpus de dos maneras.\n")
 
-guardado = Path(str(CORPUS) + ".guardado_por_la_suite")
-if guardado.exists():
-    shutil.rmtree(guardado)
+def apartar_el_corpus(nombre: str):
+    """Aparta `datos/corpus` para provocar un fallo, y NUNCA borra un respaldo.
+
+    LA LINEA QUE ESTO SUSTITUYE BORRO EL CORPUS ENTERO. Decia:
+
+        if guardado.exists():
+            shutil.rmtree(guardado)
+
+    y parecia prudente -limpiar los restos de una ejecucion anterior-. Pero un
+    respaldo que ya existe NO son restos: es el corpus, apartado ahora mismo por
+    otra ejecucion de la suite que todavia no lo ha devuelto. Dos suites de este
+    banco apartan el corpus, `comprobar_todo` las lanza a las dos, y el 28/08/2026
+    dos ejecuciones solapadas hicieron exactamente eso: la segunda «limpio los
+    restos» de la primera y las diecisiete normas desaparecieron del disco.
+
+    No se perdio nada irrecuperable -el corpus se rehace del crudo en cinco
+    segundos, para eso esta excluido de git- pero el banco se quedo en rojo
+    culpando a cuatro cosas que no tenian nada roto, que es el peor rojo que
+    existe: el que hace desconfiar de la prueba en vez de del codigo.
+
+    Ahora, si el respaldo existe, NO SE TOCA y la suite para diciendo que hacer.
+    Y cada suite usa SU nombre, para que dos que corran a la vez no se confundan
+    el respaldo de la otra con el suyo.
+    """
+    guardado = Path(f"{CORPUS}.apartado_por_{nombre}")
+    if guardado.exists():
+        raise SystemExit(
+            f"\n  NO SE EJECUTA: ya existe {guardado.name}.\n"
+            f"  Eso es el corpus apartado, no un resto que se pueda borrar:\n"
+            f"  o hay otra ejecucion de esta suite en marcha -espera a que\n"
+            f"  termine- o una murio a medias y hay que devolverlo a mano:\n"
+            f"      mv {guardado.name} {Path(CORPUS).name}\n")
+    return guardado
+
+
+guardado = apartar_el_corpus("prueba_verificar_json")
 
 # (a) CORPUS AUSENTE
 CORPUS.rename(guardado)

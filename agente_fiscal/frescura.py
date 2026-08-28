@@ -148,6 +148,87 @@ def retraso_de_consolidacion(dir_corpus: Path) -> dict:
             "preguntado": preguntado, "sin_dato": sin_dato, "detalle": detalle}
 
 
+def horizonte(dir_corpus: Path) -> dict:
+    """HASTA CUANDO LLEGA EL CORPUS. Sin red: ya esta en el sello.
+
+    -> {hasta, norma, ejercicio_completo, por_norma, sin_dato}
+
+    MANDA LA MAS ATRASADA, no la media ni la mas reciente. El corpus se usa
+    entero para contestar una pregunta -la ley, su reglamento y lo que remita-
+    asi que hasta donde llega el conjunto es hasta donde llega su eslabon mas
+    corto. Una media diria «2025» teniendo dentro un reglamento parado en 2018.
+
+    `ejercicio_completo` es el ultimo año que el corpus cubre DE ENERO A
+    DICIEMBRE. Un corpus consolidado hasta el 09/11/2018 no cubre 2018: le
+    faltan siete semanas, y una reforma de diciembre es justo la clase de cosa
+    que entra en vigor el 1 de enero siguiente. Redondear hacia arriba aqui
+    seria decir que se cubre un año que no se cubre.
+
+    NO ES NUESTRO RETRASO, es el del texto que publica el BOE. Ver
+    `retraso_de_consolidacion`: una norma estable puede llevar años sin
+    tocarse y estar al dia.
+    """
+    ruta = Path(dir_corpus) / "sellos.json"
+    vacio = {"hasta": "", "norma": "", "ejercicio_completo": None,
+             "por_norma": {}, "sin_dato": []}
+    if not ruta.is_file():
+        return vacio
+    try:
+        sellos = json.loads(ruta.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return vacio
+
+    por_norma, sin_dato = {}, []
+    for clave, valor in sorted(sellos.items()):
+        if not isinstance(valor, dict) or clave == "sellado":
+            continue
+        hasta = ((valor.get("consolidacion") or {}).get("consolidado_hasta")
+                 or "")
+        if _fecha(hasta) is None:
+            # SIN DATO NO ES «LLEGA HASTA HOY». Es la que no sabemos, y se
+            # cuenta aparte para que no desaparezca en el minimo.
+            sin_dato.append(clave)
+        else:
+            por_norma[clave] = hasta
+    if not por_norma:
+        return {"hasta": "", "norma": "", "ejercicio_completo": None,
+                "por_norma": {}, "sin_dato": sin_dato}
+    norma = min(por_norma, key=lambda k: (por_norma[k], k))
+    hasta = por_norma[norma]
+    año = int(hasta[:4])
+    return {"hasta": hasta, "norma": norma,
+            "ejercicio_completo": año if hasta[5:] >= "12-31" else año - 1,
+            "por_norma": por_norma, "sin_dato": sin_dato}
+
+
+def aviso_de_horizonte(dir_corpus: Path, ejercicio: int | None) -> str:
+    """EL AVISO CUANDO SE PREGUNTA POR DELANTE DEL CORPUS. Vacio si cabe.
+
+    Es el mismo fallo que persigue todo este modulo, en su version mas dificil
+    de ver: la respuesta sale bien formada, con su articulo y su enlace, y lo
+    unico que le pasa es que el ejercicio por el que se pregunta cae MAS ALLA
+    de donde llega la copia. No hay nada roto que enseñar.
+
+    Va DENTRO de la respuesta, no en la documentacion de quien la lee. Un aviso
+    que hay que ir a buscar a un LEEME no lo lee el programa que consume el
+    JSON, y quien escribio ese programa se fue de la empresa.
+    """
+    if ejercicio is None:
+        return ""
+    h = horizonte(dir_corpus)
+    if not h["hasta"]:
+        return ("No se sabe hasta cuándo llega esta copia: ninguna norma tiene "
+                "fecha de consolidación en su sello. Hay que reingerirlas para "
+                "poder decirlo.")
+    if f"{ejercicio}-12-31" <= h["hasta"]:
+        return ""
+    return (f"La consulta es de {ejercicio} y esta copia solo llega entera "
+            f"hasta {h['ejercicio_completo']}: el texto consolidado más "
+            f"atrasado es el de {h['norma']}, al {h['hasta']}. Lo que se "
+            f"conteste sobre {ejercicio} puede no recoger reformas "
+            f"posteriores a esa fecha.")
+
+
 def aviso_de_consolidacion(dir_corpus: Path) -> str:
     """Que normas tienen reformas publicadas sin incorporar. Vacio si ninguna.
 
