@@ -298,7 +298,7 @@ if en_marcha is None:
     # renombra: el fichero bueno es siempre uno entero, el de antes o el de ahora.
     FUENTE_GOTEO = (RAIZ / "gotear.py").read_text("utf-8")
     comprobar("el avance se guarda renombrando, no escribiendo encima",
-              "os.replace(provisional, AVANCE)" in FUENTE_GOTEO)
+              "os.replace(provisional, ruta)" in FUENTE_GOTEO)
     comprobar("  y el cerrojo no viaja por git",
               subprocess.run(["git", "check-ignore", "datos/dgt/goteo.cerrojo"],
                              cwd=str(RAIZ), capture_output=True).returncode == 0)

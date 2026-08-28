@@ -114,7 +114,7 @@ class AvanceIlegible(Exception):
     """`goteo.json` esta ahi y no se puede leer. NO se empieza de cero."""
 
 
-def leer_avance() -> dict:
+def leer_avance(ruta: Path | None = None) -> dict:
     """El avance del barrido. Un fichero AUSENTE es empezar; uno ROTO, no.
 
     LA DIFERENCIA ENTRE LAS DOS COSAS ES ONCE SESIONES DE TRABAJO. Esto se
@@ -127,13 +127,14 @@ def leer_avance() -> dict:
 
     Que no exista SI es empezar, y eso se mantiene: es el primer arranque.
     """
-    if not AVANCE.is_file():
+    ruta = Path(ruta or AVANCE)
+    if not ruta.is_file():
         return {"creado": _hoy(), "articulos": {}, "sesiones": []}
     try:
-        d = json.loads(AVANCE.read_text(encoding="utf-8"))
+        d = json.loads(ruta.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as e:
         raise AvanceIlegible(
-            f"{AVANCE.relative_to(RAIZ)} existe y no se puede leer: {e}\n"
+            f"{ruta.relative_to(RAIZ)} existe y no se puede leer: {e}\n"
             f"\n"
             f"  LO BAJADO NO SE PIERDE: esta en {DESTINO.relative_to(RAIZ)} y\n"
             f"  viaja por git. Lo que se ha roto es el cuaderno de por donde\n"
@@ -145,14 +146,14 @@ def leer_avance() -> dict:
             f"  ya esta, y sobre todo para volver a preguntar por los\n"
             f"  articulos que salieron vacios, que en disco no dejan rastro.\n"
             f"  Si aun asi es lo que toca, se aparta el fichero a mano:\n"
-            f"      mv {AVANCE.relative_to(RAIZ)} "
-            f"{AVANCE.relative_to(RAIZ)}.roto") from e
+            f"      mv {ruta.relative_to(RAIZ)} "
+            f"{ruta.relative_to(RAIZ)}.roto") from e
     d.setdefault("articulos", {})
     d.setdefault("sesiones", [])
     return d
 
 
-def guardar_avance(d: dict) -> None:
+def guardar_avance(d: dict, ruta: Path | None = None) -> None:
     """Al lado y renombrando, NUNCA encima. Un renombrado no deja a medias.
 
     `write_text` sobre el fichero bueno lo trunca antes de escribir: durante
@@ -160,11 +161,12 @@ def guardar_avance(d: dict) -> None:
     ahi es donde entra el Ctrl+C. Escribir al lado y renombrar hace que el
     fichero bueno sea siempre uno entero: el de antes o el de ahora.
     """
-    AVANCE.parent.mkdir(parents=True, exist_ok=True)
-    provisional = AVANCE.with_suffix(".json.escribiendo")
+    ruta = Path(ruta or AVANCE)
+    ruta.parent.mkdir(parents=True, exist_ok=True)
+    provisional = ruta.with_suffix(".json.escribiendo")
     provisional.write_text(json.dumps(d, ensure_ascii=False, indent=1),
                            encoding="utf-8")
-    os.replace(provisional, AVANCE)
+    os.replace(provisional, ruta)
 
 
 # --------------------------------------------------------------- EL CERROJO
@@ -175,7 +177,7 @@ class Ocupado(Exception):
 
 
 @contextlib.contextmanager
-def cerrojo():
+def cerrojo(ruta: Path | None = None):
     """UNA SESION A LA VEZ. Se suelta al salir, pase lo que pase.
 
     QUE PASA HOY SIN ESTO. Dos sesiones a la vez -y es facil: la ventana de la
@@ -192,12 +194,13 @@ def cerrojo():
     cuando el portatil se apaga. Se guarda el PID y se pregunta al sistema si
     ese proceso sigue vivo, que no es un plazo: es la respuesta.
     """
-    CERROJO.parent.mkdir(parents=True, exist_ok=True)
+    ruta = Path(ruta or CERROJO)
+    ruta.parent.mkdir(parents=True, exist_ok=True)
     quien = {"pid": os.getpid(), "desde": time.strftime("%Y-%m-%d %H:%M:%S")}
     try:
-        descriptor = os.open(CERROJO, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        descriptor = os.open(ruta, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
     except FileExistsError:
-        anterior = _quien_lo_tiene()
+        anterior = _quien_lo_tiene(ruta)
         if anterior is not None:
             raise Ocupado(
                 f"Ya hay una sesion de goteo corriendo (pid {anterior['pid']}, "
@@ -212,8 +215,8 @@ def cerrojo():
         # volver a alguien a borrar un fichero a mano por eso es garantizar que
         # el dia que estorbe se borre sin mirar.
         print("  (habia un cerrojo de una sesion que ya no existe: se retira)")
-        CERROJO.unlink(missing_ok=True)
-        descriptor = os.open(CERROJO, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        ruta.unlink(missing_ok=True)
+        descriptor = os.open(ruta, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
     try:
         os.write(descriptor, json.dumps(quien).encode("utf-8"))
         os.close(descriptor)
@@ -221,13 +224,14 @@ def cerrojo():
     finally:
         # SE SUELTA PASE LO QUE PASE, tambien si la sesion revienta: un cerrojo
         # que solo se quita cuando todo va bien es el que se queda puesto.
-        CERROJO.unlink(missing_ok=True)
+        ruta.unlink(missing_ok=True)
 
 
-def _quien_lo_tiene():
+def _quien_lo_tiene(ruta: Path | None = None):
     """El dueño del cerrojo si sigue vivo, `None` si es de un proceso muerto."""
+    ruta = Path(ruta or CERROJO)
     try:
-        quien = json.loads(CERROJO.read_text(encoding="utf-8"))
+        quien = json.loads(ruta.read_text(encoding="utf-8"))
         pid = int(quien["pid"])
     except (OSError, ValueError, KeyError, TypeError):
         # Un cerrojo ilegible no bloquea: no sabe decir de quien es, asi que no
