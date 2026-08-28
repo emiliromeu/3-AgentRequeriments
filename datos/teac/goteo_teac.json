@@ -1230,6 +1230,56 @@
    "estado": "sin_resultados",
    "buscado": "2026-08-28",
    "bajadas": 0
+  },
+  "BOE-A-1992-28740#0#146": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-1992-28740#0#15": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-1992-28740#0#4": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-1992-28740#0#65": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-1992-28740#0#71": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-1992-28740#0#83": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-1992-28740#0#98": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 3
+  },
+  "BOE-A-1992-28925#0#6": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-1992-28925#1#10": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 2
+  },
+  "BOE-A-1992-28925#1#6": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
   }
  },
  "sesiones": [
@@ -1257,6 +1307,18 @@
    "terminada": false,
    "ensayo": false,
    "por_mirar_al_empezar": 435
+  },
+  {
+   "cuando": "2026-08-28",
+   "empezada": "2026-08-28T16:23:16",
+   "minutos": 90,
+   "articulos": 10,
+   "bajadas": 5,
+   "vacios": 8,
+   "corte": "",
+   "terminada": false,
+   "ensayo": false,
+   "por_mirar_al_empezar": 385
   }
  ]
 }
