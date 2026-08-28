@@ -110,3 +110,11 @@ datos/dgt/goteo.json
 # Mac; en otra maquina seria mentira desde el primer momento, y una mentira que
 # impediria gotear.
 datos/dgt/goteo.cerrojo
+
+# LO MISMO PARA EL GOTEO DEL TEAC, y se cuela solo si no se escribe: el 28/08
+# entro por un `git add -A` y estuvo cuatro commits viajando Y reescribiendose
+# en cada sesion, que es la combinacion que dejo a la oficina sin poder
+# actualizarse. El cuaderno es de este Mac y el cerrojo habla de un proceso de
+# este Mac.
+datos/teac/goteo_teac.json
+datos/teac/goteo_teac.cerrojo

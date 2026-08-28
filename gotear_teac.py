@@ -180,6 +180,76 @@ def estado() -> int:
     return 0
 
 
+def fuera_del_catalogo() -> int:
+    """LOS QUE NO SE PUEDEN BUSCAR, CON SU CAUSA. Sin red y sin pedir nada.
+
+    EXISTE PARA QUE NADIE LOS PERSIGA CREYENDO QUE FALTAN. Cuando el goteo
+    termine dira «no queda nada por mirar» con 1.402 articulos del corpus sin
+    una sola resolucion al lado, y eso tiene toda la pinta de un trabajo a
+    medias. No lo es: es que DYCTEA no se puede buscar por texto -se busca por
+    SU codigo de norma y SU codigo de precepto- y lo que su catalogo no lista,
+    no se puede pedir. No es un fallo nuestro y no se arregla insistiendo.
+
+    SE CALCULA, NO SE ESCRIBE. Un fichero con la lista se quedaria viejo el dia
+    que DYCTEA añada preceptos a su catalogo, y entonces diria que no se puede
+    buscar algo que si se puede, que es peor que no decir nada. Esto se lee del
+    catalogo de hoy, cada vez.
+    """
+    import collections
+    import fase4
+    ix, grafo = fase4.cargar_corpus()
+    cat = ST._catalogo()
+    N = ix.normas
+
+    SIN_NORMA = "la norma no esta en el catalogo de DYCTEA"
+    SIN_PRECEPTOS = "DYCTEA tiene la norma pero no lista ni un precepto suyo"
+    SIN_ESE = "DYCTEA lista la norma pero no ESE precepto"
+
+    codigos, causas = {}, collections.Counter()
+    por_cuerpo = collections.defaultdict(lambda: collections.Counter())
+    for cu, ar, _por in gotear.orden_de_utilidad(ix, grafo):
+        cuerpo = N.por_clave(cu)
+        if cu not in codigos:
+            codigos[cu] = _codigos_de(cuerpo, cat)
+        cod, preceptos = codigos[cu]
+        etiqueta = (getattr(cuerpo, "etiqueta", "") or cu)
+        if not cod:
+            motivo = SIN_NORMA
+        elif not preceptos:
+            motivo = SIN_PRECEPTOS
+        elif not preceptos.get(_numero(ar)):
+            motivo = SIN_ESE
+        else:
+            por_cuerpo[etiqueta]["buscables"] += 1
+            continue
+        causas[motivo] += 1
+        por_cuerpo[etiqueta][motivo] += 1
+
+    total = sum(causas.values())
+    print(f"\n  ARTICULOS DEL CORPUS QUE NO SE PUEDEN BUSCAR EN DYCTEA: {total}")
+    print("  No faltan por hacer: no se pueden pedir.\n")
+    for motivo, n in causas.most_common():
+        print(f"    {n:>5}  {motivo}")
+    print(f"\n  Por cuerpo, lo buscable y lo que no:\n")
+    print(f"    {'':46} {'buscables':>9} {'fuera':>7}")
+    for et, c in sorted(por_cuerpo.items(),
+                        key=lambda x: -(sum(x[1].values()) - x[1]["buscables"])):
+        fuera = sum(c.values()) - c["buscables"]
+        print(f"    {et[:44]:<46} {c['buscables']:>9} {fuera:>7}")
+    print()
+    print("  LOS QUE NO ESTAN EN EL CATALOGO son normas enteras: el libro sexto")
+    print("  del Codi tributari catalan, la Ley 27/2014 del Impuesto sobre")
+    print("  Sociedades, su Reglamento y el texto refundido del ITPAJD. DYCTEA")
+    print("  no los tiene, y por ahi no hay doctrina que traer.")
+    print()
+    print("  LOS QUE SI ESTAN pero sin ese precepto son articulos sueltos: el")
+    print("  catalogo de DYCTEA lista los preceptos sobre los que HAY doctrina,")
+    print("  asi que un articulo que no aparece es, casi siempre, un articulo")
+    print("  sobre el que el TEAC no se ha pronunciado.")
+    print()
+    return 0
+
+
 def gotear_teac(minutos: int, ensayo: bool) -> int:
     import fase4
     ix, grafo = fase4.cargar_corpus()
@@ -304,10 +374,14 @@ def main(argv) -> int:
                     help="no sale a la red: recorre y no apunta nada")
     ap.add_argument("--estado", action="store_true",
                     help="por donde va, sin pedir nada")
+    ap.add_argument("--fuera", action="store_true",
+                    help="los articulos que DYCTEA no deja buscar, con su causa")
     args = ap.parse_args(argv)
 
     # EL MISMO CERROJO, con su fichero. `--estado` no lo coge: solo mira.
     try:
+        if args.fuera:
+            return fuera_del_catalogo()
         if args.estado:
             return estado()
         with gotear.cerrojo(CERROJO):

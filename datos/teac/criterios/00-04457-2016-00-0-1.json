@@ -1,0 +1,41 @@
+{
+  "id": "00/04457/2016/00/0/1",
+  "resolucion": "00/04457/2016/00/00",
+  "n_criterio": "1",
+  "de_criterios": "1",
+  "calificacion": "Doctrina",
+  "unidad": "TEAC",
+  "fecha": "26/02/2019",
+  "asunto": "Procedimiento de declaración de responsabilidad. Plazo máximo para la notificación de la resolución del procedimiento. Efectos del transcurso del plazo y posibilidad de iniciar un nuevo procedimiento.",
+  "criterio": "Criterio: \n\n El plazo máximo para la notificación de la resolución del procedimiento de derivación de responsabilidad es de seis meses. Declarada la caducidad del procedimiento por el transcurso del plazo, cabe el inicio de un nuevo procedimiento de derivación de responsabilidad siempre y cuando no se hubiera producido la prescripción del derecho a exigir el pago a los presuntos responsables. \n En el mismo sentido 3674/2017 de 27.02.2020",
+  "referencias": [
+    {
+      "norma": "Ley 58/2003 General Tributaria LGT",
+      "preceptos": [
+        "100.1",
+        "104.4.b)",
+        "104.5"
+      ]
+    },
+    {
+      "norma": "RD 939/2005 Reglamento General de Recaudación RGR",
+      "preceptos": [
+        "124"
+      ]
+    }
+  ],
+  "conceptos": [
+    "Caducidad",
+    "Derivación de responsabilidad",
+    "Efectos",
+    "Plazos",
+    "Prescripción"
+  ],
+  "texto_resolucion": "Tribunal Económico-Administrativo Central\n\n SALA TERCERA\n\n FECHA: 26 de febrero de 2019\n\n PROCEDIMIENTO: 00-04457-2016\n\n CONCEPTO: PROCEDIMIENTO RECAUDATORIO\n\n NATURALEZA: RECLAMACION UNICA INSTANCIA GENERAL\n\n RECLAMANTE: Axy - NIF ...\n\n DOMICILIO: ... (MADRID)\n\n En Madrid , se ha constituido el Tribunal como arriba se indica, para resolver en única instancia la reclamación de referencia, tramitada por procedimiento general.\n\n Se ha visto la presente reclamación contra acuerdo de la Depedencia Regional de Recaudación de la Delegación Especial de Madrid sobre acuerdo de declaración de caducidad.\n\n ANTECEDENTES DE HECHO\n\n PRIMERO.-\n\n El día 19/07/2016 tuvo entrada en este Tribunal la presente reclamación, interpuesta en 01/07/2016 contra acuerdo de la Depedencia Regional de Recaudación de la Delegación Especial de Madrid, notificado el 1 de junio de 2016, por el que se declara la caducidad del procedimiento de declaración de responsabilidad subsidiaria, iniciado el 31/08/2015, de conformidad con el artículo 43.1.b) de la Ley 58/2003, General Tributaria.\n\n SEGUNDO.-\n\n Contra el citado acuerdo, la actora interpuso la presente reclamación, y puesto de manifiesto el expediente, alegó en escrito presentado el 20 de enero de 2017 que no cabe el inicio de un nuevo procedimiento, dado que ya la Administración ha declarado responsable a D. Bz de las deudas de la entidad X .\n\n FUNDAMENTOS DE DERECHO\n\n PRIMERO.-\n\n Este Tribunal es competente para resolver de conformidad con lo dispuesto en la Ley 58/2003, de 17 de diciembre, General Tributaria (LGT), así como en el Reglamento general de desarrollo de la Ley 58/2003, de 17 de diciembre, General Tributaria, en materia de revisión en vía administrativa (RGRVA), aprobado por Real Decreto 520/2005, de 13 de mayo. No concurre ninguna de las causas de inadmisibilidad previstas en el artículo 239.4 de la LGT.\n\n SEGUNDO.-\n\n Este Tribunal debe pronunciarse respecto a lo siguiente:\n\n La imposibilidad de iniciar un nuevo procedimiento de derivación de responsabilidad al haberse declarado caducado el anterior. El procedimiento de declaración de responsabilidad se inicio el día 31/08/2015, por lo que al haber transcurrido más de seis meses desde el inicio, la Administración conforme a Derecho declaró la caducidad del indicado procedimiento de declaración de responsabilidad frente a la actora, mediante acuerdo notificado el 1 de junio de 2016. Por lo que, la Administración puede ahora, si se dieran las circunstancias para ello, iniciar un nuevo procedimiento de declaración de responsabilidad y con independencia de que la posible existencia de otros responsables. \n\n Por lo expuesto\n\n Este Tribunal Económico-Administrativo acuerda DESESTIMAR la presente reclamación, confirmando el acto impugnado.",
+  "unifica_criterio": false,
+  "consultas_dgt": [],
+  "url_navegador": "https://serviciostelematicosext.hacienda.gob.es/TEAC/DYCTEA/criterio.aspx?id=00/04457/2016/00/0/1",
+  "descargado": "2026-08-28T19:35:23Z",
+  "sha256_crudo": "f750f59ba6df5ffa48ccd859061bf7805b266f5773c6881710ea2dd8fe3b432f",
+  "crudo": "datos/teac/crudo/00-04457-2016-00-0-1.html"
+}
