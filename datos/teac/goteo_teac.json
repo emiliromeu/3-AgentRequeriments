@@ -980,6 +980,256 @@
    "estado": "bajada",
    "buscado": "2026-08-28",
    "bajadas": 6
+  },
+  "BOE-A-2003-23186#0#134": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 5
+  },
+  "BOE-A-2003-23186#0#139": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 5
+  },
+  "BOE-A-2003-23186#0#151": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 1
+  },
+  "BOE-A-2003-23186#0#156": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 9
+  },
+  "BOE-A-2003-23186#0#159": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 1
+  },
+  "BOE-A-2003-23186#0#201": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 4
+  },
+  "BOE-A-2003-23186#0#210": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 6
+  },
+  "BOE-A-2003-23186#0#220": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 8
+  },
+  "BOE-A-2003-23186#0#221": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 5
+  },
+  "BOE-A-2003-23186#0#34": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 7
+  },
+  "BOE-A-2003-23186#0#43": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 5
+  },
+  "BOE-A-2003-23186#0#45": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 2
+  },
+  "BOE-A-2003-23186#0#47": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 1
+  },
+  "BOE-A-2003-23186#0#48": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 3
+  },
+  "BOE-A-2003-23186#0#5": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 1
+  },
+  "BOE-A-2003-23186#0#53": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 9
+  },
+  "BOE-A-2003-23186#0#89": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 10
+  },
+  "BOE-A-2003-23186#0#90": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-2003-23186#0#98": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 3
+  },
+  "BOE-A-2006-20764#0#14": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 1
+  },
+  "BOE-A-2006-20764#0#18": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-2006-20764#0#20": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-2006-20764#0#33": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-2006-20764#0#46": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-2006-20764#0#48": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-2006-20764#0#49": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-2006-20764#0#60": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-2006-20764#0#78": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-2006-20764#0#80": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-2006-20764#0#93": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-2006-20764#0#96": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-2007-15984#1#125": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 1
+  },
+  "BOE-A-2007-15984#1#130": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 2
+  },
+  "BOE-A-2007-15984#1#147": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-2007-15984#1#195": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 4
+  },
+  "BOE-A-2007-15984#1#33": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-2007-15984#1#73": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 1
+  },
+  "BOE-A-2007-15984#1#87": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 3
+  },
+  "BOE-A-2007-6820#1#13": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 6
+  },
+  "BOE-A-2007-6820#1#28": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-2007-6820#1#32": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 2
+  },
+  "BOE-A-2007-6820#1#51": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-2007-6820#1#6": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 8
+  },
+  "BOE-A-1987-28141#0#18": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 6
+  },
+  "BOE-A-1991-27678#1#64": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-1991-27678#1#68": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 2
+  },
+  "BOE-A-1991-27678#1#74": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-1992-28740#0#117": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
+  },
+  "BOE-A-1992-28740#0#12": {
+   "estado": "bajada",
+   "buscado": "2026-08-28",
+   "bajadas": 6
+  },
+  "BOE-A-1992-28740#0#134": {
+   "estado": "sin_resultados",
+   "buscado": "2026-08-28",
+   "bajadas": 0
   }
  },
  "sesiones": [
@@ -995,6 +1245,18 @@
    "ensayo": false,
    "por_mirar_al_empezar": 631,
    "acabada": "2026-08-28T15:40:09"
+  },
+  {
+   "cuando": "2026-08-28",
+   "empezada": "2026-08-28T15:57:07",
+   "minutos": 90,
+   "articulos": 50,
+   "bajadas": 127,
+   "vacios": 20,
+   "corte": "",
+   "terminada": false,
+   "ensayo": false,
+   "por_mirar_al_empezar": 435
   }
  ]
 }
