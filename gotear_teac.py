@@ -87,6 +87,13 @@ TOPE_POR_ARTICULO = 10
 
 PAUSA_ENSAYO = 0.05
 
+# EL PLAN SE AGOTA POR LO QUE SE BAJA, NO POR LO QUE QUEDA. Un codigo propio y
+# no un 0: `0` significa «sigue», `1` «algo va mal», y esto no es ninguna de las
+# dos -es «ya esta»-. Quien encadena tiene que poder terminar limpio en vez de
+# seguir pidiendo tandas vacias. El mismo numero que usa `sembrar.PLAN_AGOTADO`,
+# a proposito: dos cadenas que leen lo mismo tienen que leerlo igual.
+PLAN_AGOTADO = 2
+
 
 def _codigos_de(cuerpo, cat) -> tuple:
     """(codigo de norma en DYCTEA, sus preceptos). ('', {}) si no lo lista.
@@ -132,11 +139,21 @@ def cola_del_dia(ix, grafo, avance, despensa) -> tuple:
     # QUE ARTICULOS TIENEN YA DOCTRINA EN LA DESPENSA. Es la señal de «esto ya
     # esta cubierto», y sale del disco y no de ningun registro de lo que
     # creemos haber hecho.
-    con = set()
-    for c in despensa.todas():
-        for p in c.preceptos(N):
-            if getattr(p, "comparable", False):
-                con.add((p.cuerpo, str(p.numero).lower()))
+    # `Criterio.preceptos` DEVUELVE TUPLAS `(cuerpo, numero)`, no objetos.
+    #
+    # Aqui habia un `getattr(p, "comparable", False)`, copiado del goteo de la
+    # DGT, donde `Consulta.preceptos` SI devuelve objetos con ese campo. Sobre
+    # una tupla ese getattr es siempre falso, asi que este conjunto salia
+    # SIEMPRE VACIO y la señal de «este articulo ya tiene doctrina» no existia.
+    #
+    # No mordio en esta campaña -el cuaderno empezaba en blanco, asi que todos
+    # los articulos tocaban igual- pero si en la siguiente pasada: `gotear.toca`
+    # usa 90 dias para reintentar un articulo vacio y 180 para refrescar uno con
+    # criterio, y con esto todos parecian vacios. Dos fuentes hermanas que
+    # devuelven formas distintas es justo donde se copia mal.
+    con = {(cuerpo, str(numero).lower())
+           for c in despensa.todas()
+           for cuerpo, numero in c.preceptos(N) if cuerpo}
 
     codigos = {}
     cola, fuera = [], []
@@ -268,7 +285,7 @@ def gotear_teac(minutos: int, ensayo: bool) -> int:
           + ("   (ENSAYO: no se sale a la red)" if ensayo else ""), flush=True)
     if not cola:
         print("\n  No queda nada por mirar. La doctrina esta al dia.")
-        return 0
+        return PLAN_AGOTADO
 
     fin = time.monotonic() + minutos * 60
     fuente = None if ensayo else T.Fuente(silencioso=True)
