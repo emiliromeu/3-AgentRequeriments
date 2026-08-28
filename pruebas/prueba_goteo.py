@@ -95,15 +95,37 @@ comprobar("el tiempo se mira ANTES de empezar cada articulo, no en mitad",
           and FUENTE.index("if time.monotonic() >= fin:")
           < FUENTE.index("resultados = petete.extraer_resultados"))
 
-# Y CORTA: una sesion de un minuto no recorre los 2.033.
+# Y CORTA: con cero minutos no se recorre ni uno.
+#
+# CONTRA UN CUADERNO EN BLANCO, Y NO CONTRA EL DE ESTE MAC. Esto miraba el
+# avance de verdad, y el 28/08/2026 se puso rojo sin que nadie tocara nada: la
+# sesion de goteo de esa mañana termino el barrido del dia, «por mirar hoy: 0»,
+# y `gotear` salio por «no queda nada por mirar» sin llegar a la linea que esta
+# comprobacion busca. La comprobacion era correcta y la respuesta tambien; lo
+# que estaba mal era depender de que quedara trabajo pendiente. Una prueba que
+# falla los dias que el barrido va al dia se acaba ignorando, y esta suite
+# existe justo para lo contrario.
+#
+# Con un cuaderno inexistente todo esta por mirar, y entonces «cero minutos, ni
+# uno recorrido» se puede afirmar siempre.
 import io
 import contextlib
-buf = io.StringIO()
-with contextlib.redirect_stdout(buf):
-    gotear.gotear(minutos=0, ensayo=True)
-salida = buf.getvalue()
-comprobar("con cero minutos no se recorre nada",
-          "articulos recorridos : 0" in salida, salida[-160:])
+import tempfile
+_antes = gotear.AVANCE
+_vacio = Path(tempfile.mkdtemp(prefix="goteo_limpio_"))
+try:
+    gotear.AVANCE = _vacio / "goteo.json"
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        gotear.gotear(minutos=0, ensayo=True)
+    salida = buf.getvalue()
+    comprobar("con el cuaderno en blanco hay cola que recorrer",
+              "por mirar hoy        : 0\n" not in salida, salida[:200])
+    comprobar("  y con cero minutos no se recorre ni uno",
+              "articulos recorridos : 0" in salida, salida[-160:])
+finally:
+    gotear.AVANCE = _antes
+    shutil.rmtree(_vacio, ignore_errors=True)
 
 
 # ==================================== 3. LA MEMORIA ES LA DE LA COLA
