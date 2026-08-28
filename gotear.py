@@ -57,7 +57,7 @@ import json
 import os
 import sys
 import time
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent
@@ -102,6 +102,12 @@ PAUSA_ENSAYO = 0.05
 
 def _hoy() -> str:
     return date.today().isoformat()
+
+
+def _ahora() -> str:
+    """Con la hora. `_hoy` da el dia, y dos sesiones del mismo dia se
+    distinguen por la hora o no se distinguen."""
+    return datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
 
 class AvanceIlegible(Exception):
@@ -309,11 +315,22 @@ def estado() -> int:
     print(f"  al dia (no toca pedirlos hoy)   : {hechos}")
     print(f"  QUEDAN POR MIRAR                : {len(todos) - hechos}")
     if avance["sesiones"]:
-        print(f"\n  ultimas sesiones:")
-        for s in avance["sesiones"][-5:]:
+        # LAS CORTADAS SE VEN, Y SE VEN MARCADAS. Es para lo que se abre la
+        # fila al empezar: una sesion que no llego al final tiene que salir
+        # aqui, con lo que alcanzo a hacer, y no desaparecer de la lista.
+        sin_terminar = sum(1 for s in avance["sesiones"]
+                           if s.get("terminada") is False)
+        print(f"\n  sesiones: {len(avance['sesiones'])}"
+              + (f"  ({sin_terminar} cortada(s) sin terminar)"
+                 if sin_terminar else ""))
+        for s in avance["sesiones"][-6:]:
+            # `terminada` no existe en las filas anteriores a este cambio: esas
+            # no se marcan de ninguna forma, porque no se sabe.
+            marca = ("" if s.get("terminada") is not False
+                     else "   <- CORTADA, no llego al final")
             print(f"    {s.get('cuando')}  {s.get('minutos')} min  "
                   f"{s.get('articulos')} articulos  "
-                  f"{s.get('bajadas')} consultas")
+                  f"{s.get('bajadas')} consultas{marca}")
     return 0
 
 
@@ -344,6 +361,32 @@ def gotear(minutos: int, ensayo: bool) -> int:
         DESTINO.mkdir(parents=True, exist_ok=True)
     hechos = bajadas = vacios = 0
     corte = ""
+
+    # EL RESUMEN SE ABRE AHORA, NO AL TERMINAR.
+    #
+    # Se escribia al final, asi que UNA SESION CORTADA NO DEJABA RASTRO: se
+    # apuntaba lo que habia bajado -eso se guarda cada diez articulos- pero en
+    # `sesiones` no aparecia nada. Y de las trece del goteo de la DGT, dos se
+    # cortaron. Mirando la lista despues, esas dos horas no habian existido:
+    # ni cuando fue, ni cuanto duro, ni por donde se quedo.
+    #
+    # Es el mismo fallo que el cuaderno que se leia como vacio, y duele por lo
+    # mismo: lo que no deja rastro no se puede diagnosticar. Con ocho sesiones
+    # de TEAC por delante, hace falta ANTES y no despues.
+    #
+    # LA FILA ES LA MISMA DE PRINCIPIO A FIN: se abre aqui con `terminada` en
+    # falso, se va actualizando en el sitio con cada guardado periodico -asi
+    # las cifras de una sesion cortada son las de verdad, no ceros- y al
+    # terminar se cierra. No se añade una segunda: dos filas por sesion serian
+    # dos sesiones en cuanto alguien las contara.
+    sesion = None
+    if not ensayo:
+        sesion = {"cuando": _hoy(), "empezada": _ahora(), "minutos": minutos,
+                  "articulos": 0, "bajadas": 0, "vacios": 0,
+                  "corte": "", "terminada": False, "ensayo": False,
+                  "por_mirar_al_empezar": len(cola_hoy)}
+        avance["sesiones"].append(sesion)
+        guardar_avance(avance)
 
     for cu, ar, por in cola_hoy:
         # EL TIEMPO SE MIRA ANTES DE EMPEZAR, nunca en mitad de un articulo.
@@ -406,6 +449,12 @@ def gotear(minutos: int, ensayo: bool) -> int:
         if not numeros:
             vacios += 1
         if hechos % 10 == 0:
+            # LA FILA DE LA SESION, AL DIA EN CADA GUARDADO. Sin esto, una
+            # sesion cortada dejaria su fila con ceros, que es peor que no
+            # dejarla: parecerian noventa minutos sin hacer nada.
+            if sesion is not None:
+                sesion.update({"articulos": hechos, "bajadas": bajadas,
+                               "vacios": vacios})
             guardar_avance(avance)        # RETOMABLE: si se corta, no se pierde
             # CON `flush`, Y NO ES UN DETALLE EN UNA SESION DE 90 MINUTOS.
             # Redirigido a fichero, Python guarda la salida en un buffer de
@@ -424,10 +473,14 @@ def gotear(minutos: int, ensayo: bool) -> int:
         print("  avance queda intacto para la sesion de verdad.")
         return 0
 
-    avance["sesiones"].append({"cuando": _hoy(), "minutos": minutos,
-                               "articulos": hechos, "bajadas": bajadas,
-                               "vacios": vacios, "corte": corte,
-                               "ensayo": ensayo})
+    # SE CIERRA LA QUE SE ABRIO, en el sitio. `terminada` es lo que distingue
+    # una sesion que llego al final de una que se corto: sin ese campo habria
+    # que adivinarlo por las cifras, y una sesion corta de verdad -«no quedaba
+    # nada por mirar»- se parece a una cortada.
+    if sesion is not None:
+        sesion.update({"articulos": hechos, "bajadas": bajadas,
+                       "vacios": vacios, "corte": corte, "terminada": True,
+                       "acabada": _ahora()})
     guardar_avance(avance)
     print(f"\n  articulos mirados : {hechos}")
     print(f"  consultas nuevas  : {bajadas}")

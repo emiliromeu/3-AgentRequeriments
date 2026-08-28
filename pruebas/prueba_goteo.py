@@ -305,6 +305,93 @@ if en_marcha is None:
 
 
 
+# ==================================== 7. EL RESUMEN, ABIERTO AL EMPEZAR
+print("\n=== 7. UNA SESION CORTADA DEJA RASTRO ===")
+print("  El resumen se escribia AL TERMINAR, asi que una sesion cortada no")
+print("  aparecia en `sesiones`: se apuntaba lo bajado -eso se guarda cada")
+print("  diez articulos- pero las dos horas no habian existido. De las trece")
+print("  del goteo de la DGT, dos se cortaron. Lo que no deja rastro no se")
+print("  puede diagnosticar.\n")
+
+# CON DOBLES Y SIN RED. El plan de la DGT esta agotado, asi que este camino no
+# se puede recorrer de verdad sin pedirle a PETETE cosas que ya tenemos. Se le
+# pone una fuente que no sale a ningun sitio y un cuaderno en blanco.
+import types                                    # noqa: E402
+import petete as _petete                        # noqa: E402
+
+
+class _FuenteSeca:
+    """Contesta sin resultados, y a la N-esima corta como un Ctrl+C."""
+
+    def __init__(self, corta_en):
+        self.corta_en, self.veces = corta_en, 0
+
+    def _campos(self, *a, **k):
+        return [("VLCMP_3", "")]
+
+    def pedir(self, *a, **k):
+        self.veces += 1
+        if self.veces >= self.corta_en:
+            raise KeyboardInterrupt("cortada a proposito")
+        return types.SimpleNamespace(cuerpo="")
+
+
+corral7 = Path(tempfile.mkdtemp(prefix="sesion_"))
+guardado7 = (gotear.AVANCE, _petete.Fuente, _petete.Cache,
+             _petete.extraer_resultados, gotear.PAUSA_ENSAYO)
+try:
+    gotear.AVANCE = corral7 / "goteo.json"
+    _petete.Cache = lambda *a, **k: None
+    _petete.extraer_resultados = lambda crudo: []
+    _petete.PAUSA = 0
+    cortada = _FuenteSeca(corta_en=12)
+    _petete.Fuente = lambda *a, **k: cortada
+
+    try:
+        gotear.gotear(minutos=90, ensayo=False)
+    except KeyboardInterrupt:
+        pass          # es lo que se esta simulando: alguien la para
+
+    d = json.loads(gotear.AVANCE.read_text(encoding="utf-8"))
+    ses = d.get("sesiones") or []
+    comprobar("la sesion cortada SI aparece en el cuaderno", len(ses) == 1,
+              ses)
+    fila = ses[0] if ses else {}
+    comprobar("  y esta marcada como no terminada",
+              fila.get("terminada") is False, fila)
+    comprobar("  con la hora en que empezo, no solo el dia",
+              len(str(fila.get("empezada", ""))) >= 16, fila.get("empezada"))
+    # LAS CIFRAS SON LAS DE VERDAD, NO CEROS. Una fila con ceros pareceria
+    # noventa minutos sin hacer nada, que es peor que no dejarla.
+    comprobar("  y con lo que alcanzo a hacer, no con ceros",
+              fila.get("articulos", 0) > 0, fila)
+    comprobar("  y dice cuanto habia por mirar cuando empezo",
+              fila.get("por_mirar_al_empezar", 0) > 0, fila)
+
+    # Y UNA QUE SI TERMINA cierra ESA MISMA fila, no añade otra: dos filas por
+    # sesion serian dos sesiones en cuanto alguien las contara.
+    gotear.AVANCE.unlink(missing_ok=True)
+    _petete.Fuente = lambda *a, **k: _FuenteSeca(corta_en=10**9)
+    gotear.gotear(minutos=0, ensayo=False)
+    d = json.loads(gotear.AVANCE.read_text(encoding="utf-8"))
+    ses = d.get("sesiones") or []
+    comprobar("una sesion que termina deja UNA sola fila", len(ses) == 1, ses)
+    comprobar("  marcada como terminada",
+              ses and ses[0].get("terminada") is True, ses)
+finally:
+    (gotear.AVANCE, _petete.Fuente, _petete.Cache,
+     _petete.extraer_resultados, gotear.PAUSA_ENSAYO) = guardado7
+    shutil.rmtree(corral7, ignore_errors=True)
+
+# Y EL ENSAYO SIGUE SIN APUNTAR NADA: la seccion 4 ya lo prueba, y esto no
+# puede haberlo cambiado.
+FUENTE_G = (RAIZ / "gotear.py").read_text("utf-8")
+comprobar("el ensayo sigue sin abrir fila de sesion",
+          "sesion = None" in FUENTE_G and "if not ensayo:" in FUENTE_G)
+comprobar("y `--estado` marca las cortadas",
+          "CORTADA, no llego al final" in FUENTE_G)
+
+
 # ==================================== CONTROL NEGATIVO
 print("\n=== CONTROL NEGATIVO: la suite tiene que ponerse roja ===")
 print("  Ninguna prueba se da por buena sin verla fallar cuando debe fallar.\n")

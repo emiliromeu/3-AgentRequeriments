@@ -68,8 +68,24 @@ CATALOGO = DIR / "catalogo.json"
 UA = ("agente-fiscal-gestoria/1.0 (cliente de consulta de una gestoria; "
       "uso interno y volumen bajo)")
 
-# Que DYCTEA conteste en 0,14 s no cambia el ritmo: sigue siendo un servicio
-# publico y el descuido empieza justo donde sobra capacidad.
+# LOS 0,14 s DE DYCTEA SON LO QUE TARDA EN CONTESTAR UNA PETICION, Y NO SON EL
+# RITMO. La distincion parece obvia escrita y no lo es de memoria: ese numero se
+# ha estado usando para estimar tandas enteras -«esto son decimas de segundo, se
+# hace en una sesion»- y las estimaciones salian diez veces cortas.
+#
+# EL RITMO DE VERDAD, medido el 28/08/2026 sobre las fechas de descarga de los
+# 909 criterios que ya estan en disco -o sea sobre lo que de verdad paso, no
+# sobre un cronometro de laboratorio-:
+#
+#     9 s por criterio  ·  25 s por articulo  ·  2,3 h para 330 articulos
+#
+# La diferencia entre 0,14 y 9 no es DYCTEA: SOMOS NOSOTROS. Son la PAUSA de
+# abajo mas las varias peticiones que cuesta un articulo -la busqueda y cada
+# resolucion que salga-. O sea que el ritmo es una decision nuestra, no un dato
+# de la fuente, y se cambia aqui a sabiendas o no se cambia.
+#
+# Y no se cambia por ir mas rapido: DYCTEA sigue siendo un servicio publico y el
+# descuido empieza justo donde sobra capacidad.
 ESPERA = 45
 REINTENTOS = 3
 PAUSA = 4.0
