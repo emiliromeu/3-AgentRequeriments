@@ -1,0 +1,15 @@
+{
+ "numero": "V0513-12",
+ "fecha": "07/03/2012",
+ "organo": "SG de Impuestos sobre la Renta de las Personas Físicas",
+ "normativa": "RIRPF RD 439/2007, Arts. 77-1, 95-6",
+ "cuestion_planteada": "Base sobre la que se aplica la retención del 1% establecida para estos casos.",
+ "descripcion_hechos": "La consultante ejerce la actividad económica de transporte de mercancías por carretera,\n determinando el rendimiento neto de la misma por el método de estimación objetiva.\n\n La actividad desarrollada es una de las incluidas entre las rentas sometidas a retención\n o a ingreso a cuenta cuando el rendimiento neto de la misma se determine por el método\n de estimación objetiva.",
+ "contestacion": "Según establece el art. 77.1 del Reglamento del IRPF, aprobado por el RD 439/2007,\n de 30 de marzo (BOE de 31 de marzo), “el importe de la retención será el resultado\n de aplicar a la base de la retención el tipo de retención que corresponda de acuerdo\n con lo previsto en el capítulo II siguiente. La base de retención será la cuantía\n total que se satisfaga o abone, sin perjuicio de lo dispuesto en el artículo 93 para\n los rendimientos de capital mobiliario y en el artículo 97 para las ganancias patrimoniales\n derivadas de las transmisiones o reembolsos de acciones o participaciones de instituciones\n de inversión colectiva, de este Reglamento”.\n\n Por su parte, el artículo 95.6 del citado Reglamento establece, en su número 1º que\n “cuando los rendimientos sean contraprestación de una de las actividades económicas\n previstas en el número 2º de este apartado y se determine el rendimiento neto por\n el método de estimación objetiva, se aplicará el tipo de retención del 1 por ciento\n sobre los ingresos íntegros satisfechos”.\n\n De acuerdo con estos preceptos, la base de retención será los ingresos íntegros satisfechos\n por el pagador de la factura emitida.\n\n Como entre estos ingresos íntegros no se incluye la cuota repercutida de IVA, la\n retención se practicará sobre el importe de la factura antes de sumar esta cuota.\n\n Lo que comunico a Vd. con efectos vinculantes, conforme a lo dispuesto en el apartado\n 1 del artículo 89 de la Ley 58/2003, de 17 de diciembre, General Tributaria.",
+ "doc_id": "1591",
+ "tab": "2",
+ "url_navegador": "https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V0513-12",
+ "descargado": "2026-08-27T19:43:18Z",
+ "sha256_crudo": "c9e684e3a0fa49e909253a0df9245377b4759288e73e7807393b7e05166b50e5",
+ "crudo": "datos/dgt/crudo/V0513-12.html"
+}

@@ -1,0 +1,15 @@
+{
+ "numero": "V2463-23",
+ "fecha": "14/09/2023",
+ "organo": "SG de Impuestos sobre la Renta de las Personas Físicas",
+ "normativa": "RIRPF RD 439/2007, art. 110.3.c).",
+ "cuestion_planteada": "Para la determinación de la base del pago fraccionado de 2023, que importe debe de\n tenerse en cuenta del año 2022 para la minoración prevista en el artículo 110.3.c)\n del Reglamento del Impuesto.",
+ "descripcion_hechos": "El consultante ejerce una actividad económica que determina el rendimiento neto por\n el método de estimación objetiva.",
+ "contestacion": "En el artículo 110 del Reglamento del Impuesto sobre la Renta de las Personas Físicas,\n aprobado por el Real Decreto 439/2007, de 30 de marzo (BOE de 31 de marzo) se regula\n el procedimiento para la determinación del importe de los pagos fraccionados. \n\n En el apartado 3, letra c), para la determinación de la base del pago fraccionado\n se establece la siguiente minoración:\n\n “c) Cuando la cuantía de los rendimientos netos de actividades económicas del ejercicio\n anterior sea igual o inferior a 12.000 euros, el importe que resulte del siguiente\n cuadro:\n\n Cuantía de los rendimientos netos Importe de la minoración \n\n del ejercicio anterior \n\n – –\n\n Euros Euros\n\n Igual o inferior a 9.000 100 \n\n Entre 9.000,01 y 10.000 75 \n\n Entre 10.000,01 y 11.000 50 \n\n Entre 11.000,01 y 12.000 25\n\n Cuando el importe de la minoración prevista en esta letra sea superior a la cantidad\n resultante por aplicación de lo dispuesto en los apartados anteriores y en las letras\n a) y b) de este apartado, la diferencia podrá deducirse en cualquiera de los siguientes\n pagos fraccionados correspondientes al mismo período impositivo cuyo importe positivo\n lo permita y hasta el límite máximo de dicho importe.”.\n\n Es decir, que el importe que debe tenerse en cuenta para la aplicación esta minoración\n de la base del pago fraccionado trimestral será el rendimiento neto de la actividad\n del año inmediato anterior (en este caso, sería el año 2022). \n\n En el caso de que se determine el rendimiento neto por el método de estimación objetiva,\n el rendimiento neto de la actividad de 2022 sería el que deba figurar en la casilla\n 1479 del modelo de declaración del IRPF para 2022. \n\n Lo que comunico a Vd. con efectos vinculantes, conforme a lo dispuesto en el apartado\n 1 del artículo 89 de la Ley 58/2003, de 17 de diciembre, General Tributaria.",
+ "doc_id": "49251",
+ "tab": "2",
+ "url_navegador": "https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V2463-23",
+ "descargado": "2026-08-27T19:16:42Z",
+ "sha256_crudo": "5f0e5112cacaaea8d744548f0a47c6d15dcc89acb284f4d45107ebf37aefce4e",
+ "crudo": "datos/dgt/crudo/V2463-23.html"
+}
