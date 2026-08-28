@@ -4627,6 +4627,11 @@ cambiar el de abajo. Ahora la señal aparece donde se acaba de hacer clic.
 
 ## La entrada de máquina del verificador
 
+> **Desde el 28/08/2026 hay tres, y el contrato ya no vive aquí.** Se mudó a
+> `agente_fiscal/maquina.py` y lo comparten `verificar_json`, `estado_json` y
+> `corpus_json`. Lo que sigue es correcto y es el origen; el estado de hoy está
+> al final de este fichero, en **«Tres entradas de máquina»**.
+
 `verificar_json.py` existe para que otro programa pregunte *«¿esto se
 sostiene?»* y se fíe de la respuesta sin leer una pantalla. `fase3.py verificar`
 es para una persona; esto es lo mismo por dentro y otra cosa por fuera.
@@ -5286,3 +5291,361 @@ uno siguiera en verde es que no la preguntaba—; y el inventario lee del códig
 quién convierte una designación en un cuerpo y exige que esté clasificado, o
 consumidor o excepción razonada. **El día que aparezca un quinto, la suite se
 pone roja hasta que alguien decida cuál es.**
+
+---
+
+# La siembra del corpus es un paso de la instalación — 28/08/2026
+
+Un equipo nuevo tiene que acabar con las diecisiete normas dentro sin que nadie
+teclee nada. Eso ya lo hacía el instalador; lo que faltaba era **saber cuánto
+cuesta**, decirlo sin mentir, y que un corte no dejara el equipo en un callejón.
+
+## Primero el cronómetro, y después la frase
+
+`medir_siembra.py` siembra las diecisiete **en limpio** —crudo vacío, corpus
+vacío— contra el BOE de verdad, contando cada petición y cronometrando cada
+norma. Se apunta a directorios temporales: una medición que ensucia lo que mide
+no se puede repetir.
+
+| | |
+|---|---|
+| peticiones al BOE | **195** (17 texto · 17 análisis · 161 metadatos) |
+| descargado | 22,7 MB |
+| preceptos | 2.504 |
+| **tiempo total** | **1 m 48 s** — en la red de este despacho, el 28/08/2026 |
+| esperando al BOE | 1 m 06 s |
+
+**Eso cabe en una instalación. La despensa de la DGT no**, y por eso no entra:
+son horas contra un servicio público. Sigue viajando por git y se avisa si
+falta. La diferencia no es de gusto, es de dos órdenes de magnitud.
+
+## Y por eso mismo el instalador no promete minutos
+
+La misma medición dice **6,4 s de media por norma y 16,2 s la peor**: dos veces
+y media la media. Las cinco más lentas —Ley 37/1992, RD 1065/2007, RD 1624/1992,
+Ley 58/2003, Ley 35/2006— son también las que más reformas pendientes tienen,
+porque cada una es una petición más.
+
+Con una red de oficina esa proporción **no mejora, empeora**. Y quien mira la
+pantalla no vive en la media: vive en la suya.
+
+Aquí estuvo escrito *«un par de minutos cada una»*. Era un número inventado, y
+los números inventados **se notan justo cuando no se cumplen**: quien esperaba
+dos minutos y lleva seis cierra la ventana. Lo que se enseña ahora:
+
+```
+        norma 4 de 17: Ley 37/1992...
+        hecha (0 min 25 s desde que empezo)
+```
+
+**«De 17», no «de 3».** En un equipo al que le faltan tres, `(1 de 3)` es cierto
+y no dice nada: no se sabe si esto empieza o acaba. El tiempo que sí se enseña
+es el **transcurrido**, que no promete nada.
+
+## Retomable, y por el sello
+
+`fase1.py ingerir` escribe el `.jsonl` y **después** lo sella. Entre esas dos
+líneas cabe un Ctrl+C, un portátil que se cierra o una oficina que se va a
+comer. Lo que quedaba era un fichero con aspecto de norma ingerida y sin sello,
+y eso abría un callejón:
+
+* la instalación miraba **el fichero**, lo daba por hecho y seguía;
+* el arranque mira **los sellos**, y paraba con *«no tiene sello. Vuelve a
+  ingerirla»*;
+* pero nadie iba a volver a ingerirla, porque la instalación creía que ya estaba.
+
+`catalogo.sembrada` exige las dos cosas. Retomar deja de necesitar nada especial:
+la siguiente pasada la ve pendiente, la siembra y sigue por donde iba.
+
+**Sin fichero de sellos no se exige sello.** Un corpus entero sin sellar no está
+a medias: está sin sellar, que es como llega una copia anterior a que los sellos
+existieran. Exigirlo ahí sería volver a bajar las diecisiete para arreglar algo
+que no está roto.
+
+## El agujero que en este Mac era invisible
+
+`ingerir` leía `/analisis` del crudo y, si no estaba, **seguía con `{}` en
+silencio**: la norma se ingería igual, pero sin `consolidado_hasta` y sin una
+sola reforma pendiente.
+
+Aquí no se notó nunca porque `inspeccionar` se ejecuta siempre antes y lo deja
+en crudo. En una instalación limpia —que llama a `ingerir` y a nada más, y que
+no recibe el crudo porque no viaja— **el sello salía mudo**.
+
+Y un sello mudo se lee como «al día»: *cero reformas pendientes por no haber
+preguntado* tiene exactamente la misma pinta que *cero por haberlo comprobado*.
+Ahora `ingerir` lo descarga si no está, y si el BOE no lo da lo dice por
+pantalla en vez de callárselo.
+
+## La fecha de cada reforma, preguntada donde el BOE sí la da
+
+El sello decía **cuántas** reformas publicadas no incorpora el texto
+consolidado. No decía **cuáles** ni **desde cuándo**, que es lo que hace falta
+para fechar el aviso y para citar la disposición que lo causa en vez del texto
+consolidado, que es justo el que está sin actualizar.
+
+`/analisis` no la da: de cada norma posterior trae `id_norma`, `relacion` y
+`texto`, y nada más —comprobado sobre los 725 posteriores del corpus entero—. La
+que va dentro de la prosa es la fecha de **disposición**, no la de publicación,
+así que sacarla de ahí sería una fecha aproximada con aspecto de dato exacto.
+
+`agente_fiscal/fechas.py` la pregunta donde el BOE sí la publica: `/metadatos`
+de la norma que modifica. Una petición por norma y con caché en disco.
+
+**Y no inventa.** Medido:
+
+| | |
+|---|---|
+| normas modificadoras preguntadas | 165 |
+| que el BOE **no tiene consolidadas** (404) | **122** |
+| reformas distintas que se quedan sin fecha | 120 (de 152) |
+
+Las que se quedan sin fecha se guardan igual, y `falta` dice qué campo no dio el
+BOE. Una reforma a medias sigue diciendo que la norma está sin incorporar, y
+callársela sería peor que tenerla incompleta. Lo que no puede pasar es que se
+lea como completa.
+
+---
+
+# Tres entradas de máquina, y el contrato en un solo sitio — 28/08/2026
+
+Quien tiene que decidir si el corpus sirve **antes** de lanzar una tanda es un
+programa, y un programa no puede leer una pantalla. Si no puede preguntarlo,
+sigue adelante. **Seguir adelante con media ley dentro es el fallo que no da
+error.**
+
+| guion | pregunta que contesta |
+|---|---|
+| `verificar_json.py` | ¿esto se sostiene? |
+| `estado_json.py` | ¿estás sembrado, hasta cuándo llegas y qué te falta? |
+| `corpus_json.py` | ¿qué dice la norma, y qué decía **ese año**? |
+
+## El contrato ya no está copiado tres veces
+
+Vive en `agente_fiscal/maquina.py`: la versión, la huella del corpus, lo único
+que escribe en stdout y la forma de un fallo. **Estaba escrito en
+`verificar_json` y se iba a copiar dos veces más**, que es como tres cosas que
+tienen que ser iguales dejan de serlo — aquí ya pasó con los tres
+identificadores de norma escritos a mano en el instalador, que se quedaron en
+tres mientras el corpus crecía a dieciséis.
+
+Lo que **no** está en el módulo, a propósito: los códigos de salida. `0`
+significa ACEPTADO en uno, LISTO en otro y TODAS CONTESTADAS en el tercero.
+Fingir que son el mismo número llamándolos igual sería mentir sobre lo único que
+cada guion tiene que explicar por su cuenta.
+
+`pruebas/prueba_contrato_json.py` prueba **los tres a la vez**, por lo mismo:
+tres suites separadas seguirían verdes el día que uno se fuera por su lado. Y
+comprueba que los tres dan **exactamente la misma huella del corpus**.
+
+## `estado_json.py`
+
+```
+.venv/bin/python estado_json.py --detalle --humano
+```
+
+Cinco preguntas, y ninguna carga el corpus: todo sale de `sellos.json` y de la
+lista que viaja.
+
+```
+  CORPUS: LISTO
+  normas          : 17 de 17
+  sembrado el     : 2026-08-28 -> 2026-08-28  (0 dias)
+  llega hasta     : 2018-11-09  (BOE-A-1995-15071); ejercicio completo 2017
+  sin incorporar  : 14 de 17 normas, 82 precepto(s)  [preguntado el 2026-08-28]
+  integridad      : cuadra
+```
+
+**«Preguntado el» va siempre**, y no es adorno: sin esa fecha, un «0 reformas
+pendientes» de hace dos años se lee igual que el de esta mañana. Es el mismo
+error que ya costó un diagnóstico entero.
+
+Tres estados distintos y se dan los tres: **sembrado** (hay algo), **completo**
+(están todas las de la lista) y **cuadra** (lo que hay es lo que dice ser). Un
+corpus puede estar sembrado y completo y tener un fichero a medias, que es el
+caso peligroso.
+
+## `corpus_json.py`: un verbo, y el lote por la entrada estándar
+
+```
+printf 'prorrata especial\ndeduccion vivienda\n' \
+  | .venv/bin/python corpus_json.py buscar --ejercicio 2023
+```
+
+`buscar` encuentra de qué artículo se habla; `literal` da el texto exacto. Una
+petición por línea, y **el corpus se carga una vez**: son 2.504 preceptos y su
+índice invertido, y hacerlo cien veces para cien preguntas es cien veces el
+mismo trabajo. Una línea que empieza por `{` es un objeto JSON con su propio
+ejercicio, así que un lote con casos de años distintos no necesita un proceso
+por año.
+
+Las respuestas van **en el orden de entrada y con su `n`**: quien manda cien
+tiene que poder casar cada respuesta con su petición sin adivinar.
+
+### El ejercicio es obligatorio en `literal`
+
+**Sin año no sale texto. Nunca, ni el de hoy «por defecto».**
+
+El corpus guarda todas las versiones de cada precepto. Dar la de hoy para un
+caso de 2019 no da error, no se nota, y es **la respuesta equivocada mejor
+presentada que existe**: artículo correcto, norma correcta, enlace correcto y la
+redacción de otro año. Una petición sin ejercicio se rechaza con `error` y **sin
+el campo `texto`**, en vez de contestarse con una nota al pie que nadie lee.
+
+Se ve funcionando con el artículo 68 de la Ley 35/2006:
+
+| ejercicio | versión que devuelve | empieza por |
+|---|---|---|
+| 2012 | la 6 de 10, del 28/12/2012 | *«Deducción por inversión en vivienda…»* |
+| 2023 | la 10 de 10, del 01/01/2023 | *«Deducción por inversión en empresas de nueva creación…»* |
+
+En `buscar` no es obligatorio: buscar es encontrar de qué artículo se habla, y
+para eso el año no hace falta.
+
+### El horizonte va dentro del JSON, no en este fichero
+
+`frescura.horizonte` dice hasta dónde llega la copia. **Manda la norma más
+atrasada**, no la media ni la más reciente: el corpus se usa entero para
+contestar —la ley, su reglamento y lo que remita—, así que llega hasta donde
+llega su eslabón más corto. Hoy: **09/11/2018**, el Reglamento del ITPAJD, que
+es un texto estable y no un descuido nuestro.
+
+El año **no se redondea hacia arriba**. Consolidado el 09/11/2018 no cubre 2018:
+le faltan siete semanas, y una reforma de diciembre es justo la clase de cosa
+que entra en vigor el 1 de enero siguiente. `ejercicio_completo` dice 2017.
+
+Cuando se pregunta por un ejercicio que cae más allá, el aviso va en la cabecera
+**y en cada respuesta del lote**. Repetirlo no es descuido: quien reparte las
+respuestas de un lote por casos se lleva cada una por su lado, y una cabecera
+que se queda atrás no acompaña a nada.
+
+**Y no salta siempre**, que es la otra mitad: con un ejercicio que cabe dentro
+del horizonte no aparece. Un aviso que sale en todas las respuestas se aprende a
+ignorar en dos días. `pruebas/prueba_horizonte.py` comprueba las dos mitades, y
+su control negativo se pone rojo tanto si el aviso dejara de salir como si
+saliera siempre.
+
+## Los dos agujeros que encontró la suite, no yo
+
+**(a) Una llamada mal hecha salía con código 2.** Argparse, tal cual viene,
+escribe el modo de empleo por stderr y sale con 2. Y 2 significa RECHAZADO, NO
+LISTO o ALGUNA SIN CONTESTAR: **tres respuestas correctas sobre algo que nadie
+ha llegado a mirar**. Además dejaba stdout vacío, que rompe el `json.loads` de
+quien llame. Ahora un verbo que no existe es un fallo, con su JSON y su
+procedencia; `--help` sigue siendo para personas.
+
+**(b) `estado_json` decía LISTO con la lista ilegible.** `catalogo.del_disco` se
+traga un `normas_del_corpus.json` roto y devuelve la lista vacía — correcto para
+sus otros usuarios: nadie quiere que la ventana no abra por un fichero derivado.
+Aquí volvía todo del revés: sin normas esperadas no falta ninguna, y contestaba
+`"listo": true, "esperadas": 0` con las diecisiete en `sobran` y **código 0**.
+Un fallo nuestro con cara de buena respuesta, que es lo único que este contrato
+prohíbe del todo.
+
+La clave que un fallo no puede llevar **no está en `false`: no está**. Un
+`"listo": false` o un `"respuestas": []` se parecen a *«he mirado y no hay
+nada»*, que es justo lo que no ha pasado. Quien consuma esto se queda con `None`
+y no puede confundirlo con una respuesta.
+
+## Y una línea de la propia suite que borró el corpus
+
+`prueba_verificar_json` aparta `datos/corpus` para provocar un fallo, y al
+empezar hacía:
+
+```python
+if guardado.exists():
+    shutil.rmtree(guardado)
+```
+
+Parecía prudente —limpiar los restos de una ejecución anterior—. **Un respaldo
+que ya existe no son restos: es el corpus**, apartado ahora mismo por otra
+ejecución que todavía no lo ha devuelto. Dos suites de este banco apartan el
+corpus, `comprobar_todo` las lanza a las dos, y el 28/08/2026 dos ejecuciones
+solapadas hicieron exactamente eso: **las diecisiete normas desaparecieron del
+disco**.
+
+No se perdió nada irrecuperable —el corpus se rehace del crudo en cinco
+segundos, para eso está excluido de git, y volvieron los mismos 2.504
+preceptos—. Lo caro fue otra cosa: el banco se quedó en rojo culpando a cuatro
+cosas que no tenían nada roto, que es **el peor rojo que existe**, el que hace
+desconfiar de la prueba en vez de del código.
+
+Ahora cada suite usa su propio nombre de respaldo y ninguna borra el de nadie:
+si existe, para y dice cómo devolverlo.
+
+---
+
+# El cerrojo del goteo, y la puerta que le faltaba — 28/08/2026
+
+Once sesiones de barrido son **dieciséis horas de peticiones a PETETE** y 1.860
+artículos mirados. No había nada que las protegiera.
+
+## Una sesión a la vez
+
+Dos a la vez —y es fácil: la ventana de la izquierda lleva una hora y uno se
+olvida— leen el mismo `goteo.json`, recorren la misma cola por utilidad, piden
+los mismos artículos, y al guardar **gana la última**. El trabajo de la otra no
+queda en ninguna parte: no es que se apunte mal, es que no se apunta. Y por el
+camino se le piden a un servicio público el doble de peticiones para bajar
+exactamente lo mismo.
+
+**El cerrojo caduca con el proceso, no con el reloj.** Un fichero con una hora
+dentro obliga a inventar un plazo —«si lleva más de dos horas, se ignora»— y ese
+plazo o corta sesiones vivas o deja el cerrojo puesto para siempre cuando se
+apaga el portátil. Se guarda el PID y se le pregunta al sistema si sigue vivo,
+que no es un plazo: es la respuesta. El de un proceso muerto se retira
+**diciéndolo**.
+
+`--estado` no lo coge: sólo mira, y esperar noventa minutos para poder preguntar
+por dónde va es lo contrario de para lo que sirve.
+
+## El cuaderno a medias no es un cuaderno vacío
+
+`leer_avance` se tragaba el `JSONDecodeError` y devolvía el diccionario vacío. Y
+el fichero se escribía de una pasada, así que un Ctrl+C en el momento justo lo
+dejaba truncado — y entonces **un `goteo.json` a medias se leía como «no se ha
+mirado nada todavía»**, sin un aviso. La sesión siguiente volvía a recorrer el
+corpus entero y a pedirle a PETETE lo que ya teníamos.
+
+Comprobado sobre el fichero de verdad antes de tocar nada: **1.860 artículos se
+convertían en 0**.
+
+Ahora para y dice que lo bajado no se pierde —está en `consultas/` y viaja por
+git— y que el cuaderno **no** viaja, así que no hay copia de la que sacarlo y
+**no promete un `git checkout` que no existe**. Y se guarda escribiendo al lado
+y renombrando, para que el fichero bueno sea siempre uno entero: el de antes o
+el de ahora.
+
+## La puerta de alcanzabilidad, que el goteo no tenía
+
+Bajar y no poder encontrarlo ocupa disco, parece cobertura y no lo es: 118
+criterios se sembraron así y se descubrió tres días después. `sembrar.py` mide
+cada tanda desde entonces — **y el goteo, que es el que está bajando ahora, no
+medía ninguna.**
+
+`medir_alcanzabilidad.py` le pregunta a **git** cuál es la tanda: las consultas
+viajan por el repositorio, así que lo que todavía no se ha comprometido es
+exactamente lo que `git status` ve sin seguir. No hay ninguna lista al lado que
+pueda quedarse atrás. Y usa la misma función que la cadena, no una copia: dos
+formas de contar lo mismo son dos números distintos en cuanto una cambie.
+
+Medido sobre la tanda del 28/08/2026, antes de comprometerla:
+
+| | |
+|---|---|
+| consultas de la tanda | 81 |
+| **alcanzables** por (norma, artículo) | **75 (92,6 %)** |
+| las 6 restantes | todas en causas ya diagnosticadas |
+
+Se puede comprometer. La puerta sólo para cuando aparece una forma que **ninguna
+causa explica**, porque pararse por deuda conocida es gastar la única señal que
+tenemos para lo que no lo es.
+
+## Pendiente, y sale de esta misma medición
+
+`--todo` enseña además la deuda acumulada: **184 de 2.705 consultas** no se
+encuentran, y de ésas **21 no encajan en ninguna causa conocida**. Esas
+veintiuna habrían parado la puerta si hubieran llegado en una tanda; están ahí
+porque el goteo llevaba once sesiones bajando sin ninguna. Ahora la hay, así que
+el número no puede crecer sin que alguien lo vea — pero **las veintiuna de hoy
+siguen sin diagnosticar**.
