@@ -1,0 +1,35 @@
+{
+  "id": "46/10175/2016/00/0/1",
+  "resolucion": "46/10175/2016/00/00",
+  "n_criterio": "1",
+  "de_criterios": "1",
+  "calificacion": "No vinculante",
+  "unidad": "TEAR de Valencia",
+  "fecha": "30/10/2018",
+  "asunto": "IVA. La Declaración de operaciones incluidas en los libros-registro de IVA subsana los defectos del propio libro-registro objeto de la declaración.",
+  "criterio": "Criterio: \n\n Debe admitirse la deducción de las cuotas correspondientes a las facturas de que se trata en tanto el defecto de registro de éstas pueda considerarse subsanado mediante la correlativa declaración, y, sólo por este motivo, acceder a la pretensión anulatoria de la reclamante.",
+  "referencias": [
+    {
+      "norma": "RD 1065/2007 Reglamento Proc. Gestión e Inspección y N.Comunes de Aplicación",
+      "preceptos": [
+        "36"
+      ]
+    }
+  ],
+  "conceptos": [
+    "Declaraciones informativas",
+    "Declaraciones/autoliquidaciones",
+    "Deducciones",
+    "Facturas y/o documentos sustitutivos",
+    "Impuesto sobre el Valor Añadido IVA",
+    "Libros-registro",
+    "Subsanación"
+  ],
+  "texto_resolucion": "Tribunal Económico-Administrativo Regional de la Comunidad Valenciana\n\n SALA 3\n\n FECHA: 30 de octubre de 2018\n\n PROCEDIMIENTO: 46-10175-2016\n\n CONCEPTO: IMPUESTO SOBRE EL VALOR AÑADIDO. IVA\n\n NATURALEZA: RECLAMACION UNICA INSTANCIA GENERAL\n\n RECLAMANTE : XYZ , SAU - NIF ... \n\n REPRESENTANTE: Fx... - NIF ---\n\n DOMICILIO: ... (VALENCIA)\n\n En VALENCIA , se ha constituido el Tribunal como arriba se indica, para resolver en única instancia la reclamación de referencia, tramitada por procedimiento general.\n\n ANTECEDENTES DE HECHO\n\n PRIMERO.-\n\n El día 21 de julio de 2016 fue notificado a la ahora reclamante acuerdo mediante el que, resolviendo procedimiento de comprobación limitada, se practican liquidaciones a su cargo por el concepto de Impuesto sobre el Valor Añadido de los periodos comprendidos en el año 2015, mediante la que, respecto de las autoliquidaciones, entre otras modificaciones y a los efectos que ahora interesa, se minora el importe de las deducciones en el de las facturas registradas como expedidas por \"proveedores varios\", con fundamento en que ello constituye un defecto de registro no subsanable mediante la presentación de la declaración informativa de operaciones incluidas en los libros registro de IVA (modelo 340) en la que se identifican los respectivos expedidores. \n\n Dichas liquidaciones determinan una suma de saldos negativos inferior en 35.282,82 euros a la resultante de las respectivas autoliquidaciones. \n\n SEGUNDO.-\n\n El día 8 de agosto de 2016 se interpuso la presente reclamación contra el referido acuerdo de liquidación, alegando el actuante, en síntesis, que los defectos de registro contenidos en el libro de facturas recibidas se han subsanado con la presentación de las declaraciones informativas de operaciones incluidas en los libros registro de IVA correspondientes a cada periodo de liquidación, en las que se identifican plenamente a todos los expedidores de las facturas registradas, solicitando el reconocimiento del derecho a deducir las cuotas de que se trata y la anulación del acuerdo de liquidación impugnado. \n\n Vistos los preceptos legales y reglamentarios de pertinente aplicación.\n\n FUNDAMENTOS DE DERECHO\n\n PRIMERO.-\n\n Este Tribunal es competente para resolver de conformidad con lo dispuesto en la Ley 58/2003, de 17 de diciembre, General Tributaria (LGT), así como en el Reglamento general de desarrollo de la Ley 58/2003, de 17 de diciembre, General Tributaria, en materia de revisión en vía administrativa (RGRVA), aprobado por Real Decreto 520/2005, de 13 de mayo. No concurre ninguna de las causas de inadmisibilidad previstas en el artículo 239.4 de la LGT.\n\n PRIMERO.-\n\n Este Tribunal debe pronunciarse respecto a lo siguiente:\n\n - Conformidad o no a Derecho del acuerdo impugnado.\n\n TERCERO.-\n\n A los efectos expresados, debe tenerse en cuenta, que el artículo 36 del Real Decreto 1065/2007, por el que se aprueba el Reglamento General de las actuaciones y los procedimientos de gestión e inspección tributaria, en el que se establece la obligación de presentar la declaración a la que alude la interesada, viene a disponer en sus apartados 1 y 3 que el contenido de dicha declaración consiste precisamente en los mismos datos anotados en los libros registro. Es precisamente esta identidad de contenidos reglamentariamente exigida la que permite entender que las omisiones en que hayan podido incurrir los unos -libros registro- se suplen o integran mediante las otras -declaraciones informativas-, pues la función de estas es idéntica a la de aquellos: aportar información -los mismos datos- a la Administración sobre las operaciones realizadas. \n\n Por lo expuesto, debe admitirse la deducción de las cuotas correspondientes a las facturas de que se trata en tanto el defecto de registro de estas pueda considerarse subsanado mediante la correlativa declaración, y, sólo por este motivo, acceder a la pretensión anulatoria de la reclamante. \n\n Por lo expuesto\n\n Este Tribunal Económico-Administrativo acuerda ESTIMAR la presente reclamación, anulando el acto impugnado.",
+  "unifica_criterio": false,
+  "consultas_dgt": [],
+  "url_navegador": "https://serviciostelematicosext.hacienda.gob.es/TEAC/DYCTEA/criterio.aspx?id=46/10175/2016/00/0/1",
+  "descargado": "2026-08-28T14:53:17Z",
+  "sha256_crudo": "d95b13613708c24314a3c0b0a9664c114a27c28632405a2421fc3ccc0792dce1",
+  "crudo": "datos/teac/crudo/46-10175-2016-00-0-1.html"
+}
