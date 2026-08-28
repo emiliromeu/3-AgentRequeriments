@@ -114,12 +114,41 @@ def sellar(ruta: Path, hoy: str | None = None, forzado: str = "",
             "preceptos_tocados": sorted(
                 str(x) for x in (getattr(informe, "preceptos_tocados", set())
                                  or set())),
+            # UNA A UNA, NO SOLO EL RECUENTO. El recuento dice que la norma
+            # esta sin incorporar; no dice CUAL la toca, ni CUANDO se publico,
+            # que es lo que hace falta para poder fechar el aviso y para poder
+            # citar la disposicion que lo causa en vez de citar el texto
+            # consolidado, que es justo el que esta sin actualizar.
+            "reformas": _reformas_de(informe),
         }
     sellos[_norma_de(ruta)] = sello
     ruta_de_sellos(directorio).write_text(
         json.dumps(sellos, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8")
     return sello
+
+
+def _reformas_de(informe) -> list:
+    """Las reformas pendientes, con lo que el BOE de de cada una.
+
+    Con lo que DE: si falta alguno de los tres campos -referencia, fecha de
+    publicacion y preceptos- la reforma se guarda igual y `falta` dice cual.
+    Ni se inventa ni se descarta en silencio.
+    """
+    salida = []
+    for r in (getattr(informe, "pendientes", []) or []):
+        salida.append({
+            "referencia": getattr(r, "id_norma", "") or "",
+            "fecha_publicacion": getattr(r, "fecha_publicacion", "") or None,
+            "preceptos": sorted(str(x) for x in (getattr(r, "preceptos", set()) or set())),
+            # La nota literal del BOE: es la cita verificable de la reforma
+            # mientras no este incorporada, asi que se guarda entera.
+            "relacion": getattr(r, "relacion", "") or "",
+            "nota": getattr(r, "texto", "") or "",
+            "falta": list(getattr(r, "falta", []) or []),
+            "dudas": list(getattr(r, "dudas", []) or []),
+        })
+    return sorted(salida, key=lambda x: (x["referencia"], x["nota"]))
 
 
 def comprobar(rutas: list) -> list[str]:

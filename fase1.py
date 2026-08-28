@@ -26,12 +26,12 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
 from agente_fiscal import boe_api, bloques as B, parser as P
+from agente_fiscal import fechas as FECHAS
 from agente_fiscal import pendientes as PEND, sellos as SELLOS
 
 RAIZ = Path(__file__).resolve().parent
@@ -112,6 +112,44 @@ def cargar_texto(norma_id: str, descargar: bool) -> bytes:
         return r.cuerpo
     print(f"  [disco] texto reutilizado <- {ruta.name}")
     return ruta.read_bytes()
+
+
+def cargar_analisis(norma_id: str, descargar: bool) -> dict:
+    """Que reformas tocan a esta norma. `data[0]`, o `{}` si no se ha podido.
+
+    SE DESCARGA AQUI SI NO ESTA, y eso tapa un agujero que en este equipo era
+    invisible. `ingerir` leia el analisis del crudo y, si no estaba, seguia con
+    `{}` en silencio: la norma se ingeria igual, pero sin `consolidado_hasta` y
+    sin una sola reforma pendiente. Aqui nunca se noto porque `inspeccionar` se
+    ejecuta siempre antes y lo deja en crudo. En una instalacion limpia -que
+    llama a `ingerir` y a nada mas, y que no recibe el crudo porque no viaja-
+    el sello salia mudo. Y UN SELLO MUDO SE LEE COMO «AL DIA»: cero reformas
+    pendientes por no haber preguntado tiene la misma pinta que cero por
+    haberlo comprobado.
+
+    Si el BOE no lo da, se sigue sin el y se dice por pantalla: el articulado
+    ya esta troceado y tirarlo entero por el analisis seria peor.
+    """
+    ruta = None if descargar else boe_api.ultimo_crudo(norma_id, DIR_CRUDO, "analisis")
+    if ruta is None:
+        try:
+            r = boe_api.descargar_y_guardar(
+                norma_id, "/analisis", "application/json", DIR_CRUDO, "analisis"
+            )
+            print(f"  [red] analisis descargado -> {r.ruta.name} ({r.tamano:,} bytes)")
+            ruta = r.ruta
+        except (boe_api.ErrorBOE, OSError) as e:
+            print(f"  [AVISO] sin analisis del BOE: {e}".split("\n")[0])
+            print("  La norma se ingiere igual, pero su sello ira SIN reformas")
+            print("  pendientes y sin fecha de consolidacion.")
+            return {}
+    else:
+        print(f"  [disco] analisis reutilizado <- {ruta.name}")
+    try:
+        datos = json.loads(ruta.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return {}
+    return (datos.get("data") or [{}])[0]
 
 
 def ruta_corpus(norma_id: str) -> Path:
@@ -374,14 +412,13 @@ def modo_ingerir(norma_id: str, descargar: bool,
     # `pendientes.leer` dice ademas QUE reformas faltan por incorporar y a que
     # preceptos afectan. Si alguna toca un precepto concreto, se marca aqui
     # como no citable y `vigencia` lo caza. Hoy no marca ninguno: ver el LEEME.
-    try:
-        analisis_json = json.loads(
-            (boe_api.ultimo_crudo(norma_id, DIR_CRUDO, "analisis")
-             or Path(os.devnull)).read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError, AttributeError):
-        analisis_json = {}
-    informe = PEND.leer((analisis_json.get("data") or [{}])[0], xml_bytes,
+    informe = PEND.leer(cargar_analisis(norma_id, descargar), xml_bytes,
                         (meta.get("estado_consolidacion") or {}).get("texto", ""))
+    # LA FECHA DE CADA REFORMA PENDIENTE. `/analisis` no la da, asi que se
+    # pregunta por `/metadatos` de la norma que modifica, una vez por norma y
+    # con cache en disco. Lo que el BOE no tenga se queda sin fecha y el sello
+    # lo anota en `falta`.
+    FECHAS.poner_fechas(informe.pendientes, DIR_CRUDO, permitir_red=True)
     tocados = informe.preceptos_tocados if informe.pendientes else set()
     culpables = ", ".join(sorted(r.id_norma for r in informe.pendientes))
 

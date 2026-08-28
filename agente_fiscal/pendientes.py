@@ -67,11 +67,34 @@ class Reforma:
     incorporada: bool
     preceptos: set = field(default_factory=set)
     dudas: list = field(default_factory=list)
+    # El BOE NO la da en `/analisis`: cada `posterior` trae id_norma, relacion
+    # y texto, y nada mas -comprobado sobre los 725 del corpus entero-. La
+    # rellena quien puede preguntar, con `fechas.poner_fechas`. Aqui no se saca
+    # de la prosa: eso seria la fecha de disposicion disfrazada de publicacion.
+    fecha_publicacion: str = ""
 
     @property
     def legible(self) -> bool:
         """¿Se ha podido convertir su nota en una lista de preceptos?"""
         return not self.dudas and bool(self.preceptos)
+
+    @property
+    def falta(self) -> list:
+        """Que no ha dado el BOE de esta reforma. Vacia = esta entera.
+
+        Se guarda en el sello en vez de descartar la reforma: una reforma a
+        medias sigue diciendo que la norma esta sin incorporar, y callarsela
+        seria peor que tenerla incompleta. Lo que no puede pasar es que se lea
+        como completa.
+        """
+        fuera = []
+        if not self.id_norma or self.id_norma == "(sin id)":
+            fuera.append("referencia")
+        if not self.fecha_publicacion:
+            fuera.append("fecha_publicacion")
+        if not self.preceptos:
+            fuera.append("preceptos")
+        return fuera
 
 
 @dataclass
