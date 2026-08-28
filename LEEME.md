@@ -5649,3 +5649,171 @@ veintiuna habrían parado la puerta si hubieran llegado en una tanda; están ah�
 porque el goteo llevaba once sesiones bajando sin ninguna. Ahora la hay, así que
 el número no puede crecer sin que alguien lo vea — pero **las veintiuna de hoy
 siguen sin diagnosticar**.
+
+---
+
+# El `git pull` no llegaba a la oficina, y era culpa nuestra — 28/08/2026
+
+Varias copias del despacho llevaban semanas sin poder actualizarse. La semana de
+goteo —**986 consultas**— no le llegaba a nadie.
+
+`actualizar` hacía exactamente lo que dice que hace: *«si hay cambios sin
+guardar, no se actualiza encima»*. **El problema es que los cambios los
+escribíamos nosotros.** Una guarda que salta siempre no es una guarda.
+
+## La regla, y es una sola
+
+> **Un fichero no puede viajar por git Y reescribirse en la máquina de destino.**
+> Una de las dos cosas, nunca las dos.
+
+Tres salidas, y las tres valen: **o no viaja, o no se reescribe en local, o el
+pull sabe descartarlo.** Lo que no vale es tenerlo en los dos sitios.
+
+## El repaso: qué se reescribe allí con sólo usar el agente
+
+Barrido de todas las escrituras del código —238, resueltas una a una— cruzado
+con lo que git sigue. En la oficina sólo corren la ventana, el instalador y la
+cola por demanda; el descargador del TEAC y el canario no.
+
+| fichero | quién lo reescribe allí | salida elegida |
+|---|---|---|
+| `datos/dgt/indice.json` | la cola por demanda, al bajar algo | **no viaja** |
+| `datos/dgt/consultas/*.json` | la cola por demanda, sin querer | **no se reescribe** |
+| `normas_del_corpus.json` | el instalador, vía `fase1 ingerir` | **no se reescribe** |
+
+Y dos que **no** eran el problema, aunque lo parecían:
+
+* **`GUIA.md` ya estaba excluida.** Se genera de `guias/GUIA.md`, que sí viaja.
+  Nunca fue un choque.
+* **`datos/dgt/estado_fuente.json` viaja y nadie lo escribe allí**: lo pone el
+  canario, que sólo corre aquí. No es un choque. Se queda como está, y con una
+  duda anotada: la oficina está leyendo *mi* última comprobación como si fuera
+  suya. Eso es otra conversación, y cambiarlo mueve estados de respuesta.
+
+## Reproducido antes de tocar nada
+
+Se clonó el repositorio a un commit anterior, se simuló una máquina de oficina
+—una consulta bajada por demanda, el índice reescrito, la lista regenerada— y se
+pidió el pull:
+
+```
+error: Los cambios locales de los siguientes archivos serán sobrescritos al fusionar:
+	datos/dgt/indice.json
+	normas_del_corpus.json
+error: Los siguientes archivos sin seguimiento en el árbol de trabajo serán sobrescritos:
+	datos/dgt/consultas/V0012-23.json
+Abortando
+```
+
+**Las tres causas a la vez, y el pull aborta entero.** No llega ni una consulta.
+
+## Qué se ha cambiado en cada una
+
+### `datos/dgt/consultas/` — la demanda no debía estar ahí nunca
+
+`cola.py` dice por escrito que lo que se baja por demanda **no viaja**, porque
+sus fechas dirían qué consulta pidió un cliente y qué día. Pero bajaba con
+`petete.Cache()`, y ésa guarda en `consultas/`. Así que cada descarga de la
+oficina caía en las dos carpetas: en `demanda/`, donde debía, y en `consultas/`,
+donde rompe el pull **y** deja el historial de trabajo del despacho en el
+repositorio. Las dos cosas son justo lo que ese fichero dice que no puede pasar.
+
+`CacheDocumentos` separa ahora **dónde lee** de **dónde escribe**: lee de las dos
+y escribe sólo en la que se le diga. La cola le dice `demanda/`. Nada se pierde
+—`dgt.CacheDGT` ya miraba las dos carpetas— y la consulta sigue disponible.
+
+### `datos/dgt/indice.json` — deja de viajar
+
+Es el mapeo *número de consulta → id interno de PETETE*: derivado, y entero
+dentro de los propios documentos. Se rehace del disco —**2.734 consultas en
+2,9 s**, medido— y se guarda para no repetirlo.
+
+**Lo que cuesta, dicho:** se pierden los ids aprendidos *buscando* sin llegar a
+descargar el documento, **2.483 de los 5.217** de este Mac. No es dato, es caché
+templada: se vuelven a aprender solos, uno por consulta que se pida y no
+tengamos, en la misma búsqueda que habría hecho falta igualmente. Se descartó
+publicar un fichero-semilla: sería una pieza más que alguien tendría que
+acordarse de actualizar, y ya sabemos cómo acaban.
+
+### `normas_del_corpus.json` — viaja, así que deja de reescribirse
+
+Éste **tiene** que viajar: es lo único del corpus que puede llegar a otro equipo.
+Lo regenera `fase1 ingerir`, y a `fase1 ingerir` lo llama **el instalador**. O
+sea que toda máquina, el día que se instalaba, se quedaba el fichero modificado
+—no en el contenido, que era idéntico, sino en el `generado`, puesto con la
+fecha de ese día— y a partir de ahí no volvía a actualizarse nunca.
+
+Ahora `catalogo.regenerar` compara la lista y sólo escribe si de verdad hay algo
+nuevo que publicar. La fecha pasa a significar *cuándo cambió la lista*, que
+además es lo que cualquiera esperaría que significase.
+
+## El comando de una línea
+
+Pura `git`, sin Python y sin ningún fichero del proyecto: funciona en un árbol
+tan roto que no quede ni el guion que vendría a arreglarlo, y `&&` se comporta
+igual en `cmd.exe` que en un terminal de Mac.
+
+```
+git fetch -q && git status -sb && git ls-files -d
+```
+
+Se lee así:
+
+| lo que sale | qué significa |
+|---|---|
+| `## main...origin/main [detrás 7]` | **le faltan 7 cambios** del pull anterior |
+| `## main...origin/main` a secas | está al día |
+| líneas ` D ...` y la lista final | **árbol incompleto**: el checkout abortó a medias |
+| líneas ` M ...` | ficheros cambiados en local |
+| líneas `?? ...` | sin seguir; si el pull trae ese nombre, **aborta la fusión** |
+
+`git ls-files -d` es la pregunta exacta para lo del árbol a medias: *seguidos por
+git y ausentes del disco*.
+
+## Y el camino de vuelta para un equipo que ya quedó roto
+
+Un pull encima no repara nada, y **«borra la carpeta y clona de nuevo» no es una
+respuesta**: se llevaría por delante la despensa por demanda y la configuración.
+
+`reparar.py` —doble clic en `reparar.command` o `reparar.bat`— hace seis cosas,
+en este orden, que es el que importa:
+
+1. **rutas largas**, primero. Sin esto, en Windows el paso 5 vuelve a abortar por
+   donde abortó la vez anterior;
+2. **lo que no reconoce, para.** Un cambio local que no está en la lista de
+   derivados puede ser trabajo de alguien, y descartarlo por comodidad sería el
+   segundo desastre del día;
+3. los **derivados**, descartados: cada uno se rehace solo;
+4. los **choques**, apartados y no borrados: las consultas que la demanda dejó en
+   `consultas/` se **mueven a `demanda/`**, que es su sitio. El choque
+   desaparece, la descarga no se pierde;
+5. el **árbol**, completado, ahora que las rutas largas ya están;
+6. y **entonces** el pull.
+
+`reparar.py --revisar` dice todo lo anterior sin tocar nada.
+
+**Lo que no se toca nunca**, y está escrito en el código antes de cada acción:
+`.env`, `datos/dgt/demanda/`, `datos/dgt/cola.json`, `datos/trazas/` y
+`datos/corpus/`.
+
+Probado de punta a punta en `pruebas/prueba_pull.py`: se monta una copia rota de
+verdad —con los cuatro destrozos— y se comprueba que queda al día, con el árbol
+completo, sin cambios pendientes y **con la descarga por demanda intacta**. Y su
+control negativo comprueba lo contrario: que un cambio local que no es un
+derivado **para** la reparación en vez de tirarlo.
+
+## Los `.bat` no se pueden ejecutar desde aquí, y eso no es motivo para no mirarlos
+
+`actualizar.bat` nunca ha corrido en un Windows de verdad. Lo que sí se puede
+hacer es comprobar que cumple **las reglas que este proyecto se escribió a sí
+mismo** en las cabeceras de sus propios `.bat`: ningún paréntesis sin escapar
+dentro de un `echo` —cierran el bloque y rompen el fichero—, ninguna tilde en un
+`echo` —la consola no siempre va en UTF-8—, un `pause` en todos los caminos para
+que la ventana no se cierre en blanco, y `python.exe` y no `pythonw.exe`, que no
+tiene consola que leer.
+
+Están comprobadas en la suite. No encontraron ningún defecto —`actualizar.bat`
+escapa bien sus paréntesis y `abrir_agente.bat` usa `pythonw` a propósito, que es
+el único que quiere esconder la consola—, pero ahora **el día que alguien escriba
+un `echo` con un paréntesis, se pone rojo aquí y no en un portátil de la
+oficina**.

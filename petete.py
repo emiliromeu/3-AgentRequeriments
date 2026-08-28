@@ -446,11 +446,16 @@ class Cache(FW.CacheDocumentos):
     de KnoSys: en el TEAC el documento se pide por su numero y no hace falta.
     """
 
-    def __init__(self):
+    def __init__(self, dir_escritura=None):
         # Los directorios se leen al construir, no en la definicion: las
         # pruebas los apuntan a un temporal antes de instanciar.
+        #
+        # `dir_escritura` lo usa la COLA POR DEMANDA para que lo que baje caiga
+        # en `demanda/` y no en `consultas/`, que viaja por git. Ver el
+        # constructor de `fuente_web.CacheDocumentos`.
         super().__init__(dir_crudo=DIR_CRUDO, dir_documentos=DIR_CONSULTAS,
-                         dir_busquedas=DIR_BUSQUEDAS, indice=INDICE, raiz=RAIZ)
+                         dir_busquedas=DIR_BUSQUEDAS, indice=INDICE, raiz=RAIZ,
+                         dir_escritura=dir_escritura)
 
     # ------------------------------------------------------------ el mapeo
 

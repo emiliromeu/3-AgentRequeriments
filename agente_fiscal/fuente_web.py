@@ -242,26 +242,97 @@ class CacheDocumentos:
     """
 
     def __init__(self, dir_crudo: Path, dir_documentos: Path,
-                 dir_busquedas: Path, indice: Path, raiz: Path):
+                 dir_busquedas: Path, indice: Path, raiz: Path,
+                 dir_escritura: Path | None = None):
+        """`dir_escritura` es DONDE CAEN los documentos nuevos. Por defecto,
+        donde estan los demas.
+
+        SE SEPARA DONDE SE LEE DE DONDE SE ESCRIBE, y no es un refinamiento:
+        es lo que hacia que la copia de la oficina no se pudiera actualizar.
+
+        `datos/dgt/consultas` VIAJA por git -es el barrido nuestro, publico y
+        sin nada de nadie-. `datos/dgt/demanda` NO viaja, y a proposito: sus
+        fechas dirian que consulta pidio un cliente y que dia. Pero la cola por
+        demanda bajaba con esta misma cache, asi que cada descarga de la
+        oficina caia TAMBIEN en `consultas/`. Dos consecuencias, las dos malas:
+
+          · el `git pull` siguiente se encontraba ahi un fichero sin seguir con
+            el nombre exacto de uno que traia, y ABORTABA la fusion entera. La
+            semana de goteo no llegaba a nadie;
+          · y el historial de trabajo del despacho quedaba en el directorio que
+            viaja, que es justo lo que `cola.py` dice por escrito que no puede
+            pasar.
+
+        Escribiendo en `demanda/` y leyendo de los dos, la demanda deja de
+        viajar y sigue estando disponible: `dgt.CacheDGT` ya miraba las dos
+        carpetas.
+        """
         self.dir_crudo = Path(dir_crudo)
         self.dir_documentos = Path(dir_documentos)
+        self.dir_escritura = Path(dir_escritura or dir_documentos)
         self.dir_busquedas = Path(dir_busquedas)
         self.ruta_indice = Path(indice)
         self.raiz = Path(raiz)
-        for d in (self.dir_crudo, self.dir_documentos, self.dir_busquedas):
+        for d in (self.dir_crudo, self.dir_documentos, self.dir_escritura,
+                  self.dir_busquedas):
             d.mkdir(parents=True, exist_ok=True)
         self.indice = self._leer_indice()
 
     # ------------------------------------------------------------- indice
 
     def _leer_indice(self) -> dict:
+        """El indice. Si no esta, SE REHACE DEL DISCO en vez de empezar vacio.
+
+        EL INDICE ES DERIVADO Y POR ESO YA NO VIAJA. Es el mapeo numero -> id
+        interno de la fuente, y se reescribia en cada maquina cada vez que la
+        cola bajaba algo: viajaba Y se reescribia en local, que es la
+        combinacion que rompe el pull. De las tres salidas posibles -no viajar,
+        no reescribirse, o que el pull sepa descartarlo- la que le toca es la
+        primera, porque el dato no es de nadie: esta entero en los documentos.
+
+        Un indice vacio no es inofensivo: sin el, cada consulta cuesta una
+        busqueda extra contra la fuente PARA SIEMPRE. Por eso no se empieza de
+        cero: se lee de los documentos que ya hay, que llevan dentro su
+        `doc_id` y su `tab`, y se guarda para no repetirlo.
+        """
         if self.ruta_indice.is_file():
             try:
                 return json.loads(self.ruta_indice.read_text(encoding="utf-8"))
             except json.JSONDecodeError:
-                aviso("el indice estaba corrupto; se empieza uno nuevo "
+                aviso("el indice estaba corrupto; se rehace de los documentos "
                       "(el crudo y los documentos siguen ahi)")
-        return {"consultas": {}, "creado": ahora()}
+        return self._indice_del_disco()
+
+    def _indice_del_disco(self) -> dict:
+        """Reconstruye el indice leyendo los documentos guardados."""
+        consultas = {}
+        for d in self._donde_leer():
+            for f in sorted(d.glob("*.json")):
+                try:
+                    r = json.loads(f.read_text(encoding="utf-8"))
+                except (json.JSONDecodeError, OSError):
+                    continue
+                if not isinstance(r, dict):
+                    continue
+                ficha = {k: r[k] for k in ("doc_id", "tab", "fecha")
+                         if r.get(k)}
+                if r.get("descargado"):
+                    ficha["visto"] = r["descargado"]
+                if ficha:
+                    consultas[f.stem.upper()] = ficha
+        indice = {"consultas": consultas, "creado": ahora(),
+                  "rehecho_del_disco": ahora()}
+        if consultas:
+            # Se guarda ya: rehacerlo en cada arranque seria pagar dos mil
+            # lecturas por no haber escrito una linea.
+            try:
+                self.ruta_indice.parent.mkdir(parents=True, exist_ok=True)
+                self.ruta_indice.write_text(
+                    json.dumps(indice, ensure_ascii=False, indent=2),
+                    encoding="utf-8")
+            except OSError:
+                pass          # sin poder escribirlo se sigue: es un atajo
+        return indice
 
     def _guardar_indice(self) -> None:
         self.ruta_indice.write_text(
@@ -270,17 +341,26 @@ class CacheDocumentos:
 
     # ---------------------------------------------------------- documentos
 
+    def _donde_leer(self) -> list:
+        """Las carpetas donde puede estar un documento, sin repetir."""
+        if self.dir_escritura == self.dir_documentos:
+            return [self.dir_documentos]
+        return [self.dir_documentos, self.dir_escritura]
+
     def tiene(self, numero: str) -> bool:
-        return (self.dir_documentos / f"{numero.upper()}.json").is_file()
+        return any((d / f"{numero.upper()}.json").is_file()
+                   for d in self._donde_leer())
 
     def leer(self, numero: str) -> dict | None:
-        f = self.dir_documentos / f"{numero.upper()}.json"
-        if not f.is_file():
-            return None
-        try:
-            return json.loads(f.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            return None
+        for d in self._donde_leer():
+            f = d / f"{numero.upper()}.json"
+            if not f.is_file():
+                continue
+            try:
+                return json.loads(f.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                return None
+        return None
 
     def guardar_crudo(self, numero: str, crudo: str) -> tuple:
         """El crudo, tal cual llego. Devuelve (ruta, sha256)."""
@@ -289,7 +369,8 @@ class CacheDocumentos:
         return f, hashlib.sha256(crudo.encode("utf-8")).hexdigest()
 
     def guardar_documento(self, numero: str, registro: dict) -> None:
-        (self.dir_documentos / f"{numero}.json").write_text(
+        """EN `dir_escritura`, que no siempre es donde estan los demas."""
+        (self.dir_escritura / f"{numero}.json").write_text(
             json.dumps(registro, ensure_ascii=False, indent=2), encoding="utf-8")
 
     def ruta_relativa(self, f: Path) -> str:

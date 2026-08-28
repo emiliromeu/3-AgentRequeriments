@@ -467,7 +467,14 @@ def vaciar(tope: int = 3, pausa: float = 10.0, progreso=None) -> dict:
 
         DEMANDA.mkdir(parents=True, exist_ok=True)
         fuente = petete.Fuente(silencioso=True)
-        cache = petete.Cache()
+        # LO QUE BAJA LA DEMANDA CAE EN `demanda/`, QUE NO VIAJA. Con la cache
+        # de siempre caia ademas en `consultas/`, que si viaja: el `git pull`
+        # siguiente se encontraba un fichero sin seguir con el nombre exacto de
+        # uno que traia y abortaba la fusion entera, y de paso el historial de
+        # lo que pregunta el despacho acababa en el repositorio. Las dos cosas
+        # son justo lo que la cabecera de este fichero dice que no puede pasar.
+        DEMANDA.mkdir(parents=True, exist_ok=True)
+        cache = petete.Cache(dir_escritura=DEMANDA)
 
         for i, e in enumerate(cola_pendiente):
             cuerpo = N.por_clave(e["cuerpo"])
@@ -502,7 +509,13 @@ def vaciar(tope: int = 3, pausa: float = 10.0, progreso=None) -> dict:
 
             bajadas = 0
             for numero in numeros:
-                if cache.tiene(numero) or (DEMANDA / f"{numero}.json").is_file():
+                # `cache.tiene` ya mira las DOS carpetas -la que viaja y la de
+                # demanda-, asi que no hace falta preguntar por la segunda
+                # aparte. Y guarda `obtener_consulta`, en `demanda/`: escribir
+                # aqui otra vez el mismo fichero con otro formato dejaba dos
+                # versiones de los mismos bytes segun quien lo hubiera escrito
+                # el ultimo.
+                if cache.tiene(numero):
                     continue
                 time.sleep(pausa)
                 try:
@@ -510,10 +523,7 @@ def vaciar(tope: int = 3, pausa: float = 10.0, progreso=None) -> dict:
                         numero, cache, fuente, verboso=False)
                 except Exception:                # noqa: BLE001
                     continue
-                if datos:
-                    (DEMANDA / f"{numero}.json").write_text(
-                        json.dumps(datos, ensure_ascii=False, indent=1),
-                        encoding="utf-8")
+                if datos and (DEMANDA / f"{numero.upper()}.json").is_file():
                     bajadas += 1
             marcar(e["cuerpo"], e["articulo"],
                    BAJADA if bajadas else SIN_RESULTADOS, bajadas)

@@ -138,7 +138,13 @@ echo.
 git status --short
 echo.
 echo   QUE HAY QUE HACER:
-echo   Avisa a Emili y ensenale esta lista. No borres nada.
+echo   Casi siempre son ficheros que escribe el propio agente, y entonces
+echo   esto se arregla solo. Doble clic en:   reparar.bat
+echo   Si quieres ver antes que haria, sin que toque nada:
+echo       reparar.bat --revisar
+echo.
+echo   Si reparar.bat dice que hay cambios que no reconoce, avisa a Emili
+echo   y ensenale esa lista. No borres nada.
 echo.
 pause
 exit /b 1

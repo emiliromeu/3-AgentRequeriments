@@ -100,6 +100,33 @@ def regenerar() -> list[dict]:
     for n in del_corpus():
         tengo[n["id"]] = n              # el corpus local manda en el CONTENIDO
     normas = [tengo[i] for i in sorted(tengo)]
+
+    # NO SE REESCRIBE SI LA LISTA NO HA CAMBIADO, y esto es lo que arreglo el
+    # `git pull` de la oficina.
+    #
+    # Este fichero es de los pocos que VIAJA y ademas se genera en cada
+    # maquina: lo rehace `fase1 ingerir`, y a `fase1 ingerir` lo llama el
+    # INSTALADOR. O sea que cualquier equipo, el dia que se instala, se
+    # encontraba su `normas_del_corpus.json` modificado — no en el contenido,
+    # que era identico, sino en el `generado`, que se ponia con la fecha de
+    # ese dia. A partir de ahi `actualizar` veia «cambios sin guardar» y se
+    # negaba a actualizar, para siempre, en esa maquina.
+    #
+    # De las tres salidas -no viajar, no reescribirse, o que el pull sepa
+    # descartarlo- a este le toca la segunda: TIENE que viajar, porque es lo
+    # unico del corpus que puede llegar a otro equipo. Asi que se compara la
+    # lista y solo se escribe si de verdad hay algo nuevo que publicar. La
+    # fecha deja de ser «cuando se ejecuto esto» y pasa a ser «cuando cambio la
+    # lista», que ademas es lo que alguien esperaria que significara.
+    anterior = {}
+    if LISTA.is_file():
+        try:
+            anterior = json.loads(LISTA.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            anterior = {}
+    if anterior.get("normas") == normas:
+        return normas
+
     LISTA.write_text(json.dumps(
         {"generado": date.today().isoformat(),
          "de": "datos/corpus/sellos.json — NO SE ESCRIBE A MANO",

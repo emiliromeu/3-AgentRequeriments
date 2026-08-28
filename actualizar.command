@@ -24,6 +24,10 @@ if [ -n "$(git status --porcelain)" ]; then
   git status --short
   echo
   echo "  No se actualiza encima: el pull podria pararse a mitad o borrarlos."
+  echo
+  echo "  Casi siempre son ficheros que escribe el propio agente, y entonces"
+  echo "  esto se arregla solo. Doble clic en:   reparar.command"
+  echo "  Mira lo que va a hacer, sin tocar nada:  ./reparar.command --revisar"
   read -r -p "  Enter para cerrar. "; exit 1
 fi
 echo "  [2/4] Cambios sin guardar .......... ninguno"
@@ -49,6 +53,8 @@ if ! git pull --ff-only; then
   echo
   echo "  NO SE HA PODIDO ACTUALIZAR. Mira la linea de arriba: es lo que dice git."
   echo "  El agente sigue funcionando con la version que ya tenias."
+  echo
+  echo "  Prueba con:   reparar.command"
   read -r -p "  Enter para cerrar. "; exit 1
 fi
 echo; echo "  ACTUALIZADO. Cierra esta ventana y abre el agente."

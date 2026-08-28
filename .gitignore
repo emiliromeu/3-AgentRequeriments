@@ -87,6 +87,20 @@ datos/arranque_fallido.txt
 # La marca de «ya lo vi»: es de ESTE equipo, no viaja.
 datos/dgt/visto.json
 
+# EL INDICE DE LA CACHE DE LA DGT: numero de consulta -> id interno de PETETE.
+#
+# VIAJABA Y SE REESCRIBIA EN CADA MAQUINA, que es la combinacion que rompe el
+# `git pull`: la cola por demanda de la oficina lo tocaba en cuanto bajaba algo,
+# y el pull siguiente se negaba a fusionar por «cambios locales». Un derivado no
+# vale una actualizacion parada: se rehace de los documentos, que llevan dentro
+# su `doc_id` y su `tab` -2.734 en 2,9 s, medido-.
+#
+# LO QUE CUESTA, dicho: se pierden los ids que se aprendieron BUSCANDO sin
+# llegar a descargar el documento -2.483 de los 5.217 de este Mac-. No es dato,
+# es cache templada: se vuelven a aprender solos, uno por consulta que se pida y
+# no tengamos, en la misma busqueda que habria hecho falta igualmente.
+datos/dgt/indice.json
+
 # El avance del goteo: es de ESTE Mac, del proceso que solo corre aqui.
 # Si viajara, la oficina tendria el avance de un barrido que no hace, y una
 # copia de alla podria pisar el mio.
