@@ -283,7 +283,52 @@ def resolver_norma(nombre: str, normas=None, codigo: str = "") -> tuple:
     # Sin codigo: el respaldo de siempre, con su regla de siempre.
     from . import dgt as _D
     clave, _estado = _D._resolver_designacion(nombre, normas)
+    if not clave:
+        # LA ABREVIATURA DE DYCTEA, Y AQUI SI SE EXPANDE.
+        #
+        # DYCTEA escribe «RD 939/2005 Reglamento General de Recaudacion RGR» y
+        # el resolutor solo entiende «Real Decreto 939/2005», asi que devolvia
+        # vacio y el criterio quedaba en la despensa SIN PODER ENCONTRARSE.
+        # Salio el 28/08/2026 en la puerta de alcanzabilidad de la primera
+        # tanda del goteo: 38 de 311 criterios nuevos, TODOS reglamentos
+        # nombrados por su real decreto. Antes no se veia porque la siembra
+        # nunca habia llegado a los reglamentos -ver `gotear_teac`-, asi que
+        # arreglar el lado de la busqueda destapo el lado de la lectura.
+        #
+        # LA MISMA EXPANSION ESTA MEDIDA Y DESCARTADA EN LA DGT, y no es una
+        # contradiccion: es que el campo tiene otra forma. En la DGT
+        # `normativa` es PROSA -«...de acuerdo con el RD 1624/1992, art. 24...»-
+        # y expandir ahi recupera 152 y pierde 96. En DYCTEA la referencia
+        # viene ESTRUCTURADA y la designacion va al PRINCIPIO del campo, asi
+        # que el patron se ancla en `^` y no puede coger una mencion de paso.
+        #
+        # MEDIDO AQUI, sobre las 2.122 referencias de los 1.220 criterios de la
+        # despensa: 541 empiezan por RD/RDLeg, se GANAN 428 -1065/2007,
+        # 1624/1992, 439/2007, 939/2005, 1629/1991...- y se pierden CERO. No
+        # cambia ni una resolucion que ya funcionara.
+        expandido = _expandir_real_decreto(nombre)
+        if expandido != nombre:
+            clave, _estado = _D._resolver_designacion(expandido, normas)
+            if clave:
+                return clave, "por nombre, expandiendo la abreviatura"
     return clave, ("por nombre" if clave else "el nombre no resuelve")
+
+
+# La designacion abreviada TAL COMO LA ESCRIBE DYCTEA, y solo al principio del
+# campo: ahi es donde la pone. En mitad de una frase seria adivinar.
+_RE_RD_DYCTEA = re.compile(
+    r"^\s*(RD|R\.D\.|RDLeg|RD-Leg|RDL)\s*[- ]?\s*(\d+/\d{4})\b")
+
+
+def _expandir_real_decreto(nombre: str) -> str:
+    """«RD 939/2005 Reglamento...» -> «Real Decreto 939/2005 Reglamento...»."""
+    m = _RE_RD_DYCTEA.match(nombre or "")
+    if not m:
+        return nombre
+    cual = m.group(1).upper().replace(".", "").replace("-", "")
+    largo = ("Real Decreto Legislativo" if cual in ("RDLEG", "RDL")
+             else "Real Decreto")
+    return f"{largo} {m.group(2)}" + nombre[m.end():]
 
 
 def clave_resolucion(ident: str) -> tuple:

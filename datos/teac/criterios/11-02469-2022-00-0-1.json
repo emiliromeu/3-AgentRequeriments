@@ -1,0 +1,37 @@
+{
+  "id": "11/02469/2022/00/0/1",
+  "resolucion": "11/02469/2022/00/00",
+  "n_criterio": "1",
+  "de_criterios": "1",
+  "calificacion": "No vinculante",
+  "unidad": "TEAR de Andalucía",
+  "fecha": "13/01/2023",
+  "asunto": "IVA. Sociedad de gananciales que explota unos inmuebles. Deducibilidad de las cuotas del IVA soportado.",
+  "criterio": "Criterio: \n\n El IVA soportado en relación con la nuda propiedad no es deducible, pues la actividad empresarial se efectúa con el usufructo de los bienes, mientras que la nuda propiedad que ostentan las personas físicas es un activo patrimonial de las mismas, no cumpliendo la regla de afectación.",
+  "referencias": [
+    {
+      "norma": "Ley 37/1992 Impuesto sobre el Valor Añadido IVA",
+      "preceptos": [
+        "92",
+        "94"
+      ]
+    }
+  ],
+  "conceptos": [
+    "Actividad/explotación económica",
+    "Afectación",
+    "Deducciones",
+    "Impuesto sobre el Valor Añadido IVA",
+    "IVA soportado",
+    "Nuda propiedad",
+    "Sociedad de gananciales",
+    "Usufructo"
+  ],
+  "texto_resolucion": "Tribunal Económico-Administrativo Regional de Andalucía \n\n Órgano Unipersonal \n\n FECHA: 13 de enero de 2023 \n\n PROCEDIMIENTO: 11-02469-2022 \n\n CONCEPTO: IMPUESTO SOBRE EL VALOR AÑADIDO. IVA \n\n NATURALEZA: RECLAMACION UNICA INSTANCIA ABREVIADO \n\n RECLAMANTE: XZ S C - NIF ... \n\n REPRESENTANTE: ...- NIF ... \n\n DOMICILIO: . - España \n\n En Sevilla , se ha constituido el Tribunal como arriba se indica, para resolver en única instancia la reclamación de referencia, tramitada por procedimiento abreviado.\n\n Se ha visto la presente reclamación contra resolución de la oficina gestora desestimatoria de recurso de reposición interpuesto contra acuerdo que recoge liquidaciones provisionales, ejercicio 2018, 1T a 4T. Liquidación A11...85 .\n\n No consta a este Tribunal datos alguno sobre el inicio de expediente sancionador como consecuencia de estas liquidaciones provisionales.\n\n ANTECEDENTES DE HECHO\n\n PRIMERO.- El día 02/09/2022 tuvo entrada en este Tribunal la presente reclamación, interpuesta en 15/08/2022 contra el acto arriba indicado.\n\n FUNDAMENTOS DE DERECHO\n\n PRIMERO.- Este Tribunal es competente, actuando como órgano unipersonal, para resolver de conformidad con lo dispuesto en la Ley 58/2003, de 17 de diciembre, General Tributaria (LGT), así como en el Reglamento general de desarrollo de la Ley 58/2003, de 17 de diciembre, General Tributaria, en materia de revisión en vía administrativa (RGRVA), aprobado por Real Decreto 520/2005, de 13 de mayo. No concurre ninguna de las causas de inadmisibilidad previstas en el artículo 239.4 de la LGT.\n\n SEGUNDO.- Este Tribunal debe pronunciarse respecto a lo siguiente:\n\n Tras presentar sus declaraciones-liquidaciones se inicia un procedimiento de comprobación limitada que termina con liquidaciones provisionales en las que se minora el IVA deducido por el reclamante.\n\n Contra las mismas se interpone recurso de reposición que es desestimado.\n\n Ante este Tribunal el reclamante alega que no sabe el motivo por el que no se admiten algunas cuotas deducidas.\n\n El acuerdo impugnado señala:\n\n \"Por último, respecto de las restantes facturas no admitidas como deducibles a efectos del IVA, no puede acreditarse de forma suficiente la afectación exclusiva a la actividad, tal y como establece el artículo 95.UNO de la Ley de IVA \"\n\n Esta norma es muy clara. El reclamante entiende que tiene derecho a la deducción de cuotas soportadas. Esta deducción minora la cuota a ingresar o hacer nacer un derecho de crédito a su favor. Por tanto, la carga de probar que las cuotas soportadas son deducibles recae sobre el reclamante (artículo 105 LGT). La Ley del IVA establece en sus artículos 92 y 94 la regla de afectación, que el artículo 95 exige que sea exclusiva y directa respecto de las cuotas soportadas en bienes y servicios corrientes.\n\n Respecto de estas cuotas el reclamante no ha probado el carácter exclusivo del uso de las mismas en la actividad de arrendamiento.\n\n El reclamante es una sociedad civil a la que dos cónyuges han aportado el usufructo de unos inmuebles que son de su propiedad. No consta que se haya repercutido IVA en la constitución de estos usufructos a favor de la sociedad civil reclamante.\n\n La situación que resulta de la constitución de la sociedad es que los cónyuges mantienen la nuda propiedad de los inmuebles y las mismas no están afectan a actividad empresarial alguna.\n\n La sociedad reclamante disfruta del usufructo de los inmuebles y los explota.\n\n Pero lo que observamos es que la sociedad se deduce cuotas que están relacionadas con la nuda propiedad (por ejemplo, las reparaciones) y que, por tanto, no tienen carácter deducibles para la sociedad, pues la nuda propiedad no es explotada empresarialmente, sino que es un activo patrimonial para los cónyuges.\n\n Y otras cuotas no están relacionadas directa y exclusivamente con el usufructo de los inmuebles y su explotación por medio del arrendamiento.\n\n Por tanto, debemos confirmar el acuerdo impugnado.\n\n Por lo expuesto\n\n Este Tribunal Económico-Administrativo acuerda DESESTIMAR la presente reclamación, confirmando el acto impugnado.",
+  "unifica_criterio": false,
+  "consultas_dgt": [],
+  "url_navegador": "https://serviciostelematicosext.hacienda.gob.es/TEAC/DYCTEA/criterio.aspx?id=11/02469/2022/00/0/1",
+  "descargado": "2026-08-28T12:59:49Z",
+  "sha256_crudo": "ff38c71f447376d164882542d2221e5f5c8d4a2f82f6251464edf49a5f4d4527",
+  "crudo": "datos/teac/crudo/11-02469-2022-00-0-1.html"
+}

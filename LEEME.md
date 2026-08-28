@@ -5284,6 +5284,13 @@ el campo de la DGT. Hoy no muerde —cero pares mal atribuidos en los 909
 criterios cacheados, porque DYCTEA nombra el reglamento y no el real decreto—,
 pero la vía lo permitía, y lo que decide no es cuántos fallan hoy.
 
+> **Corrección del 28/08/2026: esa última frase dejó de ser verdad, y fue por
+> un arreglo nuestro.** DYCTEA **sí** nombra el real decreto —«RD 939/2005
+> Reglamento General de Recaudación RGR»—; lo que pasaba es que la siembra
+> nunca había llegado a los reglamentos, porque los buscaba por su título largo
+> y no los encontraba. Al arreglar la búsqueda entraron 311 criterios nuevos y
+> **38 de ellos no se podían alcanzar**. Ver «El goteo del TEAC» al final.
+
 `pruebas/prueba_hermano.py` no prueba la regla —eso ya lo hace
 `prueba_cuerpo.py`—: prueba **quién la pregunta**. Cada consumidor resuelve un
 caso que solo sale con ella; con la regla desactivada los cuatro se caen —si

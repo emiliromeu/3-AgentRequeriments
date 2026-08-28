@@ -1,0 +1,33 @@
+{
+  "id": "41/05621/2021/00/0/1",
+  "resolucion": "41/05621/2021/00/00",
+  "n_criterio": "1",
+  "de_criterios": "1",
+  "calificacion": "No vinculante",
+  "unidad": "TEAR de Andalucía",
+  "fecha": "31/03/2022",
+  "asunto": "IVA. IVA Soportado. Deducibilidad. Compensaciones agrícolas. Entrega de cheques nominativos en el período de declaración por el comprado.",
+  "criterio": "Criterio: \n\n Hay diferencias con Resolución TEAC 15/10/2019 (RG 00-02852-2019) en cuyo caso los recibos fueron firmados en un período y los cheques entregados en el siguiente. En el caso analizado coinciden mes de firma del recibo, mes de entrega del cheque nominativo y período de declaración. El hecho de que el agricultor receptor del cheque nominativo lo haya cobrado o hecho efectivo en el período siguiente no excluye la deducibilidad.",
+  "referencias": [
+    {
+      "norma": "Ley 37/1992 Impuesto sobre el Valor Añadido IVA",
+      "preceptos": [
+        "130"
+      ]
+    }
+  ],
+  "conceptos": [
+    "Compensación",
+    "Deducciones",
+    "Impuesto sobre el Valor Añadido IVA",
+    "IVA soportado",
+    "Regímenes especiales: agricultura, ganadería y pesca"
+  ],
+  "texto_resolucion": "Tribunal Económico-Administrativo Regional de Andalucía \n\n Sala \n\n FECHA: 31 de marzo de 2022 \n\n PROCEDIMIENTO: 41-05621-2021 \n\n CONCEPTO: IMPUESTO SOBRE EL VALOR AÑADIDO. IVA \n\n NATURALEZA: RECLAMACION UNICA INSTANCIA GENERAL \n\n RECLAMANTE: XZ SL - NIF ... \n\n REPRESENTANTE: ... - NIF ... \n\n DOMICILIO: ... \n\n En Sevilla , se ha constituido el Tribunal como arriba se indica, para resolver en única instancia la reclamación de referencia, tramitada por procedimiento general.\n\n Se ha visto la presente reclamación contra resolución de la Unidad Regional de Gestión de Grandes Empresas desestimatoria de recurso de reposición interpuesto contra acuerdo que recoge liquidación provisional, ejercicio 2020, período 12 con minoración del resultado a devolver.\n\n ANTECEDENTES DE HECHO\n\n PRIMERO.- El día 18/08/2021 tuvo entrada en este Tribunal la presente reclamación, interpuesta en 13/08/2021 contra el acto arriba indicado.\n\n FUNDAMENTOS DE DERECHO\n\n PRIMERO.- Este Tribunal es competente para resolver de conformidad con lo dispuesto en la Ley 58/2003, de 17 de diciembre, General Tributaria (LGT), así como en el Reglamento general de desarrollo de la Ley 58/2003, de 17 de diciembre, General Tributaria, en materia de revisión en vía administrativa (RGRVA), aprobado por Real Decreto 520/2005, de 13 de mayo. No concurre ninguna de las causas de inadmisibilidad previstas en el artículo 239.4 de la LGT.\n\n SEGUNDO.- Este Tribunal debe pronunciarse respecto a lo siguiente:\n\n Tras presentar su declaración-liquidación con solicitud de devolución se inicia un procedimiento de comprobación limitada en el que, en aplicación de lo dispuesto en el artículo 134 de la Ley del IVA, se excluye la deducción de compensaciones agrícolas pagadas por el reclamante ya que firmados los recibos de dichas compensaciones el 30 de diciembre de 2020 con entrega de cheques nominativos de la misma fecha los mismos fueron presentados al cobro en el ejercicio 2021.\n\n Sobre esta cuestión nos pronunciamos en la resolución de ... de 2020 en la reclamación ...-2019 interpuesta por el reclamante, diciendo:\n\n \" En el expediente administrativo no existe constancia documental alguna de que el pago de los suministros o entregas de productos naturales por los agricultores se haya efectuado por medio de un contrato de confirming, sino que el reclamante ha entregado cheques nominativos a dichos agricultores. Pero el hecho de que algunos de los mismos hayan presentado al cobro dichos cheques en el mes siguiente entendemos que no excluye la deducibilidad de las compensaciones agrícolas, que no puede depender de la voluntad de los agricultores de presentar al cobro los cheques entregados para pago de los productos suministrados. Y máxime cuando los cheques entregados han sido finalmente pagados a los agricultores. \"\n\n La oficina gestora señala que este criterio no se ajusta al del TEAC de 15 de octubre de 2019 en la reclamación 00-02852-2019.\n\n Pues bien, examinada dicha resolución resulta que en la misma se aborda un supuesto en que los recibos agrícolas son firmados en el mes de diciembre de un ejercicio (y el reclamante ejercita el derecho a la deducción de las compensaciones en dicho período) pero los cheques entregados para el pago de las mismas tienen fecha de enero del ejercicio siguiente, circunstancias que no se dan en el presente caso, por lo que no es de aplicación dicho criterio.\n\n El antecedente de hecho tercero de dicha resolución señala:\n\n \" 3.- El 9 de junio de 2015 la oficina gestora notificó a la interesada una propuesta de liquidación provisional de la que resultaba una cuota a pagar de 2.416,62 euros, señalando que no se admitía la deducción en el período 12 del ejercicio 2014 de las compensaciones recogidas en determinados recibos puesto que, de acuerdo con los justificantes de pago aportados, dichas compensaciones no habían sido satisfechas en el mes de diciembre de 2014 (todos los cheques empleados como medios de pago están fechados el 20 de enero de 2015). \"\n\n Por ello, debemos estimar la presente reclamación y anular el acto impugnado.\n\n Por lo expuesto\n\n Este Tribunal Económico-Administrativo acuerda ESTIMAR la presente reclamación, anulando el acto impugnado.",
+  "unifica_criterio": false,
+  "consultas_dgt": [],
+  "url_navegador": "https://serviciostelematicosext.hacienda.gob.es/TEAC/DYCTEA/criterio.aspx?id=41/05621/2021/00/0/1",
+  "descargado": "2026-08-28T13:04:42Z",
+  "sha256_crudo": "c5f8c3b40225180689d2237bbff2a1289aafaeb133c6faf1b307d77be0764e96",
+  "crudo": "datos/teac/crudo/41-05621-2021-00-0-1.html"
+}
