@@ -120,17 +120,50 @@ def del_disco() -> list[dict]:
 
 
 def ingerida(norma_id: str) -> bool:
+    """¿Hay fichero? La pregunta cruda, sin mirar si es de fiar."""
     return (CORPUS / f"{norma_id}.jsonl").is_file()
 
 
+def sembrada(norma_id: str) -> bool:
+    """¿Ingerida Y SELLADA? Es lo que decide si la siembra se da por hecha.
+
+    EL FICHERO NO BASTA, Y ES LO QUE HACE LA SIEMBRA RETOMABLE. `fase1 ingerir`
+    escribe el `.jsonl` y DESPUES lo sella. Entre esas dos lineas cabe un
+    Ctrl+C, un portatil que se cierra o una oficina que se va a comer: queda un
+    fichero con aspecto de norma ingerida y sin sello. Mirando solo el fichero,
+    la instalacion la daba por hecha y seguia; y como el arranque SI mira los
+    sellos, el equipo acababa parado en «no tiene sello. Vuelve a ingerirla»,
+    que es un callejon: el instalador nunca la iba a volver a ingerir porque
+    creia que ya estaba.
+
+    Contandola como no sembrada, retomar es no hacer nada especial: la
+    siguiente pasada la ve pendiente, la ingiere y sigue por donde iba.
+
+    SIN FICHERO DE SELLOS NO SE EXIGE SELLO. Un corpus entero sin sellar no
+    esta a medias: esta sin sellar, que es como llega una copia anterior a que
+    los sellos existieran. Exigirlo ahi seria volver a bajar las diecisiete
+    para arreglar algo que no esta roto.
+    """
+    if not ingerida(norma_id):
+        return False
+    if not SELLOS.is_file():
+        return True
+    try:
+        return norma_id in json.loads(SELLOS.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        # El fichero de sellos ilegible no convierte en sospechosa a cada
+        # norma: eso es un problema suyo, y lo dice `sellos.comprobar`.
+        return True
+
+
 def faltan() -> list[dict]:
-    """Las de la lista que este equipo NO tiene todavia.
+    """Las de la lista que este equipo NO tiene todavia sembradas.
 
     ES LA LISTA LA QUE MANDA, NO LO QUE HAYA EN LOCAL. Al reves -que es como
     estaba- una maquina con trece normas no descubre nunca que existen tres
     mas: mira lo suyo, lo encuentra completo y se queda tranquila.
     """
-    return [n for n in del_disco() if not ingerida(n["id"])]
+    return [n for n in del_disco() if not sembrada(n["id"])]
 
 
 def sobran() -> list[str]:

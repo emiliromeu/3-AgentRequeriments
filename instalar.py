@@ -110,14 +110,23 @@ def falta_dependencia() -> bool:
 
 
 def falta_corpus() -> list:
-    """Las normas de LA LISTA que este equipo no tiene todavia.
+    """Las normas de LA LISTA que este equipo no tiene todavia sembradas.
 
     MANDA LA LISTA, NO LO QUE HAYA EN LOCAL. Es la diferencia entre «me faltan
     tres» y «lo mio esta completo»: una maquina con trece normas mirandose a si
     misma no descubre nunca que existen dieciseis.
+
+    Y SEMBRADA ES INGERIDA Y SELLADA, no solo ingerida: es lo que hace que una
+    instalacion cortada a la mitad se retome sola. Ver `catalogo.sembrada`.
     """
     from agente_fiscal import catalogo as CAT
     return [(n["id"], n["nombre"]) for n in CAT.faltan()]
+
+
+def normas_de_la_lista() -> list:
+    """Las diecisiete, en el orden en que se siembran. La lista que viaja."""
+    from agente_fiscal import catalogo as CAT
+    return [(n["id"], n["nombre"]) for n in CAT.del_disco()]
 
 
 DESPENSA_DGT = RAIZ / "datos" / "dgt" / "consultas"
@@ -464,50 +473,72 @@ def _ingerir_con_progreso(norma_id: str) -> _Resultado:
 
 
 def ingerir_corpus(pendientes: list) -> int:
-    # SE DICE CUANTAS Y CUANTO TARDA. Quien mira esto no sabe si se ha colgado;
-    # «tarda unos minutos» con tres normas por delante es engañoso, y el que
-    # espera acaba cerrando la ventana a la mitad.
-    # `*.jsonl` a secas contaba el doble: cada norma deja tambien un
-    # `.descartados.jsonl` al lado. Un equipo con trece decia tener veintiseis.
-    ya = len([p for p in CORPUS.glob("*.jsonl")
-              if not p.name.endswith(".descartados.jsonl")])
+    """SIEMBRA EL CORPUS. Es un paso de la instalacion, no un extra.
+
+    LA SIEMBRA DEL CORPUS SI VA EN EL INSTALADOR Y LA DE LA DGT NO, y la
+    diferencia no es de gusto: esta MEDIDA. `medir_siembra.py`, sembrando las
+    diecisiete en limpio contra el BOE: 195 peticiones, 22,7 MB, 2.504
+    preceptos, 1m 48s en la red de este despacho. Eso cabe en una instalacion.
+    La despensa de la DGT son horas contra un servicio publico y no cabe en
+    ninguna: viaja por git y se avisa si falta. Ver `avisar_de_la_despensa`.
+
+    Y POR ESO MISMO NO SE PROMETE NINGUN TIEMPO. La misma medicion da 6,4 s de
+    media por norma y 16,2 s la peor: dos veces y media la media. Con una red
+    de oficina esa proporcion no mejora, empeora, y quien mira la pantalla no
+    vive en la media, vive en la suya. Aqui estuvo escrito «un par de minutos
+    cada una» y era un numero inventado; los numeros inventados se notan justo
+    cuando no se cumplen, y quien esperaba dos minutos y lleva seis cierra la
+    ventana. Lo que se enseña es POR DONDE VA -«norma 4 de 17»- que es verdad
+    en cualquier red, y el tiempo TRANSCURRIDO, que no promete nada.
+    """
+    # LA POSICION ES SOBRE LAS DIECISIETE, NO SOBRE LAS QUE FALTAN. En un
+    # equipo con catorce, «(1 de 3)» es correcto y no dice nada: no se sabe si
+    # esto acaba de empezar o esta acabando. «Norma 15 de 17» lo dice.
+    lista = normas_de_la_lista()
+    posicion = {norma_id: i for i, (norma_id, _) in enumerate(lista, 1)}
+    total = len(lista)
+
+    ya = total - len(pendientes)
     n = len(pendientes)
     if ya:
-        ok(f"Este equipo tiene {ya} normas y han aparecido {n} mas.")
-        ok("Se bajan ahora; las que ya estan NO se vuelven a bajar.")
+        ok(f"Este equipo tiene {ya} de las {total} normas; faltan {n}.")
+        ok("Se siembran ahora; las que ya estan NO se vuelven a bajar.")
     else:
         ok("El agente trabaja con el texto oficial del BOE, guardado en este")
-        ok("equipo. Hay que bajarlo una vez.")
-    # SE DICE QUE TARDA, PERO NO CUANTO. Que tarda hay que decirlo -si no,
-    # quien mira una pantalla quieta la cierra-. Cuanto, no: depende de la red
-    # de cada sitio, y aqui las tres tardaron segundos mientras que en la
-    # oficina pueden ser minutos. «Un par de minutos cada una» era un numero
-    # inventado, de los que se notan en cuanto no se cumplen.
-    ok(f"Son {n} norma(s) y esto tarda. Abajo va diciendo por donde va;")
-    ok("puedes dejarlo trabajando.")
+        ok(f"equipo. Son {total} normas y hay que bajarlas una vez.")
+    # SE DICE QUE TARDA, PERO NO CUANTO. Ver el docstring: el cuanto depende de
+    # la red de cada sitio y aqui no se puede medir la de la oficina.
+    ok("Esto tarda. Abajo va diciendo por que norma va; puedes dejarlo")
+    ok("trabajando, y si se corta, retoma por donde iba.")
     linea()
     arranque = time.time()
-    for n, (norma_id, nombre) in enumerate(pendientes, 1):
-        linea(f"        ({n} de {len(pendientes)}) bajando {nombre}...")
+    for norma_id, nombre in pendientes:
+        linea(f"        norma {posicion.get(norma_id, 0)} de {total}: "
+              f"{nombre}...")
         try:
             r = _ingerir_con_progreso(norma_id)
         except OSError:
             return parar("No se ha podido bajar el texto de las normas.")
-        if r.returncode != 0 or not (CORPUS / f"{norma_id}.jsonl").is_file():
+        # SE EXIGE EL SELLO, no solo el fichero. Un `.jsonl` escrito y sin
+        # sellar es exactamente el estado que deja un corte, y darlo por bueno
+        # aqui es lo que dejaba al equipo en el callejon de «no tiene sello».
+        from agente_fiscal import catalogo as CAT
+        if r.returncode != 0 or not CAT.sembrada(norma_id):
             salida = (r.stderr or "").lower()
             if "conexion" in salida or "network" in salida or "urlopen" in salida:
                 return parar(
                     "No se ha podido bajar el texto del BOE: no hay conexion.",
-                    "Revisa la red y vuelve a abrir el agente. Lo ya bajado no "
-                    "se pierde.")
+                    "Revisa la red y vuelve a abrir el agente. Lo ya sembrado "
+                    "no se pierde:\nla siguiente vez sigue por donde iba.")
             return parar(
                 f"No se ha podido preparar {nombre}.",
                 "Vuelve a abrir el agente con el equipo conectado a internet.\n"
-                "Lo que ya se haya bajado no se vuelve a bajar.")
+                "Lo que ya se haya sembrado no se vuelve a bajar.")
         transcurrido = int(time.time() - arranque)
-        linea(f"        listo ({transcurrido // 60} min {transcurrido % 60} s "
+        # EL TIEMPO TRANSCURRIDO NO ES UNA PROMESA: es lo que ya ha pasado.
+        linea(f"        hecha ({transcurrido // 60} min {transcurrido % 60:02d} s "
               f"desde que empezo)")
-    ok("Corpus preparado.")
+    ok("Corpus sembrado.")
     return 0
 
 
