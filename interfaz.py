@@ -380,6 +380,11 @@ INTERLINEA_PARRAFO = 9
 # ilegibles.
 ANCHO_DOS_COLUMNAS = 1150
 
+# CUANTAS FILAS DEL HISTORIAL SE PINTAN DE UNA VEZ. Es un limite de DIBUJO, no
+# de lectura: leerlas todas cuesta 0,03 s con el indice, y pintarlas se va a
+# 10 ms por fila cuando el contenedor crece. Ver `_pintar_historial`.
+PAGINA_HISTORIAL = 50
+
 ANCHO_TARJETA = 720     # la tarjeta de la consulta, centrada
 ANCHO_DUDA = 52         # caracteres de la caja de la duda
 
@@ -527,24 +532,29 @@ COMUNIDADES = (
 
 RE_ENLACE = re.compile(r"https?://[^\s)\]}>,;]+")
 
-# El nombre de la carpeta de un expediente ES su sello de tiempo:
-# `20260828T121300`, y `-2` detras cuando hubo dos en el mismo segundo.
-RE_SELLO = re.compile(r"(\d{8})T(\d{4})")
+def _cuando_partido(traza) -> tuple:
+    """De un expediente a («28/08/2026», «12:13»). Dos vacios si no se puede.
+
+    LA REGLA VIVE EN UN SOLO SITIO: `expedientes.fecha_de`. Aqui hubo una
+    segunda copia con su propia expresion regular durante medio dia, y este
+    proyecto ya se ha quemado tres veces con eso -la validacion del año llego a
+    tener tres copias que coincidian hasta que alguien arreglo una-.
+    """
+    from agente_fiscal import expedientes as EX
+    return EX.fecha_de(traza)
 
 
 def _cuando(traza) -> str:
-    """De un expediente a «28/08/2026 a las 12:13». Vacio si no se puede.
+    """«28/08/2026 a las 12:13», o vacio.
 
     NO SE INVENTA UNA FECHA. Si el nombre no lleva sello -no deberia pasar,
-    pero un expediente cargado de otro sitio podria- se devuelve cadena vacia y
-    quien llame no pinta nada. Un «(sin fecha)» en pantalla es ruido; una fecha
-    supuesta seria peor.
+    pero un expediente copiado a mano podria- se devuelve cadena vacia y quien
+    llame no pinta nada. Un «(sin fecha)» en pantalla es ruido; una fecha
+    supuesta, en un historial que se usa para decir «esta es la del martes»,
+    seria peor.
     """
-    m = RE_SELLO.search(Path(str(traza or "")).name)
-    if not m:
-        return ""
-    d, h = m.group(1), m.group(2)
-    return f"{d[6:8]}/{d[4:6]}/{d[0:4]} a las {h[0:2]}:{h[2:4]}"
+    dia, hora = _cuando_partido(traza)
+    return f"{dia} a las {hora}" if dia else ""
 
 
 def _cobertura():
@@ -744,6 +754,15 @@ class Ventana:
         e.map("Campo.TEntry", bordercolor=[("focus", LILA)],
               lightcolor=[("focus", LILA)], darkcolor=[("focus", LILA)])
 
+        # EL INTERRUPTOR DEL HISTORIAL. Un `Checkbutton` de tkinter sin estilo
+        # trae el fondo del sistema y se lee como un formulario de 2003 al
+        # lado de todo lo demas.
+        e.configure("Filtro.TCheckbutton", background=PAPEL, foreground=TINTA2,
+                    font=self.fuente_menuda, focuscolor=LILA)
+        e.map("Filtro.TCheckbutton",
+              foreground=[("active", TINTA)],
+              background=[("active", PAPEL)])
+
         e.configure("Barra.Horizontal.TProgressbar", background=LILA,
                     troughcolor=ELEVADO, bordercolor=ELEVADO,
                     lightcolor=LILA, darkcolor=LILA, borderwidth=0,
@@ -855,9 +874,19 @@ class Ventana:
                                         pady=MARGEN_LECTURA)
         self.vista_respuesta.grid(row=0, column=0, sticky="nsew")
         self.vista_respuesta.grid_remove()
+        # TRES VISTAS, Y LA TERCERA NO ES UNA VENTANA APARTE. Se turnan en la
+        # misma celda igual que las otras dos: una ventana suelta se pierde
+        # detras de la principal y hay que ir a buscarla a la barra de tareas,
+        # que es justo lo que le pasa a «Qué hay dentro».
+        self.vista_historial = tk.Frame(self.marco, bg=PAPEL,
+                                        padx=MARGEN_LECTURA,
+                                        pady=MARGEN_LECTURA)
+        self.vista_historial.grid(row=0, column=0, sticky="nsew")
+        self.vista_historial.grid_remove()
 
         self._construir_consulta(self.vista_consulta)
         self._construir_respuesta(self.vista_respuesta)
+        self._construir_historial(self.vista_historial)
         # EL AÑO, PUESTO ANTES DE QUE LLEGUE NADIE. Con el campo vacio la
         # accion principal nace apagada, siempre; puesto y marcado, la ventana
         # abre con algo que confirmar de un vistazo en vez de un tramite.
@@ -1185,14 +1214,311 @@ class Ventana:
 
         pie_fila = tk.Frame(centro, bg=PAPEL)
         pie_fila.pack(fill="x", pady=(HUECO, 0))
+        # AQUI ESTABA LA PROMESA QUE NO SE PODIA CUMPLIR: «cada consulta queda
+        # guardada en el expediente», sobre un sitio al que no habia forma de
+        # ir. Ahora se puede ir, y por eso el pie vuelve a tener algo que
+        # decir. Es el mismo hueco, con la puerta puesta.
+        self.boton_historial = ttk.Button(
+            pie_fila, text="Consultas anteriores", style="Discreto.TButton",
+            command=self._abrir_historial)
+        self.boton_historial.pack(side="left")
+        self._pinchable(self.boton_historial)
         self.pie = tk.Label(pie_fila, text="", bg=PAPEL, fg=TINTA3,
                             font=self.fuente_rotulo, anchor="w")
-        self.pie.pack(side="left")
+        self.pie.pack(side="left", padx=(HUECO2, 0))
         self.boton_dentro = ttk.Button(
             pie_fila, text="Qué hay dentro", style="Discreto.TButton",
             command=self._abrir_estado)
         self.boton_dentro.pack(side="right")
         self._pinchable(self.boton_dentro)
+
+    # ------------------------------------------------ vista 3: el historial
+
+    def _construir_historial(self, raiz_vista) -> None:
+        """LA PANTALLA DE VOLVER A LO DE ANTES.
+
+        Arriba una barra fina -volver, buscar y el interruptor de las pruebas-
+        y debajo la lista, agrupada por dia. Es la misma forma que la vista de
+        leer, y a proposito: quien sabe usar una sabe usar la otra.
+
+        LA FECHA NO CUESTA NADA. El nombre de la carpeta ES el sello de tiempo,
+        asi que ordenar y agrupar por dia sale de `scandir` y de nada mas. Lo
+        caro es la pregunta, que vive dentro de un fichero: de eso se encarga
+        el indice. Ver `agente_fiscal/expedientes.py`.
+        """
+        raiz_vista.columnconfigure(0, weight=1)
+        raiz_vista.rowconfigure(2, weight=1)
+
+        barra = tk.Frame(raiz_vista, bg=PAPEL)
+        barra.grid(row=0, column=0, sticky="ew", pady=(0, AIRE))
+        barra.columnconfigure(1, weight=1)
+        b = ttk.Button(barra, text="←  Volver", style="Segundo.TButton",
+                       command=lambda: self._mostrar("consulta"))
+        b.grid(row=0, column=0, sticky="w")
+        self._pinchable(b)
+        self.buscar_texto = tk.StringVar()
+        self.buscar_texto.trace_add("write", lambda *_: self._pintar_historial())
+        self.caja_buscar = ttk.Entry(barra, textvariable=self.buscar_texto,
+                                     font=self.fuente, style="Campo.TEntry")
+        self.caja_buscar.grid(row=0, column=1, sticky="ew", padx=(HUECO, HUECO))
+        tk.Label(barra, text="buscar en las preguntas", bg=PAPEL, fg=TINTA3,
+                 font=self.fuente_menuda).grid(row=0, column=2, sticky="e")
+
+        # EL INTERRUPTOR DICE LO QUE OCULTA, NO LO QUE ENSEÑA.
+        #
+        # «Ver también las de prueba» obliga a deducir que hay algo escondido;
+        # «Ocultar las de prueba», marcado, lo dice de frente y con la cifra al
+        # lado. Un filtro que no se ve es un filtro en el que nadie piensa.
+        fila_filtro = tk.Frame(raiz_vista, bg=PAPEL)
+        fila_filtro.grid(row=1, column=0, sticky="ew", pady=(0, AIRE))
+        self.ocultar_pruebas = tk.BooleanVar(value=True)
+        self.marca_filtro = ttk.Checkbutton(
+            fila_filtro, text="Ocultar las de prueba",
+            variable=self.ocultar_pruebas, style="Filtro.TCheckbutton",
+            command=self._pintar_historial)
+        self.marca_filtro.pack(side="left")
+        self._pinchable(self.marca_filtro)
+        # EL MOTIVO, AL LADO Y SIN TENER QUE PREGUNTARLO. Un filtro puesto por
+        # defecto tiene que decir por que existe y que se lleva por delante,
+        # o dentro de un mes nadie sabra si falta algo o es que no lo hubo.
+        self.pie_filtro = tk.Label(
+            fila_filtro, text="", bg=PAPEL, fg=TINTA3,
+            font=self.fuente_menuda, anchor="w", justify="left")
+        self.pie_filtro.pack(side="left", padx=(HUECO2, 0))
+
+        self.caja_historial, self.pagina_historial, self.lienzo_historial = \
+            self._desplazable(raiz_vista)
+        self.caja_historial.grid(row=2, column=0, sticky="nsew")
+        self.pagina_historial.columnconfigure(0, weight=1)
+
+        # Lo leido del disco. Se llena por detras: ver `_abrir_historial`.
+        self._filas_historial: list = []
+        self._grupos_historial: list = []
+        self._tope_historial = 0
+        self._dia_puesto = ""
+        self._boton_mas = None
+        self._historial_leido = False
+
+    def _abrir_historial(self) -> None:
+        """Enseña la lista. Y si todavia no hay nada leido, lo lee por detras.
+
+        NUNCA BLOQUEA, y esa es toda la forma de esto: la pantalla se enseña
+        primero -con lo que haya- y la lectura del disco va en un hilo. Con el
+        indice ya hecho tarda 0,03 s y no se llega a ver; sin el, la primera
+        vez son 69 segundos en frio, y durante esos segundos la pantalla
+        existe, dice que esta leyendo y se puede volver atras.
+        """
+        self._mostrar("historial")
+        if self._historial_leido:
+            return
+        self._pintar_aviso_historial("Leyendo los expedientes...")
+
+        def leer():
+            try:
+                from agente_fiscal import expedientes as EX
+                filas, aviso = EX.filas()
+            except Exception:                    # noqa: BLE001
+                # NI UN FALLO DE DISCO PUEDE DEJAR LA PANTALLA MUDA. Se dice
+                # en una frase y se sigue: lo que no habra es lista.
+                traceback.print_exc()
+                self.avisos.put(("historial", ([], "roto")))
+                return
+            self.avisos.put(("historial", (filas, aviso)))
+
+        threading.Thread(target=leer, daemon=True).start()
+
+    def _llego_el_historial(self, dato) -> None:
+        filas, aviso = dato
+        self._filas_historial = filas
+        self._historial_leido = True
+        if aviso == "roto":
+            self._pintar_aviso_historial(
+                "No se han podido leer los expedientes guardados. Están en su "
+                "carpeta y no les ha pasado nada; lo que falla es leerlos "
+                "desde aquí. Avisa a Emili.")
+            return
+        if aviso:
+            # La cache no se ha podido guardar. No es un fallo de nada que se
+            # vea: solo quiere decir que la proxima vez volvera a tardar.
+            self.mostrar_cinta(
+                "El historial no ha podido guardar su índice, así que la "
+                "próxima vez tardará en abrirse. Las consultas están todas.",
+                clave="indice")
+        self._pintar_historial()
+
+    def _pintar_aviso_historial(self, frase: str) -> None:
+        for w in self.pagina_historial.winfo_children():
+            w.destroy()
+        tk.Label(self.pagina_historial, text=frase, bg=PAPEL, fg=TINTA2,
+                 font=self.fuente, anchor="w", justify="left",
+                 wraplength=700).pack(fill="x", pady=HUECO)
+
+    def _pintar_historial(self, _evento=None) -> None:
+        """La lista, agrupada por dia y con los hilos plegados en una fila.
+
+        SE PINTA UNA PAGINA, Y NO PORQUE LEER SEA CARO. Leer ya no lo es -el
+        indice deja la lista en 0,03 s-; lo caro es DIBUJAR. Medido en este
+        Mac, con la lista entera delante:
+
+            25 filas ....  0,04 s   (1,7 ms por fila)
+           100 filas ....  0,30 s   (3,0 ms)
+           400 filas ....  4,08 s   (10,2 ms)
+
+        No es lineal: cada fila son seis widgets y tkinter se va frenando a
+        medida que el contenedor crece. Con las 1.122 que hay hoy la ventana se
+        queda colgada minutos, y probandolo se quedo. Cincuenta caben en una
+        decima de segundo y son mas de lo que nadie mira de una vez; para el
+        resto estan el buscador y el boton de abajo.
+        """
+        if not self._historial_leido:
+            return
+        from agente_fiscal import expedientes as EX
+        for w in self.pagina_historial.winfo_children():
+            w.destroy()
+
+        todas = self._filas_historial
+        de_prueba = [f for f in todas if EX.es_de_prueba(f)]
+        vistas = [f for f in todas if not EX.es_de_prueba(f)] \
+            if self.ocultar_pruebas.get() else list(todas)
+        self.pie_filtro.configure(
+            text=f"{len(de_prueba)} hechas con el motor de ensayo o que no "
+                 f"llegaron a consultarse. Quítalo y salen todas.")
+        vistas = EX.buscar(vistas, self.buscar_texto.get())
+        self._grupos_historial = EX.hilos(vistas)
+        self._tope_historial = 0
+        self._dia_puesto = ""
+
+        if not self._grupos_historial:
+            self._pintar_aviso_historial(
+                "No hay ninguna consulta que coincida."
+                if self.buscar_texto.get().strip() else
+                "Todavía no hay consultas guardadas.")
+            return
+        self._mas_historial()
+
+    def _mas_historial(self) -> None:
+        """Pinta la siguiente pagina, SIN rehacer lo que ya esta puesto."""
+        from agente_fiscal import expedientes as EX
+        if getattr(self, "_boton_mas", None) is not None:
+            self._boton_mas.destroy()
+            self._boton_mas = None
+        grupos = self._grupos_historial
+        desde = self._tope_historial
+        hasta = min(len(grupos), desde + PAGINA_HISTORIAL)
+        for grupo in grupos[desde:hasta]:
+            dia, hora = EX.fecha_de(grupo[-1]["sello"])
+            if dia != self._dia_puesto:
+                self._dia_puesto = dia
+                tk.Label(self.pagina_historial, text=dia, bg=PAPEL, fg=TINTA3,
+                         font=self.fuente_seccion, anchor="w"
+                         ).pack(fill="x", pady=(HUECO, AIRE))
+            self._fila_historial(grupo, hora)
+        self._tope_historial = hasta
+        quedan = len(grupos) - hasta
+        if quedan:
+            # DICE CUANTAS QUEDAN, no solo «ver mas». Sin la cifra no se sabe
+            # si falta una o mil, y eso decide si se sigue bajando o se busca.
+            self._boton_mas = ttk.Button(
+                self.pagina_historial, style="Segundo.TButton",
+                text=f"Ver {min(quedan, PAGINA_HISTORIAL)} más "
+                     f"({quedan} por debajo)",
+                command=self._mas_historial)
+            self._boton_mas.pack(anchor="w", pady=(HUECO, HUECO))
+            self._pinchable(self._boton_mas)
+
+    def _fila_historial(self, grupo: list, hora: str) -> None:
+        """Una fila: cuando, la pregunta y como acabo.
+
+        EL ESTADO SE PINTA CON EL MISMO ROTULO Y EL MISMO COLOR que en la
+        pantalla de leer. Inventar aqui un vocabulario propio -«ok», «sin
+        resultado»- obligaria a aprender dos, y el de la respuesta es el que
+        importa.
+        """
+        ultima = grupo[-1]
+        fila = tk.Frame(self.pagina_historial, bg=PAPEL2,
+                        highlightthickness=1, highlightbackground=FILETE)
+        fila.pack(fill="x", pady=(0, 2))
+        fila.columnconfigure(1, weight=1)
+
+        estado = ultima.get("estado") or ""
+        tk.Frame(fila, width=4, bg=FILETE_ESTADO.get(estado, FILETE)
+                 ).grid(row=0, column=0, rowspan=2, sticky="ns")
+        tk.Label(fila, text=hora, bg=PAPEL2, fg=TINTA3,
+                 font=self.fuente_referencia, anchor="w", padx=HUECO2
+                 ).grid(row=0, column=1, sticky="w")
+        pregunta = ultima.get("pregunta") or "(sin pregunta guardada)"
+        tk.Label(fila, text=pregunta, bg=PAPEL2, fg=TINTA, font=self.fuente,
+                 anchor="w", justify="left", padx=HUECO2, wraplength=760
+                 ).grid(row=1, column=1, sticky="ew", pady=(0, AIRE - 2))
+        tk.Label(fila, text=estado, bg=PAPEL2,
+                 fg=COLOR.get(estado, TINTA3), font=self.fuente_seccion,
+                 anchor="e", padx=HUECO2).grid(row=0, column=2, sticky="e")
+
+        # La segunda linea de datos: el año, la comunidad, con que se hizo y
+        # cuantas vueltas tiene el hilo.
+        trozos = [x for x in (ultima.get("ejercicio"), ultima.get("comunidad"))
+                  if x]
+        trozos.append("con criterio" if ultima.get("con_criterio")
+                      else "solo ley")
+        if len(grupo) > 1:
+            trozos.append(f"{len(grupo)} vueltas")
+        tk.Label(fila, text="  ·  ".join(trozos), bg=PAPEL2, fg=TINTA3,
+                 font=self.fuente_menuda, anchor="e", padx=HUECO2
+                 ).grid(row=1, column=2, sticky="e", pady=(0, AIRE - 2))
+
+        # TODA LA FILA ABRE, no solo un enlace pequeño al final. Y las de un
+        # hilo abren su ULTIMA vuelta, que es la que lleva el contexto entero.
+        # LA RUEDA Y EL CLIC SE ATAN AQUI, fila a fila. Recorrer el
+        # contenedor entero al terminar de pintar era la otra mitad del
+        # atasco: son seis widgets por fila y la recursion los visitaba todos
+        # otra vez.
+        for w in [fila] + list(fila.winfo_children()):
+            self._pinchable(w)
+            w.bind("<Button-1>",
+                   lambda _e, g=grupo: self._abrir_expediente(g))
+            for evento in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+                w.bind(evento,
+                       lambda e: self._rueda_de(e, self.lienzo_historial))
+
+    def _abrir_expediente(self, grupo: list) -> None:
+        """Abre una consulta guardada en la MISMA vista de leer.
+
+        Se lee del expediente y se pinta con `_terminar`, igual que una recien
+        hecha. Lo unico que cambia es que se dice que es guardada: una
+        respuesta vieja que se lee como nueva es una respuesta que alguien
+        puede mandar a un cliente creyendo que se ha comprobado hoy.
+        """
+        import ver_ejemplo
+        ultima = grupo[-1]
+        res, faltan = ver_ejemplo.cargar(ultima["sello"])
+        if res is None:
+            self.mostrar_cinta(
+                "No se ha podido abrir esa consulta: "
+                + (faltan[0] if faltan else "el expediente está incompleto")
+                + ". El resto del historial sigue funcionando.")
+            return
+        # LA PREGUNTA Y EL AÑO VUELVEN A LA CAJA, y no es decoracion: son lo
+        # que se enseña en el eco y lo que usa «seguir preguntando». Si se
+        # compusiera por dentro, quien continue el hilo no sabria con que
+        # texto se le esta contestando.
+        self.caja.delete("1.0", "end")
+        self.caja.insert("1.0", res.get("_pregunta") or "")
+        self.ejercicio.set(res.get("_ejercicio") or "")
+        self.comunidad.set(res.get("comunidad") or "")
+        # EL AÑO DE UN EXPEDIENTE NO SE VUELVE A PROPONER. Es el que sostuvo
+        # esa respuesta; cambiarlo por el de hoy seria enseñar una respuesta
+        # de 2023 diciendo que es de 2026.
+        self._ejercicio_a_mano = True
+        self.marca_ejercicio.configure(text="")
+        self.vuelta = len(grupo)
+        self._terminar(res)
+        dia, hora = _cuando_partido(ultima["sello"])
+        self.mostrar_cinta(
+            f"Consulta guardada del {dia} a las {hora}. No es nueva: se lee "
+            f"tal como se enseñó ese día. Puedes seguir preguntando abajo.",
+            clave="guardada")
+        for f in faltan:
+            print(f"[historial] {ultima['sello']}: {f}", file=sys.stderr)
 
     # ---------------------------------------------------- vista 2: leer
 
@@ -1215,6 +1541,16 @@ class Ventana:
             command=self._nueva_consulta)
         self.boton_volver.grid(row=0, column=0, sticky="w")
         self._pinchable(self.boton_volver)
+
+        # LA TERCERA SALIDA. Al leer una respuesta hay tres cosas que se
+        # pueden querer: seguir sobre esto -la caja de abajo-, empezar de cero
+        # -«Nueva consulta»- y volver a lo de antes. Las tres, a la vista.
+        self.boton_a_historial = ttk.Button(
+            barra_alta, text="Consultas anteriores", style="Discreto.TButton",
+            command=self._abrir_historial)
+        self.boton_a_historial.grid(row=0, column=6, sticky="w",
+                                    padx=(AIRE, 0))
+        self._pinchable(self.boton_a_historial)
 
         self.eco_pregunta = tk.Label(
             barra_alta, text="", bg=PAPEL, fg=TINTA3,
@@ -1609,12 +1945,17 @@ class Ventana:
 
     def _mostrar(self, cual: str) -> None:
         """Cambia de vista. Nada se destruye: solo se quita del grid."""
+        for v in (self.vista_consulta, self.vista_respuesta,
+                  getattr(self, "vista_historial", None)):
+            if v is not None:
+                v.grid_remove()
         if cual == "respuesta":
-            self.vista_consulta.grid_remove()
             self.vista_respuesta.grid()
             self.texto.focus_set()
+        elif cual == "historial":
+            self.vista_historial.grid()
+            self.caja_buscar.focus_set()
         else:
-            self.vista_respuesta.grid_remove()
             self.vista_consulta.grid()
             self.caja.focus_set()
         self._ancho_previo = 0
@@ -1651,6 +1992,11 @@ class Ventana:
         teclear otro encima sin borrar.
         """
         self._mostrar("consulta")
+        # Y SE RETIRA LO QUE YA NO ES VERDAD. Si se venia de una consulta
+        # abierta del historial, la cinta seguia diciendo «consulta guardada
+        # del 18/08» sobre un formulario en blanco. Un aviso que nadie retira
+        # es un aviso que miente en cuanto cambia la pantalla.
+        self.ocultar_cinta("guardada")
         self.caja_ejercicio.focus_set()
         self.caja_ejercicio.select_range(0, "end")
 
@@ -2642,6 +2988,9 @@ class Ventana:
             self._revisar_boton()
             return
         self.trabajando = True
+        # Y ESTA YA NO ES LA GUARDADA: en cuanto se pulsa, lo que venga sera
+        # una consulta nueva, comprobada hoy.
+        self.ocultar_cinta("guardada")
         # A PARTIR DE AQUI EL AÑO YA NO SE PROPONE, y no es un detalle.
         #
         # `_seguir` compone la pregunta anterior MAS lo añadido y la escribe en
@@ -2741,6 +3090,8 @@ class Ventana:
                     self._terminar_roto(dato)
                 elif clase == "cliente":
                     self._llego_para_cliente(dato)
+                elif clase == "historial":
+                    self._llego_el_historial(dato)
         except queue.Empty:
             pass
         self.raiz.after(80, self._vaciar_avisos)

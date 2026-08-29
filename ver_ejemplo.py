@@ -73,7 +73,17 @@ def cargar(expediente: str) -> tuple:
     Devuelve `(res, faltan)`. `faltan` son las cosas que NO se han podido leer,
     para decirlas en voz alta en vez de rellenarlas a ojo.
     """
-    traza = DIR_TRAZAS / expediente
+    # SOLO DE `datos/trazas`, Y SE COMPRUEBA. Cerrado el 29/08/2026.
+    #
+    # Esto estaba anotado como pendiente sabido -«acepta una ruta absoluta y
+    # mira fuera de datos/trazas; solo lee, y es un guion mio»-, y dejo de
+    # valer en cuanto la VENTANA empezo a llamar aqui para el historial: ya no
+    # es un guion mio, es una pantalla que usa el departamento. Se resuelve el
+    # nombre y se exige que el resultado cuelgue de `datos/trazas`, con lo que
+    # un «../..» o una ruta absoluta no llegan a abrirse.
+    traza = (DIR_TRAZAS / expediente).resolve()
+    if traza.parent != DIR_TRAZAS.resolve():
+        return None, [f"«{expediente}» no es un expediente de datos/trazas"]
     if not traza.is_dir():
         return None, [f"no existe el expediente {expediente}"]
 
@@ -153,6 +163,52 @@ def cargar(expediente: str) -> tuple:
                             or analisis.get("ejercicio") or "")
     if not res["_ejercicio"]:
         faltan.append("el expediente no dice de que ejercicio era")
+
+    # ────────────────────────────────────────────────────────────────────
+    # LOS DOS NOMBRES QUE NO CUADRABAN. Arreglado el 29/08/2026.
+    # ────────────────────────────────────────────────────────────────────
+    #
+    # `resultado.json` guarda `avisos_de_cobertura` y `limites_del_corpus`.
+    # `interfaz._terminar` lee `cobertura` y `estructural`. Como todo se lee
+    # con `.get()`, esto NO FALLABA: pintaba la respuesta SIN NINGUN AVISO.
+    #
+    # Comprobado sobre un expediente real -20260818T140817-, que en disco
+    # lleva «Articulo 15: la Disposicion adicional tercera lo menciona y la
+    # respuesta no la recoge; ahi suelen estar las excepciones» y se abria
+    # diciendo que no habia nada que mirar. Una respuesta vieja leida sin sus
+    # avisos es exactamente lo que este proyecto existe para que no pase, y
+    # ademas es peor que no poder abrirla.
+    if "cobertura" not in res:
+        res["cobertura"] = list(res.get("avisos_de_cobertura") or [])
+    if "estructural" not in res:
+        res["estructural"] = res.get("limites_del_corpus") or ""
+
+    # ────────────────────────────────────────────────────────────────────
+    # LO QUE HACE FALTA PARA SEGUIR UNA CONVERSACION ANTIGUA
+    # ────────────────────────────────────────────────────────────────────
+    #
+    # `interfaz._seguir` cuelga la vuelta nueva de la anterior y le pasa el
+    # resumen de la duda y los preceptos que la sostenian. Sin esto se podia
+    # LEER un expediente viejo pero no continuarlo, que es la mitad de lo que
+    # se pidio. Las dos cosas estan en disco desde siempre; solo habia que
+    # leerlas.
+    res["analisis"] = analisis
+    if not res.get("preceptos_enviados"):
+        seleccion = _leer(traza / "seleccion.json") or {}
+        res["preceptos_enviados"] = [
+            p.get("referencia", "") for p in (seleccion.get("preceptos") or [])
+            if p.get("decision") == "enviado" and p.get("referencia")]
+    # De que vuelta viene esta, para poder armar el hilo hacia atras.
+    if not res.get("viene_de"):
+        res["viene_de"] = (_leer(traza / "hilo.json") or {}).get("viene_de", "")
+
+    # LA COMUNIDAD, QUE VIAJA EN EL ECO. Los expedientes anteriores al campo no
+    # la llevan, y entonces no se pinta: es lo correcto, porque no se sabe.
+    res.setdefault("comunidad", "")
+    # EL EXPEDIENTE EXISTE -lo acabamos de abrir-, asi que la ventana no puede
+    # decir que la consulta no quedo guardada.
+    res["expediente"] = True
+
     res["traza"] = str(traza)
     return res, faltan
 

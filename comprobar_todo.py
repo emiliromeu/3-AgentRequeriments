@@ -208,8 +208,10 @@ def main() -> int:
     pendientes += [
         "sembrar_teac.py:69 lee catalogo.json sin coger JSONDecodeError. "
         "Guion de mantenimiento, no lo usa el despacho.",
-        "ver_ejemplo.py acepta una ruta absoluta y mira fuera de "
-        "datos/trazas/. Solo lee, y es un guion mio.",
+        # CERRADO EL 29/08/2026. Dejo de ser «un guion mio» en cuanto el
+        # historial de la ventana empezo a llamar a `ver_ejemplo.cargar`:
+        # ahora `cargar` resuelve el nombre y exige que cuelgue de
+        # `datos/trazas`. Lo comprueba `prueba_historial`.
         "Si el modelo se cae ENTRE el analizador y el redactor, el analisis "
         "se vuelve a pagar. Son 0,03 centimos: no se construyo reanudacion.",
         "El criterio de la DGT y del TEAC solo cubre IVA. Renta y Sociedades "

@@ -132,6 +132,35 @@ LA CADENA, QUE NO TENIA NINGUNA (13/08/2026)
                          le pida, y cuenta cuantas tandas llega a hacer. Cero
                          red: nada de esto toca PETETE.
 
+EL HISTORIAL (29/08/2026)
+-------------------------
+  prueba_historial.py    Volver a una consulta de hace una semana. Habia 5.325
+                         expedientes en disco y ninguna forma de ver uno.
+
+                         LA QUE CASI SE CUELA, y es el motivo de que esta suite
+                         exista: `resultado.json` guarda `avisos_de_cobertura`
+                         y `limites_del_corpus`, e `interfaz._terminar` lee
+                         `cobertura` y `estructural`. Los nombres no cuadraban
+                         y, como todo se lee con `.get()`, NO FALLABA: abria la
+                         respuesta SIN NINGUN AVISO. Comprobado sobre un
+                         expediente real -20260818T140817-, que en disco lleva
+                         un aviso diciendo que a la respuesta puede faltarle una
+                         excepcion. Una respuesta vieja leida sin lo que puede
+                         invalidarla es PEOR que no poder abrirla.
+
+                         Tambien: que se lee como GUARDADA y no como recien
+                         hecha; que el filtro de las de prueba se puede apagar
+                         -si se equivoca, esconderia justo el ERROR que alguien
+                         busca-; y que el indice es una cache que nunca
+                         bloquea: roto, viejo, con carpetas borradas o
+                         imposible de escribir, la lista se pinta mas despacio
+                         y no deja de existir.
+
+                         Trabaja sobre un `datos/trazas` de mentira en un
+                         directorio temporal: una suite que escribe en los
+                         expedientes de verdad es una suite que puede
+                         perderlos. Cero red, cero API.
+
 LO QUE NUNCA ESTUVO EN /tmp, Y SIGUE
 ------------------------------------
   python fase3.py probar          bateria del verificador, 37 casos adversarios
