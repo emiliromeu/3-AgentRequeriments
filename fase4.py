@@ -300,6 +300,36 @@ busqueda tienen que servir para lo que se pregunta ahora, no para lo de antes.
 """
 
 
+# ------------------------------------------------------------- LOS PASOS
+#
+# LOS SEIS PASOS DE UNA CONSULTA, DEFINIDOS UNA SOLA VEZ.
+#
+# La ventana los enseña en lista mientras espera -son 102 segundos de mediana
+# en las consultas reales- y para eso tiene que saber CUALES son y en que
+# orden, no solo cual va ahora.
+#
+# SE MANDA LA CLAVE, NO LA FRASE, y esa es toda la gracia. Si la ventana
+# reconociera los pasos por su texto, reescribir aqui «Analizando la
+# pregunta...» dejaria la lista muerta sin que nada fallara: se quedaria en el
+# primer paso para siempre y nadie sabria por que. Es el mismo patron que ya
+# nos ha costado disgustos con la cobertura y con el año.
+#
+# EL DE CRITERIO NO SIEMPRE VA. Con el primer boton no se mira criterio, asi
+# que ese paso NO SE ENSEÑA: un paso en gris que no va a ocurrir nunca es una
+# promesa que no se cumple, y quien espera cuenta los que faltan.
+PASOS = (
+    ("analisis", "Analizar la pregunta"),
+    ("ley", "Buscar en la ley y el reglamento"),
+    ("criterio", "Buscar el criterio guardado"),
+    ("redaccion", "Redactar con los articulos encontrados"),
+    ("verificacion", "Comprobar cada cita contra el texto oficial"),
+    ("estado", "Calcular el estado de la respuesta"),
+)
+# El unico que se salta cuando se consulta solo con la ley.
+PASO_SOLO_CON_CRITERIO = "criterio"
+CLAVES_DE_PASO = tuple(c for c, _t in PASOS)
+
+
 def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
               progreso=None, con_criterio: bool | None = None,
               comunidad: str = "", viene_de: str = "",
@@ -314,9 +344,16 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     en contestar y necesita ensenar que sigue viva. No decide nada: si nadie lo
     pasa, aqui no cambia absolutamente nada.
     """
-    def paso(texto: str) -> None:
+    def paso(clave: str, texto: str = "") -> None:
+        """Avisa de por que paso va. `clave` es de `PASOS`; el texto, para leer.
+
+        La clave la usa la ventana para marcar la fila que toca; el texto es
+        para la terminal y para quien no quiera saber de claves. Emparejar por
+        texto seria emparejar por algo que se puede reescribir sin darse
+        cuenta.
+        """
         if progreso is not None:
-            progreso(texto)
+            progreso(clave, texto)
 
     # LO QUE SE PEGA DE UN PDF LLEGA CON LAS PALABRAS PARTIDAS. Se recomponen
     # aqui, en la entrada, para que las vean igual el modelo y la busqueda: si
@@ -474,7 +511,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         return _fin(res, tr)
 
     # ---------------------------------------------------- LLAMADA 1
-    paso("Analizando la pregunta...")
+    paso("analisis", "Analizando la pregunta...")
     apartado("1. Analisis de la pregunta (llamada 1 al modelo)")
     analisis = None
     errores: list[str] = []
@@ -578,7 +615,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     print(f"   ejercicio: {ejercicio}  ({explicacion})")
 
     # ---------------------------------------------------- BUSQUEDA (fase 2)
-    paso("Buscando en la ley y el reglamento...")
+    paso("ley", "Buscando en la ley y el reglamento...")
     apartado("2. Busqueda en el corpus (fase 2, deterministica)")
     consulta = " ".join(analisis.terminos_busqueda)
     # SE BUSCA EN LA LEY DEL IMPUESTO DE LA PREGUNTA, MAS LAS GENERALES.
@@ -765,7 +802,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     consultas_dgt = None
     lectura_dgt = None
     if usar_criterio:
-        paso("Buscando criterio de la DGT en la copia local...")
+        paso("criterio", "Buscando criterio de la DGT en la copia local...")
         apartado("2 bis. Criterio de la DGT (solo de la copia local)")
         viva, motivo_fuente = DGT.fuente_viva()
         consultas_dgt = DGT.CacheDGT().buscar(pregunta)
@@ -789,7 +826,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     criterios_teac = None
     lectura_teac = None
     if usar_criterio:
-        paso("Buscando doctrina del TEAC en la copia local...")
+        paso("criterio", "Buscando doctrina del TEAC en la copia local...")
         apartado("2 ter. Doctrina del TEAC (solo de la copia local)")
         pares = [(r.get("cuerpo_clave", ""),
                   r["referencia"].replace("Articulo ", "").lower())
@@ -859,7 +896,8 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
             normas=ix.normas, plan=plan,
         )
         tr.escribir(f"material_{intento}.txt", material)
-        paso(f"Redactando con los articulos encontrados"
+        paso("redaccion",
+             f"Redactando con los articulos encontrados"
              f"{f' (intento {intento})' if intento > 1 else ''}...")
         try:
             resp = motor.redactar(RED.SISTEMA, material)
@@ -901,7 +939,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
             res["fallo"] = "modelo"
             return _fin(res, tr)
 
-        paso("Comprobando cada cita contra el texto oficial...")
+        paso("verificacion", "Comprobando cada cita contra el texto oficial...")
         informe = verificador.verificar_texto(borrador, ejercicio, exigir_norma=True)
         tr.json(f"verificacion_{intento}.json", informe.a_json())
 
@@ -928,7 +966,7 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
     res["veredicto"] = informe.veredicto if informe else None
 
     # ---------------------------------------------------- ESTADO (reglas)
-    paso("Calculando el estado de la respuesta...")
+    paso("estado", "Calculando el estado de la respuesta...")
     apartado("4. Estado (lo calcula el codigo, no el modelo)")
     if usar_criterio:
         # Solo cuenta el criterio que HA PASADO el verificador. Una consulta

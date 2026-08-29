@@ -258,39 +258,78 @@ TEXTOS_DE_ESTADO = [CLARO_SIN_DGT, CLARO_CON_TRES_FUENTES,
 
 # --------------------------------------------------------------- la paleta
 #
-# MODO OSCURO de la maqueta «Consulta IVA - Direccion visual»: negro y lila.
-# Es el que se pidio desde el principio; el «papel claro» fue un desvio.
+# ─────────────────────────────────────────────────────────────────────────
+# CLARO, NO OSCURO. CAMBIADO EL 29/08/2026.
+# ─────────────────────────────────────────────────────────────────────────
 #
-# Se traduce lo que tkinter sabe hacer -color, tipografia, tamaños, espaciado,
-# jerarquia- y se deja fuera lo que no (esquinas redondeadas, sombras,
-# degradados, transiciones). Ver la lista al final del rediseño.
+# ESTO INVIERTE UNA DECISION MIA -la fase 22- y el motivo viejo se borra
+# entero a proposito, igual que se hizo con el orden de los dos botones y con
+# el año vacio: dejarlo escrito haria que alguien lo devolviera dentro de tres
+# meses leyendo un razonamiento que ya no aplica.
 #
-# EL NEGRO NO ES NEGRO. #0F0E13 tiene una gota de violeta: un #000000 puro con
-# texto blanco encima vibra y cansa a los diez minutos, y aqui se leen parrafos
-# de ley enteros. Las tres superficies se separan por CLARIDAD, no por bordes:
-# fondo -> panel -> campo, cada una un escalon mas clara.
+# LO QUE VALE AHORA: no gusta, y lo dice quien lo tiene delante ocho horas al
+# dia. Eso solo ya basta, pero ademas hay tres razones que no dependen del
+# gusto:
 #
-# LOS NOMBRES SE QUEDAN. `PAPEL2` ya no es papel blanco sino la superficie de
-# lectura, que es lo que siempre significo. Renombrarlos obligaria a tocar las
-# suites, y lo que las suites protegen -que el fondo NO cambia con el estado-
-# no tiene nada que ver con el color que sea.
+#   · AQUI SE LEEN PARRAFOS DE LEY, no se vigila un panel de control a
+#     oscuras. Texto largo sobre negro se lee peor en una sala con luz, que es
+#     donde esta el despacho.
+#   · LO QUE SALE DE ESTA VENTANA VA SOBRE BLANCO: la respuesta copiada, el
+#     correo al cliente, la hoja impresa. La pantalla era el unico sitio donde
+#     el mismo trabajo se veia de otro color.
+#   · LA VENTANA NO ES DE NADIE EN CONCRETO. Un tema oscuro es una preferencia
+#     personal en una herramienta que usa un equipo entero.
+#
+# LO QUE NO CAMBIA, y es lo unico que habia que proteger al portar los colores:
+# NI UN ROJO, NI UN AMBAR, NI UN VERDE. Los tres estados se siguen separando
+# por CROMA a la misma claridad, para que NO ENCONTRADO no se lea como una
+# averia. Y los contrastes se han vuelto a medir enteros: los del oscuro no
+# valen al invertir el fondo, y suponerlo era el fallo de la fase 22 al reves.
+#
+# EL BLANCO NO ES BLANCO. #FAF9FB lleva la misma gota de violeta que llevaba el
+# negro, y por el mismo motivo: un #FFFFFF puro a pantalla completa deslumbra a
+# las dos horas. Las tres superficies se separan por CLARIDAD, no por bordes,
+# solo que ahora al reves -fondo -> panel -> campo va de mas claro a menos-.
+#
+# LOS NOMBRES SE QUEDAN. `PAPEL2` vuelve a ser papel de verdad; `ELEVADO` ya no
+# esta elevado sino hundido, y aun asi se queda: significa «lo que se rellena»,
+# que es lo que siempre significo. Renombrarlo obligaria a tocar las suites, y
+# lo que las suites protegen -que el fondo NO cambia con el estado- no tiene
+# nada que ver con el color que sea.
 
-PAPEL = "#0F0E13"      # fondo de la ventana
-PAPEL2 = "#17161D"     # superficie de lectura: paneles y respuesta
-ELEVADO = "#1F1D28"    # lo que se rellena: caja de la duda, campo del año
-# LOS GRISES ESTAN MEDIDOS, NO ELEGIDOS A OJO. Sobre negro es facil pasarse de
-# apagado: el primer TINTA3 daba 3,8:1 contra el panel y el minimo para texto
-# menudo es 4,5:1. Se subio hasta 5,2:1. Los numeros de los diez pares estan al
-# final del rediseño, en LEEME.
-TINTA = "#EDECF2"      # texto principal
-TINTA2 = "#A19DB0"     # texto secundario
-TINTA3 = "#8B87A0"     # rotulos menudos y pie: 5,2:1, no 3,8:1
-FILETE = "#2B2937"     # bordes y separadores
-ENLACE = "#C8B0FF"     # el lila claro: sobre negro el oscuro no se lee
-LILA = "#C0A5FF"       # el acento: marca, filete y boton principal
-LILA_VIVO = "#D6C4FF"  # el mismo, al pasar por encima
-LILA_TINTA = "#141019"  # texto sobre el boton lila
-SELECCION = "#3A3350"   # el texto seleccionado con el raton
+PAPEL = "#FAF9FB"      # fondo de la ventana
+PAPEL2 = "#FFFFFF"     # superficie de lectura: paneles y respuesta
+ELEVADO = "#F2F0F6"    # lo que se rellena: caja de la duda, campo del año
+# LOS GRISES ESTAN MEDIDOS, NO ELEGIDOS A OJO. Sobre blanco es facil quedarse
+# corto: un gris que sobre negro daba 5,2:1 aqui puede dar 2,8:1. Los quince
+# pares estan comprobados en `prueba_interfaz`, que los recalcula: una tabla
+# escrita a mano en un comentario es una tabla que se queda vieja.
+TINTA = "#1A1822"      # texto principal
+TINTA2 = "#56516A"     # texto secundario
+TINTA3 = "#6B6580"     # rotulos menudos y pie: 5,5:1 sobre panel
+FILETE = "#CFCAD9"     # bordes y separadores
+ENLACE = "#5B3FBF"     # el lila oscuro: sobre blanco el claro no se lee
+LILA = "#5B3FBF"       # el acento: marca, filete y boton principal
+LILA_VIVO = "#4A32A8"  # el mismo, al pasar por encima: aqui OSCURECE
+LILA_TINTA = "#FFFFFF"  # texto sobre el boton lila
+SELECCION = "#DCD3F5"   # el texto seleccionado con el raton
+
+# LO QUE ANTES ESTABA ESCRITO A MANO DENTRO DE `_estilos`.
+#
+# Habia SEIS hex sueltos ahi -el fondo del boton apagado, dos de roce, el gris
+# del texto apagado y los dos de la barra- que no salian de la paleta. Sobre
+# fondo claro habrian quedado como manchas oscuras, y es exactamente el fallo
+# que el LEEME ya cuenta de la fase 22 pero del reves: un color atado al hex
+# del otro modo. Ahora cada uno tiene nombre y vive aqui, con los demas.
+APAGADO = "#EDEAF3"       # el fondo de un boton que no se puede pulsar
+# Y SU TEXTO SE TIENE QUE LEER. 3,96:1 sobre el fondo de arriba, no 2,9:1: un
+# boton apagado ilegible es el «boton gris en silencio» que `prueba_boton`
+# existe para impedir. Apagado no quiere decir invisible.
+APAGADO_TINTA = "#767183"
+ROCE = "#F0EDF7"          # el segundo boton, al pasar por encima
+ROCE2 = "#F2F0F6"         # y el discreto
+BARRA = "#C2BCD1"         # la barra de desplazamiento
+BARRA_VIVA = "#A8A1BC"    # la misma, con el raton encima
 
 # LOS TRES ESTADOS NO SON UN SEMAFORO, Y ESTO ES LO QUE LO EVITA.
 #
@@ -304,19 +343,19 @@ SELECCION = "#3A3350"   # el texto seleccionado con el raton
 # entiende «aqui no hay nada que sostenga esto»; quien la vea en rojo entiende
 # «se ha roto» y vuelve a preguntar de otra manera hasta que salga verde.
 #
-# En oscuro los tres SUBEN de claridad -sobre negro manda el claro, no el
-# oscuro- pero la relacion entre ellos es la misma: mismo brillo, croma que
-# baja. Comprobado: los tres pasan el filtro de colores de semaforo.
+# En claro los tres BAJAN de claridad -sobre blanco manda el oscuro, no el
+# claro- pero la relacion entre ellos es la misma: mismo brillo, croma que
+# baja. 7,2:1, 5,3:1 y 5,4:1, los tres por encima del minimo.
 COLOR = {
-    EST.CLARO: "#C0A5FF",          # lila, el acento de la casa
-    EST.DISCUTIDO: "#A79FC4",      # lila desaturado
-    EST.NO_ENCONTRADO: "#9A97A6",  # gris: ni alarma ni error
+    EST.CLARO: "#5B3FBF",          # lila, el acento de la casa
+    EST.DISCUTIDO: "#6E6690",      # lila desaturado
+    EST.NO_ENCONTRADO: "#6B6878",  # gris: ni alarma ni error
 }
 # El filete de 4 px a la izquierda del estado, que es la marca de la maqueta.
 FILETE_ESTADO = {
     EST.CLARO: LILA,
-    EST.DISCUTIDO: "#7C74A0",
-    EST.NO_ENCONTRADO: "#514E5E",
+    EST.DISCUTIDO: "#8F86B5",
+    EST.NO_ENCONTRADO: "#A9A5B5",
 }
 # El fondo NO cambia con el estado: es siempre la superficie de lectura. En la
 # version anterior cada estado teñia su panel (verde, ambar, rojo) y eso era
@@ -722,9 +761,9 @@ class Ventana:
                     font=self.fuente, borderwidth=0, focuscolor="",
                     padding=(26, 12), relief="flat", anchor="center")
         e.map("Primario.TButton",
-              background=[("disabled", "#26242F"), ("pressed", LILA),
+              background=[("disabled", APAGADO), ("pressed", LILA),
                           ("active", LILA_VIVO)],
-              foreground=[("disabled", TINTA3)])
+              foreground=[("disabled", APAGADO_TINTA)])
 
         # EL SEGUNDO BOTON: mismo tamaño, contorno en vez de relleno. La
         # diferencia de peso dice cual es el camino corriente SIN que el otro
@@ -735,8 +774,8 @@ class Ventana:
                     padding=(26, 12), relief="flat", bordercolor=FILETE,
                     lightcolor=PAPEL2, darkcolor=PAPEL2)
         e.map("Segundo.TButton",
-              background=[("disabled", PAPEL2), ("active", "#221F2E")],
-              foreground=[("disabled", "#4E4B5C")],
+              background=[("disabled", PAPEL2), ("active", ROCE)],
+              foreground=[("disabled", APAGADO_TINTA)],
               bordercolor=[("active", LILA)])
 
         # Y EL DISCRETO: sin fondo ni borde, para lo que no compite.
@@ -744,7 +783,7 @@ class Ventana:
                     font=self.fuente_menuda, borderwidth=0, focuscolor="",
                     padding=(14, 8), relief="flat")
         e.map("Discreto.TButton",
-              background=[("active", "#1B1924")],
+              background=[("active", ROCE2)],
               foreground=[("active", ENLACE), ("disabled", TINTA3)])
 
         e.configure("Campo.TEntry", fieldbackground=ELEVADO, foreground=TINTA,
@@ -768,11 +807,11 @@ class Ventana:
                     lightcolor=LILA, darkcolor=LILA, borderwidth=0,
                     thickness=4)
 
-        e.configure("Vertical.TScrollbar", background="#2E2B3A",
+        e.configure("Vertical.TScrollbar", background=BARRA,
                     troughcolor=PAPEL2, bordercolor=PAPEL2, arrowcolor=TINTA3,
-                    lightcolor="#2E2B3A", darkcolor="#2E2B3A", borderwidth=0,
+                    lightcolor=BARRA, darkcolor=BARRA, borderwidth=0,
                     arrowsize=12)
-        e.map("Vertical.TScrollbar", background=[("active", "#413D52")])
+        e.map("Vertical.TScrollbar", background=[("active", BARRA_VIVA)])
 
     def _desplazable(self, padre, fondo=None):
         """Un area que se puede recorrer entera, pase lo que pase dentro.
@@ -1205,12 +1244,46 @@ class Ventana:
         self.pie_ley.pack(side="left", padx=(HUECO2, 0))
 
         # --- progreso ---
+        # ─────────────────────────────────────────────────────────────
+        # LA ESPERA, EN SEIS PASOS Y NO EN UNA LINEA.
+        # ─────────────────────────────────────────────────────────────
+        #
+        # Una consulta real tarda 102 SEGUNDOS de mediana -medido sobre las 77
+        # que llegaron a hacerse con el modelo de verdad-. Casi dos minutos
+        # delante de una barra que se mueve sola y de una linea que se
+        # sustituye a si misma seis veces sin dejar rastro.
+        #
+        # LO QUE FALTABA NO ERA MOVIMIENTO, ERA SABER POR DONDE VA. Los seis
+        # pasos ya se emitian uno a uno; lo unico que hacia la ventana con
+        # ellos era pisarlos. Puestos en lista se ve lo que YA ESTA HECHO, que
+        # es lo que hace tolerable una espera larga, y se ve cuanto queda.
+        #
+        # NI UN PORCENTAJE. No hay forma de saber cuanto falta -depende de
+        # cuantos articulos salgan y de cuanto tarde el modelo- y una barra que
+        # avanza hasta el 90% y se queda ahi es peor que ninguna.
+        #
+        # LOS PASOS SALEN DE `fase4.PASOS`, no de una lista escrita aqui. Ver
+        # la nota alli: emparejar por el texto del mensaje seria dejar la lista
+        # muerta el dia que alguien reescriba una frase.
         self.marco_progreso = tk.Frame(centro, bg=PAPEL)
         self.marco_progreso.pack(fill="x", pady=(HUECO2, 0))
         self.barra = ttk.Progressbar(self.marco_progreso, mode="indeterminate",
                                      style="Barra.Horizontal.TProgressbar")
+        # La linea de siempre: dice el detalle -«intento 2», «6 preceptos»- que
+        # no cabe en el rotulo de un paso.
         self.paso = tk.Label(self.marco_progreso, text="", bg=PAPEL,
                              fg=TINTA2, font=self.fuente, anchor="w")
+        self.marco_pasos = tk.Frame(self.marco_progreso, bg=PAPEL)
+        self.filas_paso: dict = {}
+        for clave, rotulo in fase4.PASOS:
+            f = tk.Frame(self.marco_pasos, bg=PAPEL)
+            marca = tk.Label(f, text="·", bg=PAPEL, fg=TINTA3, width=2,
+                             font=self.fuente_referencia, anchor="w")
+            marca.pack(side="left")
+            et = tk.Label(f, text=rotulo, bg=PAPEL, fg=TINTA3,
+                          font=self.fuente, anchor="w")
+            et.pack(side="left")
+            self.filas_paso[clave] = (f, marca, et)
 
         pie_fila = tk.Frame(centro, bg=PAPEL)
         pie_fila.pack(fill="x", pady=(HUECO, 0))
@@ -3022,8 +3095,10 @@ class Ventana:
         self.etiqueta_explicacion.grid_forget()
         self.etiqueta_hecha_con.grid_forget()
         self._escribir_texto([])
-        self.paso.pack(side="left")
-        self.barra.pack(side="right", fill="x", expand=True, padx=(12, 0))
+        self._armar_pasos(con_criterio)
+        self.marco_pasos.pack(fill="x", pady=(AIRE, 0))
+        self.paso.pack(side="top", anchor="w", pady=(AIRE, 0))
+        self.barra.pack(side="top", fill="x", pady=(AIRE, 0))
         self.barra.start(12)
         self.paso.configure(text="Preparando la consulta...")
 
@@ -3054,8 +3129,8 @@ class Ventana:
         import contextlib
         import io
 
-        def progreso(texto: str) -> None:
-            self.avisos.put(("paso", texto))
+        def progreso(clave: str, texto: str) -> None:
+            self.avisos.put(("paso", (clave, texto)))
 
         try:
             # La salida por pantalla del motor no se pierde: se manda a la
@@ -3083,7 +3158,9 @@ class Ventana:
             while True:
                 clase, dato = self.avisos.get_nowait()
                 if clase == "paso":
-                    self.paso.configure(text=dato)
+                    clave, texto = dato
+                    self.paso.configure(text=texto)
+                    self._marcar_paso(clave)
                 elif clase == "hecho":
                     self._terminar(dato)
                 elif clase == "roto":
@@ -3096,10 +3173,60 @@ class Ventana:
             pass
         self.raiz.after(80, self._vaciar_avisos)
 
+    def _armar_pasos(self, con_criterio: bool) -> None:
+        """Deja los seis -o cinco- pasos puestos y todos pendientes.
+
+        EL DE CRITERIO SOLO SI SE VA A HACER. Con el primer boton no se mira
+        criterio: enseñarlo en gris seria prometer un paso que no va a ocurrir,
+        y quien espera cuenta los que faltan.
+        """
+        self._paso_actual = ""
+        for clave, _rotulo in fase4.PASOS:
+            fila, marca, et = self.filas_paso[clave]
+            fila.pack_forget()
+            if clave == fase4.PASO_SOLO_CON_CRITERIO and not con_criterio:
+                continue
+            marca.configure(text="·", fg=TINTA3)
+            et.configure(fg=TINTA3, font=self.fuente)
+            fila.pack(fill="x", anchor="w")
+
+    def _marcar_paso(self, clave: str) -> None:
+        """El que llega pasa a ser el de ahora; los anteriores, hechos.
+
+        SE CIERRAN LOS DE ANTES, no solo el anterior: un paso puede saltarse
+        -sin criterio no hay busqueda de criterio- y dejarlo a medias en la
+        lista diria que algo se quedo colgado. Se cierra todo lo que queda por
+        detras del que acaba de llegar, que es lo unico que se sabe seguro.
+        """
+        if clave not in self.filas_paso:
+            # Una clave que la ventana no conoce: el motor ha crecido y esta
+            # lista no se ha enterado. No se inventa una fila -eso seria
+            # enseñar un paso que no se sabe que es- y se deja constancia.
+            print(f"[pasos] llega «{clave}», que no esta en fase4.PASOS",
+                  file=sys.stderr)
+            return
+        visto = False
+        for c, _rotulo in fase4.PASOS:
+            fila, marca, et = self.filas_paso[c]
+            if not fila.winfo_manager():
+                continue
+            if c == clave:
+                visto = True
+                marca.configure(text="·", fg=LILA)
+                et.configure(fg=TINTA, font=self.fuente_seccion)
+            elif not visto:
+                marca.configure(text="✓", fg=LILA)
+                et.configure(fg=TINTA2, font=self.fuente)
+            else:
+                marca.configure(text="·", fg=TINTA3)
+                et.configure(fg=TINTA3, font=self.fuente)
+        self._paso_actual = clave
+
     def _parar_barra(self) -> None:
         self.barra.stop()
         self.barra.pack_forget()
         self.paso.pack_forget()
+        self.marco_pasos.pack_forget()
         self.trabajando = False
         self.boton.configure(text=BOTON_LEY)
         if self.boton_criterio is not None:

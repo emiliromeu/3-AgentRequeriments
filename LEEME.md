@@ -2103,49 +2103,54 @@ se puso ese mensaje. Se coge el módulo de `sys.modules` en el momento de mutar.
 
 ---
 
-# FASE 22 · EL MODO OSCURO, Y LO QUE HACÍA QUE LA VENTANA SE VIERA MAL
+# FASE 22 · LA PALETA, Y LO QUE HACÍA QUE LA VENTANA SE VIERA MAL
 
-La maqueta traía tres modos y se había aplicado «papel claro». Se pidió el
-**oscuro —negro y lila—** desde el principio. Esta fase lo aplica y, de paso,
-arregla lo que hacía que la ventana pareciera vieja aunque los colores fueran
-buenos: **no eran los colores, era el espacio.**
+> **REVERTIDO EL 29/08/2026: la ventana va en CLARO.** Esta fase la puso en
+> oscuro y esa decisión ya no está en pie. Lo que sigue vale igual —lo que
+> hacía que se viera mal no eran los colores, era el espacio— y el apartado de
+> la paleta se ha reescrito con la que hay hoy.
 
 ## 1 · La paleta
 
-El negro no es negro: `#0F0E13` lleva una gota de violeta. Un `#000000` puro
-con texto blanco encima vibra y cansa a los diez minutos, y aquí se leen
-párrafos de ley enteros. Las tres superficies se separan **por claridad, no por
-bordes**: fondo → panel → campo, cada una un escalón más clara.
+**Claro, y el motivo está escrito al lado del código** (`interfaz.py`, junto a
+la definición). En una frase: aquí se leen párrafos de ley en una sala con luz,
+lo que sale de esta ventana —la respuesta copiada, el correo, la hoja
+impresa— va sobre blanco, y un tema oscuro es una preferencia personal en una
+herramienta que usa un equipo entero. El motivo viejo se borró entero a
+propósito, como se hizo con el orden de los botones y con el año vacío.
+
+El blanco no es blanco: `#FAF9FB` lleva la misma gota de violeta que llevaba el
+negro, y por el mismo motivo —un `#FFFFFF` puro a pantalla completa deslumbra a
+las dos horas—. Las tres superficies se separan **por claridad, no por
+bordes**: fondo → panel → campo.
 
 ```
-#0F0E13  fondo de la ventana          #EDECF2  texto principal
-#17161D  panel: lectura y respuesta   #A19DB0  texto secundario
-#1F1D28  campo: la duda y el año      #8B87A0  rótulos menudos
-#2B2937  bordes                       #C0A5FF  el lila: acento y botón
-                                      #C8B0FF  enlaces y citas pinchables
+#FAF9FB  fondo de la ventana          #1A1822  texto principal
+#FFFFFF  panel: lectura y respuesta   #56516A  texto secundario
+#F2F0F6  campo: la duda y el año      #6B6580  rótulos menudos
+#CFCAD9  bordes                       #5B3FBF  el lila: acento y botón
 ```
 
-**Los grises están medidos, no elegidos a ojo.** Sobre negro es muy fácil
-pasarse de apagado. El primer `TINTA3` daba **3,8:1** contra el panel y el
-mínimo para texto menudo es 4,5:1 — se subió hasta 5,2:1. Los diez pares:
+**LOS CONTRASTES YA NO SE ESCRIBEN AQUÍ, SE CALCULAN.** Aquí hubo una tabla de
+diez pares medidos a mano, y quedó vieja el día que la paleta cambió: decía
+`5,2:1` de un gris que ya no existe. Los quince pares los recalcula
+`prueba_interfaz` (bloque «2 bis») con la fórmula de la norma, sobre los hex
+que de verdad tiene la paleta, y se pone roja si alguno baja de 4,5:1. Una
+tabla en un comentario es una promesa sin quien la vigile.
 
-| | contraste | |
-|---|---|---|
-| texto principal sobre panel | 15,3:1 | |
-| titular sobre el fondo | 16,4:1 | |
-| texto en la caja de la duda | 14,1:1 | |
-| enlace sobre panel | 9,5:1 | el producto: el más legible después del estado |
-| tinta sobre el botón lila | 9,0:1 | |
-| estado CRITERIO CLARO | 8,6:1 | |
-| estado CRITERIO DISCUTIDO | 7,2:1 | |
-| texto secundario | 6,8:1 | |
-| estado NO ENCONTRADO | 6,3:1 | |
-| rótulos menudos | 5,2:1 | era 3,8:1 |
+Se comprueba además que **el texto de un botón apagado se lee** (3,96:1): un
+botón gris ilegible es el «botón gris en silencio» que `prueba_boton` existe
+para impedir. Apagado no quiere decir invisible.
 
-Los tres estados **suben** de claridad respecto al modo claro —sobre negro manda
-el claro, no el oscuro— pero la relación entre ellos no cambia: **mismo brillo,
-croma decreciente**. Del lila al gris pasando por un lila apagado. Ni un rojo,
-ni un ámbar, ni un verde en toda la pantalla.
+Y que **no queda ni un color escrito a mano dentro de `_estilos`**. Había seis
+—el fondo del botón deshabilitado, dos de roce, el gris del texto apagado y los
+dos de la barra— y son este mismo fallo del revés: un hex atado al modo que
+tocaba entonces, que sobre el fondo contrario queda como una mancha y no avisa.
+
+Los tres estados **bajan** de claridad respecto al modo oscuro —sobre blanco
+manda el oscuro— pero la relación entre ellos no cambia: **mismo brillo, croma
+decreciente**. Del lila al gris pasando por un lila apagado, y la suite
+comprueba que el croma baja en ese orden. Ni un rojo, ni un ámbar, ni un verde.
 
 ## 2 · Lo que hacía que se viera mal
 

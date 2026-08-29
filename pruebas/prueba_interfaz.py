@@ -246,6 +246,83 @@ comprobar("y se lee: contraste suficiente contra su fondo",
           f"{interfaz.COLOR[EST.NO_ENCONTRADO]} sobre {interfaz.PAPEL2}: "
           f"{contraste}")
 
+# LOS TRES, A LA MISMA CLARIDAD Y CON EL CROMA BAJANDO. Es lo que impide que se
+# lean como un semaforo, y es una propiedad de la RELACION entre los tres: da
+# igual si la paleta es clara u oscura.
+def _croma(hexa):
+    r_, g_, b_ = _rgb(hexa)
+    return max(r_, g_, b_) - min(r_, g_, b_)
+
+
+cromas = [_croma(interfaz.COLOR[e])
+          for e in (EST.CLARO, EST.DISCUTIDO, EST.NO_ENCONTRADO)]
+comprobar("el croma baja del criterio claro al no encontrado",
+          cromas[0] > cromas[1] > cromas[2], cromas)
+
+# ======================================================================
+print("\n=== 2 bis. LOS CONTRASTES SE CALCULAN, NO SE ESCRIBEN ===")
+print("  Una tabla de contrastes en un comentario es una tabla que se queda")
+print("  vieja el dia que alguien toca un hex. Se recalculan aqui.\n")
+
+
+def _luminancia(hexa):
+    def canal(v):
+        v = v / 255
+        return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+    r_, g_, b_ = (canal(c) for c in _rgb(hexa))
+    return 0.2126 * r_ + 0.7152 * g_ + 0.0722 * b_
+
+
+def contra(a, b):
+    la, lb = _luminancia(a), _luminancia(b)
+    hi, lo = max(la, lb), min(la, lb)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+I = interfaz
+# CADA PAR ES TEXTO SOBRE SU FONDO DE VERDAD, no una combinacion cualquiera:
+# lo que se mide es lo que se lee. El minimo de la norma para texto es 4,5:1.
+PARES = [
+    ("texto principal sobre panel", I.TINTA, I.PAPEL2),
+    ("titular sobre el fondo", I.TINTA, I.PAPEL),
+    ("texto en la caja de la duda", I.TINTA, I.ELEVADO),
+    ("texto secundario sobre panel", I.TINTA2, I.PAPEL2),
+    ("texto secundario sobre el fondo", I.TINTA2, I.PAPEL),
+    ("rotulos menudos sobre panel", I.TINTA3, I.PAPEL2),
+    ("rotulos menudos sobre el fondo", I.TINTA3, I.PAPEL),
+    ("rotulos menudos sobre campo", I.TINTA3, I.ELEVADO),
+    ("enlace sobre panel", I.ENLACE, I.PAPEL2),
+    ("tinta sobre el boton lila", I.LILA_TINTA, I.LILA),
+    ("tinta sobre el boton lila al pasar", I.LILA_TINTA, I.LILA_VIVO),
+    ("estado CRITERIO CLARO", I.COLOR[EST.CLARO], I.PAPEL2),
+    ("estado CRITERIO DISCUTIDO", I.COLOR[EST.DISCUTIDO], I.PAPEL2),
+    ("estado NO ENCONTRADO", I.COLOR[EST.NO_ENCONTRADO], I.PAPEL2),
+    ("texto seleccionado con el raton", I.TINTA, I.SELECCION),
+]
+for nombre, tinta, fondo in PARES:
+    r = contra(tinta, fondo)
+    comprobar(f"{nombre}: {r:.2f}:1", r >= 4.5, f"{tinta} sobre {fondo}")
+
+# EL BOTON APAGADO TAMBIEN SE TIENE QUE LEER. No es texto corriente -la norma
+# lo exime- pero un boton gris ilegible es el «boton gris en silencio» que
+# `prueba_boton` existe para impedir. Apagado no quiere decir invisible.
+r = contra(I.APAGADO_TINTA, I.APAGADO)
+comprobar(f"el texto de un boton apagado se lee: {r:.2f}:1", r >= 3.0,
+          f"{I.APAGADO_TINTA} sobre {I.APAGADO}")
+
+# NI UN COLOR ESCRITO A MANO DENTRO DE `_estilos`.
+#
+# Habia SEIS, y son el fallo de la fase 22 del reves: un hex atado al modo que
+# tocaba entonces. Sobre el fondo contrario quedan como manchas, y nada avisa.
+import re as _re  # noqa: E402
+_fuente = (RAIZ / "interfaz.py").read_text("utf-8")
+_estilos = _fuente[_fuente.index("def _estilos"):_fuente.index("def _desplazable")]
+_sueltos = _re.findall(r'"#[0-9A-Fa-f]{6}"',
+                       "\n".join(l for l in _estilos.splitlines()
+                                  if not l.lstrip().startswith("#")))
+comprobar("ni un color escrito a mano en los estilos: todos de la paleta",
+          not _sueltos, _sueltos)
+
 # =====================================================================
 print("\n=== 3. LOS TRES ESTADOS SE PINTAN, Y CON LA EXPLICACION DE SU BOTON ===")
 print("  Desde que hay dos botones, el MISMO estado no significa lo mismo: un")
@@ -1221,6 +1298,90 @@ comprobar("y el foco en el año, que es lo que mas se cambia",
           str(raiz.focus_get()) == str(v.caja_ejercicio)
           or v.caja_ejercicio.selection_present(),
           str(raiz.focus_get()))
+
+# =====================================================================
+print("\n=== 14 bis. LA ESPERA, EN SEIS PASOS ===")
+print("  Una consulta real tarda 102 s de mediana. Los seis pasos ya se")
+print("  emitian uno a uno; la ventana los pisaba en una sola linea.\n")
+import fase4 as _F4  # noqa: E402
+
+# LA QUE IMPIDE QUE ESTO SE MUERA EN SILENCIO.
+#
+# Si la ventana emparejara los pasos por su TEXTO, reescribir un mensaje en
+# `fase4` dejaria la lista clavada en el primer paso sin que nada fallara. Se
+# emparejan por CLAVE, y aqui se comprueba que las dos partes hablan de las
+# mismas: las que emite el motor y las que tiene la ventana.
+_fuente_f4 = (RAIZ / "fase4.py").read_text("utf-8")
+# SIN EL PUNTO DELANTE. `fase4` tiene DOS `paso(`: la funcion local que avisa a
+# la ventana, y `tr.paso(...)`, que apunta un hito en el expediente. Son cosas
+# distintas con el mismo nombre, y contar las dos daba «busqueda», «ejercicio»,
+# «pertinencia», «tope» y «orientacion» como pasos de pantalla que no lo son.
+_emitidas = set(re.findall(r'(?<![.\w])paso\(\s*"([a-z]+)"', _fuente_f4))
+comprobar("todo paso que emite el motor esta declarado en fase4.PASOS",
+          _emitidas <= set(_F4.CLAVES_DE_PASO),
+          sorted(_emitidas - set(_F4.CLAVES_DE_PASO)))
+comprobar("y todo paso declarado se llega a emitir: ninguno es decoracion",
+          set(_F4.CLAVES_DE_PASO) <= _emitidas,
+          sorted(set(_F4.CLAVES_DE_PASO) - _emitidas))
+comprobar("la ventana tiene una fila por cada paso del motor",
+          set(v.filas_paso) == set(_F4.CLAVES_DE_PASO),
+          sorted(set(v.filas_paso) ^ set(_F4.CLAVES_DE_PASO)))
+comprobar("son seis, no una linea", len(_F4.PASOS) == 6, len(_F4.PASOS))
+
+
+def _puestos():
+    return [c for c, _r in _F4.PASOS if v.filas_paso[c][0].winfo_manager()]
+
+
+def _marca(c):
+    return v.filas_paso[c][1].cget("text")
+
+
+v._armar_pasos(False)
+v.marco_pasos.pack(fill="x")
+bombear(0.3)
+comprobar("solo con la ley NO se enseña el paso del criterio",
+          _F4.PASO_SOLO_CON_CRITERIO not in _puestos(), _puestos())
+comprobar("  y quedan cinco: un paso que no va a ocurrir no se promete",
+          len(_puestos()) == 5, _puestos())
+v._armar_pasos(True)
+bombear(0.3)
+comprobar("con criterio se enseñan los seis", len(_puestos()) == 6, _puestos())
+comprobar("  y todos empiezan pendientes",
+          all(_marca(c) == "·" for c in _puestos()),
+          [_marca(c) for c in _puestos()])
+for clave in ("analisis", "ley", "criterio"):
+    v._marcar_paso(clave)
+bombear(0.3)
+comprobar("lo hecho queda marcado como hecho",
+          _marca("analisis") == "✓" and _marca("ley") == "✓",
+          [_marca("analisis"), _marca("ley")])
+comprobar("  el de ahora se distingue de los hechos y de los que faltan",
+          _marca("criterio") == "·"
+          and v.filas_paso["criterio"][2].cget("fg") == interfaz.TINTA
+          and v.filas_paso["estado"][2].cget("fg") == interfaz.TINTA3,
+          v.filas_paso["criterio"][2].cget("fg"))
+# UN PASO SALTADO NO DEJA LA LISTA A MEDIAS. Se cierra todo lo anterior, no
+# solo el paso justo anterior.
+v._armar_pasos(True)
+v._marcar_paso("verificacion")
+bombear(0.3)
+comprobar("saltando pasos, los de atras quedan cerrados y no colgando",
+          all(_marca(c) == "✓" for c in ("analisis", "ley", "criterio",
+                                         "redaccion")),
+          [_marca(c) for c in ("analisis", "ley", "criterio", "redaccion")])
+# NI UN PORCENTAJE: no hay forma de saber cuanto falta, y fingirlo es mentir.
+comprobar("la barra sigue siendo indeterminada, sin porcentaje falso",
+          str(v.barra.cget("mode")) == "indeterminate", v.barra.cget("mode"))
+# Y UNA CLAVE DESCONOCIDA NO TUMBA LA VENTANA.
+reventado = None
+try:
+    v._marcar_paso("un-paso-que-no-existe")
+except Exception as exc:  # noqa: BLE001
+    reventado = exc
+comprobar("una clave que la ventana no conoce no revienta nada",
+          reventado is None, repr(reventado))
+v.marco_pasos.pack_forget()
 
 # =====================================================================
 print("\n=== 15. CONTROL NEGATIVO: ¿CAZA ESTA SUITE LO QUE DICE CAZAR? ===")
