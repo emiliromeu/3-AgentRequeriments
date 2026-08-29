@@ -25,6 +25,7 @@ LO QUE ESTA SUITE VIGILA:
   4. Que haya UNA implementacion, no una por guion.
 """
 import json
+import re
 import shutil
 import sys
 import tempfile
@@ -150,12 +151,69 @@ comprobar("las mediciones y la ficha usan el modulo, no su propia copia",
 comprobar("y las mediciones dicen de cuantas versiones es la muestra",
           all("reparto(" in (RAIZ / n).read_text("utf-8")
               for n in usan if n.startswith("medir_")), usan)
-# EL CONTROL: que no quede ninguna lectura del hash escrita a mano por ahi.
+# EL CONTROL: que no quede ninguna lectura del COMMIT escrita a mano por ahi.
+#
+# ────────────────────────────────────────────────────────────────────────
+# ANTES BUSCABA LA PALABRA «rev-parse». ARREGLADO EL 29/08/2026.
+# ────────────────────────────────────────────────────────────────────────
+#
+# Decia: `sueltas = [f for f in RAIZ.glob("*.py") if "git" in ... and
+# "rev-parse" in ...]`. Estaba roja por `reparar.py`, que llama a
+# `git("rev-parse", "--is-inside-work-tree")` y `git("rev-parse",
+# "--abbrev-ref", "HEAD")`: la primera pregunta si esto es un repositorio y la
+# segunda EN QUE RAMA estamos. Ninguna de las dos lee el commit.
+#
+# Y la palabra tampoco describia lo que este modulo hace: `version.actual` lee
+# el commit con `git log -1 --format=%h`, que no lleva «rev-parse» por ningun
+# lado. O sea que el control ni cazaba la forma que de verdad usamos ni
+# perdonaba una que no tiene nada que ver.
+#
+# UNA SUITE ROJA QUE SE SABE FALSA ES UNA SUITE QUE DENTRO DE UN MES NADIE
+# MIRA, y entonces la roja de verdad pasa con ella. Asi que se comprueba LO QUE
+# IMPORTA -que nadie lee la identidad del commit por su cuenta- mirando los
+# argumentos de cada llamada, no una palabra suelta del fichero.
+
+# Las formas de sacar la identidad de un commit con git. `rev-parse` entra solo
+# si NO lleva uno de los flags que preguntan otra cosa.
+NO_ES_EL_COMMIT = ("--abbrev-ref",        # en que rama estamos
+                   "--is-inside-work-tree",  # si esto es un repositorio
+                   "--show-toplevel",      # donde esta la raiz
+                   "--git-dir")
+
+
+def lee_el_commit(fuente: str) -> bool:
+    """¿Este fichero saca la identidad de un commit por su cuenta?"""
+    # `git log --format=%h` / `%H`, y `git describe`, sin vuelta de hoja.
+    if re.search(r"--format=[^\"']*%[hH]\b", fuente):
+        return True
+    if re.search(r"[\"']describe[\"']", fuente):
+        return True
+    # `rev-parse`: se mira ARGUMENTO A ARGUMENTO, no la palabra suelta.
+    for m in re.finditer(r"[\"']rev-parse[\"']", fuente):
+        # el resto de la llamada, hasta cerrar el parentesis
+        resto = fuente[m.end():m.end() + 200].split(")")[0]
+        if not any(f in resto for f in NO_ES_EL_COMMIT):
+            return True
+    return False
+
+
 sueltas = [f.name for f in RAIZ.glob("*.py")
-           if "git" in f.read_text("utf-8")
-           and "rev-parse" in f.read_text("utf-8")]
+           if lee_el_commit(f.read_text("utf-8"))]
 comprobar("y no queda ninguna lectura del commit a mano",
           not sueltas, sueltas)
+
+# CONTROL NEGATIVO: la comprobacion de arriba solo vale si sabe decir que si.
+# Se le dan las cuatro formas de leer un commit y las dos de `reparar.py`, que
+# son las que la tenian roja sin motivo.
+for forma in ('git("rev-parse", "HEAD")',
+              'git("rev-parse", "--short", "HEAD")',
+              'run(["git", "log", "-1", "--format=%h"])',
+              'subprocess.run(["git", "describe", "--always"])'):
+    comprobar(f"  caza «{forma[:38]}»", lee_el_commit(forma), forma)
+for forma in ('git("rev-parse", "--is-inside-work-tree")',
+              'git("rev-parse", "--abbrev-ref", "HEAD")',
+              'git("status", "--porcelain")'):
+    comprobar(f"  y NO confunde «{forma[:36]}»", not lee_el_commit(forma), forma)
 
 print("\n" + "=" * 74)
 if fallos:
