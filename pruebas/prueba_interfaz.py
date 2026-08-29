@@ -26,6 +26,7 @@ sys.path.insert(0, str(RAIZ))
 
 import tkinter as tk
 from tkinter import font as tkfont
+from tkinter import ttk
 
 import interfaz
 from agente_fiscal import estado as EST
@@ -98,13 +99,80 @@ def esperar(cond, limite=120):
 bombear(0.3)
 
 # =====================================================================
-print("\n=== 1. EL ANO DEL CASO ES OBLIGATORIO ===")
-print("  Nunca se rellena solo, y nunca con el ano en curso.")
-comprobar("el campo del ejercicio empieza VACIO", v.ejercicio.get().strip() == "",
-          repr(v.ejercicio.get()))
+print("\n=== 1. EL ANO DEL CASO ES OBLIGATORIO, Y VIENE PUESTO ===")
+print("  Obligatorio sigue igual. Lo que cambia es que se llega con el")
+print("  campo relleno y DICIENDO de donde salio el año.")
+#
+# ────────────────────────────────────────────────────────────────────────
+# ESTAS DOS COMPROBACIONES DECIAN LO CONTRARIO. CAMBIADO EL 29/08/2026.
+# ────────────────────────────────────────────────────────────────────────
+#
+# Decian «el campo del ejercicio empieza VACIO» y «y no trae el ano en curso»,
+# y eran la regla 2 de la cabecera de `interfaz.py` escrita como prueba. La
+# regla se ha invertido a proposito -ver la nota larga junto al campo- y estas
+# dos comprobaciones se reescriben con ella.
+#
+# LO QUE NO SE PUEDE PERDER AL CAMBIARLAS, y es lo que se comprueba ahora:
+# el ano nunca puede estar mal EN SILENCIO. Vacio, eso se conseguia obligando
+# a teclear; relleno, se consigue con tres cosas, y las tres se prueban aqui:
+#
+#   1. sigue siendo obligatorio: si se vacia, los botones se apagan;
+#   2. el campo dice DE DONDE salio lo que lleva dentro;
+#   3. y esa marca desaparece en cuanto una persona teclea, para que un ano
+#      puesto por el programa no se pueda confundir con uno elegido.
+#
+# UNA PRUEBA QUE SE CAMBIA PARA QUE PASE NO PRUEBA NADA. Por eso el bloque de
+# CONTROL NEGATIVO del final rompe el relleno a proposito y comprueba que esta
+# suite lo caza.
 import datetime
-comprobar("y no trae el ano en curso",
-          str(datetime.date.today().year) not in v.ejercicio.get())
+EN_CURSO = str(datetime.date.today().year)
+comprobar("el campo del ejercicio llega RELLENO", v.ejercicio.get().strip() != "",
+          repr(v.ejercicio.get()))
+comprobar("con el año natural en curso", v.ejercicio.get().strip() == EN_CURSO,
+          v.ejercicio.get())
+comprobar("y el campo dice de donde ha salido",
+          v.marca_ejercicio.cget("text") == interfaz.MARCA_EN_CURSO,
+          v.marca_ejercicio.cget("text"))
+comprobar("el aviso dice QUE PASA si el año esta mal, no que es obligatorio",
+          "de otra ley" in interfaz.AVISO_EJERCICIO.lower()
+          and "obligatorio" not in interfaz.AVISO_EJERCICIO.lower(),
+          interfaz.AVISO_EJERCICIO)
+
+# --- de donde saca el año: los tres casos ---
+v.caja.delete("1.0", "end")
+v.caja.insert("1.0", "deduccion del IVA de un turismo comprado en 2019")
+v._proponer_ejercicio()
+comprobar("si la pregunta dice UN año, se pone ese",
+          v.ejercicio.get() == "2019", v.ejercicio.get())
+comprobar("y se dice que lo dice la pregunta",
+          v.marca_ejercicio.cget("text") == interfaz.MARCA_DE_LA_PREGUNTA,
+          v.marca_ejercicio.cget("text"))
+v.caja.delete("1.0", "end")
+v.caja.insert("1.0", "cambio de criterio entre 2019 y 2021, cual aplico")
+v._proponer_ejercicio()
+comprobar("si la pregunta dice VARIOS, NO se elige por nadie",
+          v.marca_ejercicio.cget("text") == interfaz.MARCA_VARIOS,
+          v.marca_ejercicio.cget("text"))
+# LO TECLEADO MANDA, Y NO SE PISA NUNCA MAS.
+# COMO LO HACE UNA PERSONA: el foco en el campo y una tecla de verdad. Sin
+# `focus_force` la ligadura no llega -corriendo sin nadie delante la ventana no
+# es la activa-, que es el mismo motivo por el que existe el ayudante `tecla()`
+# de mas abajo.
+v.caja_ejercicio.focus_force()
+bombear(0.15)
+v.caja_ejercicio.event_generate("<KeyRelease-2>", when="now")
+bombear(0.15)
+comprobar("en cuanto se teclea en el campo, la marca desaparece",
+          v.marca_ejercicio.cget("text") == "",
+          v.marca_ejercicio.cget("text"))
+v.ejercicio.set("2015")
+v.caja.delete("1.0", "end")
+v.caja.insert("1.0", "una duda del ejercicio 2022")
+v._proponer_ejercicio()
+comprobar("y un año puesto A MANO ya no lo pisa la pregunta",
+          v.ejercicio.get() == "2015", v.ejercicio.get())
+v._ejercicio_a_mano = False
+
 v.caja.delete("1.0", "end")
 v.caja.insert("1.0", "una duda cualquiera")
 v.ejercicio.set("")
@@ -238,8 +306,10 @@ if reventado is None:
     comprobar("salen los tres avisos con su texto",
               sum(1 for t in etiquetas if t.startswith("•")) == 3,
               str(etiquetas))
-    comprobar("y la linea de limite del corpus, al final",
-              any(ESTRUCTURAL in t for t in etiquetas))
+    # El limite del corpus ya no vive aqui: se comprueba mas abajo, debajo
+    # del texto, que es donde se ha movido.
+    comprobar("el limite del corpus NO ocupa sitio entre los avisos",
+              not any(ESTRUCTURAL in t for t in etiquetas), str(etiquetas)[:120])
     # EL ORDEN SE MIDE EN LA PANTALLA, NO EN EL `grid`.
     #
     # Esto comparaba numeros de fila. Valia mientras el estado, el aporte, los
@@ -273,18 +343,64 @@ if reventado is None:
     comprobar("con respuesta verificada SI hay algo que copiar",
               str(v.boton_copiar["state"]) == "normal")
 
-# El bloque de cobertura SE VE aunque este vacio.
+# ────────────────────────────────────────────────────────────────────────
+# SIN NADA QUE AVISAR, NO HAY BLOQUE. CAMBIADO EL 29/08/2026.
+# ────────────────────────────────────────────────────────────────────────
+#
+# Aqui se comprobaba lo contrario: «sin nada que avisar, el bloque de cobertura
+# SIGUE saliendo» y «dice expresamente que no falta nada». El razonamiento era
+# que leer «no falta nada por mirar» es informacion.
+#
+# LO TUMBA LA CUENTA: sobre las 79 consultas hechas con el motor de verdad,
+# 73 no tienen ni un aviso. El bloque salia diciendo «Nada que mirar» en el 92%
+# de las respuestas, y un bloque que casi siempre dice que no hay nada deja de
+# leerse — justo antes del dia en que si tiene algo que decir.
+#
+# LO QUE HAY QUE SEGUIR PROTEGIENDO, y se comprueba abajo: cuando SI hay algo,
+# sale entero, con su rotulo y por delante del texto.
 v._terminar({"codigo": 0, "estado": EST.CLARO, "fallo": None, "senales": [],
              "cobertura": [], "estructural": "", "preceptos": ["Articulo 91"],
              "traza": None, "recuperado": [], "respuesta": "Sale al 21%."})
 bombear(0.3)
+comprobar("sin nada que avisar, el panel de avisos NO se pinta",
+          not v.panel_avisos.winfo_ismapped())
+comprobar("y no queda ni un rotulo suelto dentro",
+          not v.panel_avisos.winfo_children(),
+          str([w.cget("text") for w in v.panel_avisos.winfo_children()])[:120])
+
+# CON UN SOLO AVISO DE COBERTURA VUELVE A SALIR, entero y con su rotulo.
+v._terminar({"codigo": 0, "estado": EST.CLARO, "fallo": None, "senales": [],
+             "cobertura": ["Articulo 91: el texto cambio dentro del ejercicio"],
+             "estructural": "", "preceptos": ["Articulo 91"],
+             "traza": None, "recuperado": [], "respuesta": "Sale al 21%."})
+bombear(0.3)
 etiquetas = [w.cget("text") for w in v.panel_avisos.winfo_children()]
-comprobar("sin nada que avisar, el bloque de cobertura SIGUE saliendo",
+comprobar("con algo que avisar, el bloque vuelve",
+          v.panel_avisos.winfo_ismapped() and
           any("NO SE HA PODIDO MIRAR" in t for t in etiquetas), str(etiquetas))
-comprobar("y dice expresamente que no falta nada",
-          any(t.startswith("Nada que mirar") for t in etiquetas))
 comprobar("sin desacuerdo, ese rotulo no sale",
           not any("DESACUERDO" in t for t in etiquetas))
+
+# --- EL LIMITE DEL CORPUS: FUERA DE LOS AVISOS, PERO NO PERDIDO ---
+#
+# Sale en 1.626 de 4.933 expedientes y no hay nada que hacer con el, asi que
+# ya no compite por el sitio con los avisos accionables. Pero tiene que
+# SEGUIR ESTANDO: dice de que no puede hablar esta respuesta.
+LIMITE = "Articulo 80 remite a Ley 22/2003, que no esta en el corpus"
+v._terminar({"codigo": 0, "estado": EST.CLARO, "fallo": None, "senales": [],
+             "cobertura": [], "estructural": LIMITE,
+             "preceptos": ["Articulo 80"], "traza": None, "recuperado": [],
+             "respuesta": "Sale al 21%."})
+bombear(0.3)
+etiquetas = [w.cget("text") for w in v.panel_avisos.winfo_children()]
+comprobar("el limite del corpus ya NO va con los avisos",
+          not any(LIMITE in t for t in etiquetas), str(etiquetas)[:120])
+comprobar("pero se sigue leyendo, debajo del texto",
+          LIMITE in v.texto.get("1.0", "end"),
+          v.texto.get("1.0", "end")[-200:])
+comprobar("y va DESPUES de la respuesta, no antes",
+          v.texto.get("1.0", "end").index(LIMITE)
+          > v.texto.get("1.0", "end").index("Sale al 21%"))
 
 # =====================================================================
 print("\n=== 5. LAS CITAS Y SUS ENLACES SON LO MAS LEGIBLE ===")
@@ -438,13 +554,21 @@ if hijas:
     def textos(w, acc=None):
         """Lo que se LEE, no lo que existe.
 
-        Se cuenta solo lo que tiene gestor de geometria: desde que la lista de
-        normas se pliega, las etiquetas del detalle siguen creadas pero no
-        estan puestas. Contarlas seria medir una pantalla que nadie ve.
+        Se cuenta solo lo que se VE: desde que la lista de normas se pliega,
+        las etiquetas del detalle siguen creadas pero no estan puestas.
+        Contarlas seria medir una pantalla que nadie ve.
+
+        SE PREGUNTA `winfo_ismapped`, NO `winfo_manager`. Cambiado el
+        29/08/2026 al plegarse tambien el bloque de mantenimiento: aquel
+        pliegue quita las etiquetas UNA A UNA y este quita el marco que las
+        contiene. Una etiqueta dentro de un marco retirado sigue teniendo
+        gestor -es hija de algo con `pack`- y `winfo_manager` la daba por
+        visible. `winfo_ismapped` mira la cadena entera hasta la ventana, que
+        es lo que decide si un ojo la ve.
         """
         acc = [] if acc is None else acc
         try:
-            if isinstance(w, tk.Label) and w.winfo_manager():
+            if isinstance(w, tk.Label) and w.winfo_ismapped():
                 acc.append(str(w.cget("text")))
         except tk.TclError:
             pass
@@ -452,23 +576,71 @@ if hijas:
             textos(h, acc)
         return acc
 
+    def _todos(w, acc=None):
+        acc = [] if acc is None else acc
+        acc.append(w)
+        for h in w.winfo_children():
+            _todos(h, acc)
+        return acc
+
     dentro = "\n".join(textos(ventana))
     comprobar("dice las normas cargadas", "NORMAS CARGADAS" in dentro)
     comprobar("con el total de articulos", "en total" in dentro, dentro[:80])
-    comprobar("dice cuantas consultas de la DGT hay guardadas",
-              "Dirección General de Tributos" in dentro)
-    comprobar("y cuantas resoluciones", "Doctrina del TEAC" in dentro
-              and "tribunales regionales" in dentro)
     comprobar("nombra los dos botones",
               interfaz.BOTON_LEY in dentro and interfaz.BOTON_CRITERIO in dentro)
     comprobar("y NO dice lo que cuesta ninguno",
               not any(x in dentro for x in ("€", "0,13", "0,22")),
               [l for l in dentro.splitlines()
                if any(x in l for x in ("€", "0,13", "0,22"))][:3])
-    comprobar("y si las fuentes responden ahora mismo (el canario)",
-              "LAS FUENTES, AHORA MISMO" in dentro)
-    comprobar("avisa de que una fuente caida NO impide consultar",
-              "no impide consultar" in dentro)
+
+    # ────────────────────────────────────────────────────────────────────
+    # LA TELEMETRIA SE PLIEGA. CAMBIADO EL 29/08/2026.
+    # ────────────────────────────────────────────────────────────────────
+    #
+    # Aqui se exigia que la primera pantalla dijera cuantas consultas de la
+    # DGT hay, cuantas resoluciones y si las fuentes responden. Las tres son
+    # ciertas y ninguna cambia lo que hace quien viene a preguntar «¿esta mi
+    # impuesto dentro?»: son de quien CUIDA la herramienta.
+    #
+    # LA DIFERENCIA ENTRE ESCONDER Y PLEGAR ES SI SE PUEDE LLEGAR, asi que lo
+    # que se comprueba ahora son las dos cosas: que NO ocupan la pantalla de
+    # llegada, y que estan enteras a UN CLIC. Sin la segunda mitad, esta
+    # reescritura seria un recorte disfrazado.
+    comprobar("el mantenimiento tiene su sitio, y esta plegado",
+              "MANTENIMIENTO" in dentro
+              and "Dirección General de Tributos" not in dentro,
+              dentro[:120])
+    comprobar("y no gasta la pantalla de llegada en si las fuentes responden",
+              # Se busca el ROTULO del canario, no la palabra «DYCTEA»:
+              # `AVISO_DESPENSA` la nombra tambien, y ahi dice DONDE MIRAR,
+              # que es otra cosa y si tiene que estar.
+              "Tributos (consultas de la DGT)" not in dentro
+              and "no impide consultar" not in dentro,
+              [l for l in dentro.splitlines()
+               if "Tributos (consultas" in l or "no impide consultar" in l][:2])
+
+    plegables = [w for w in _todos(ventana)
+                 if isinstance(w, ttk.Button)
+                 and "estado de la herramienta" in str(w.cget("text"))]
+    comprobar("hay un boton para abrirlo", len(plegables) == 1,
+              str(len(plegables)))
+    if plegables:
+        plegables[0].invoke()
+        bombear(0.3)
+        abierto = "\n".join(textos(ventana))
+        comprobar("abierto, dice cuantas consultas de la DGT hay guardadas",
+                  "consulta(s) de la DGT" in abierto, abierto[-300:])
+        comprobar("y cuantas resoluciones", "resolución(es)" in abierto)
+        comprobar("y si las fuentes responden ahora mismo (el canario)",
+                  "Tributos (consultas de la DGT)" in abierto
+                  and "DYCTEA" in abierto)
+        comprobar("y que el corpus esta entero",
+                  "sello" in abierto.lower() or "íntegr" in abierto.lower()
+                  or "corpus" in abierto.lower(), abierto[-300:])
+        comprobar("avisa de que una fuente caida NO impide consultar",
+                  "no impide consultar" in abierto)
+        plegables[0].invoke()      # se deja como estaba, cerrado
+        bombear(0.2)
     comprobar("ni una ruta de fichero ni una variable de entorno",
               "AGENTE_DGT" not in dentro and "/Users" not in dentro
               and ".json" not in dentro, dentro[:120])
@@ -1050,7 +1222,56 @@ comprobar("y el foco en el año, que es lo que mas se cambia",
           or v.caja_ejercicio.selection_present(),
           str(raiz.focus_get()))
 
+# =====================================================================
+print("\n=== 15. CONTROL NEGATIVO: ¿CAZA ESTA SUITE LO QUE DICE CAZAR? ===")
+print("  Tres comprobaciones de arriba se REESCRIBIERON el 29/08/2026 al")
+print("  invertir decisiones. Una prueba que se cambia para que pase no")
+print("  prueba nada, asi que aqui se rompe el codigo de verdad y se mira")
+print("  que los predicados de arriba se pongan en rojo.\n")
+
 raiz.destroy()
+raiz2 = tk.Tk()
+
+# --- 1 · se rompe el relleno del año: el campo vuelve a nacer vacio ---
+interfaz.Ventana._proponer_ejercicio_bueno = interfaz.Ventana._proponer_ejercicio
+interfaz.Ventana._proponer_ejercicio = lambda self: None
+vn = interfaz.Ventana(raiz2, "ensayo")
+fin = time.time() + 1.0
+while time.time() < fin:
+    raiz2.update()
+    time.sleep(0.01)
+comprobar("roto el relleno, la suite lo caza (el campo sale vacio)",
+          not (vn.ejercicio.get().strip() != ""), repr(vn.ejercicio.get()))
+comprobar("y tambien caza que el campo deje de decir de donde salio",
+          not (vn.marca_ejercicio.cget("text") == interfaz.MARCA_EN_CURSO),
+          vn.marca_ejercicio.cget("text"))
+interfaz.Ventana._proponer_ejercicio = interfaz.Ventana._proponer_ejercicio_bueno
+
+# --- 2 · se rompe el ocultado: el bloque vacio vuelve a pintarse ---
+vn._pintar_avisos(["algo"], ["algo"])
+fin = time.time() + 0.4
+while time.time() < fin:
+    raiz2.update()
+    time.sleep(0.01)
+comprobar("con avisos de verdad el panel SI se pinta (si no, la de arriba "
+          "seria verde por accidente)",
+          vn.panel_avisos.winfo_ismapped())
+
+# --- 3 · se rompe el traslado del limite: se quita de debajo del texto ---
+interfaz.Ventana._escribir_limite_bueno = interfaz.Ventana._escribir_limite
+interfaz.Ventana._escribir_limite = lambda self, res: None
+vn._terminar({"codigo": 0, "estado": EST.CLARO, "fallo": None, "senales": [],
+              "cobertura": [], "estructural": LIMITE, "preceptos": [],
+              "traza": None, "recuperado": [], "respuesta": "Sale al 21%."})
+fin = time.time() + 0.4
+while time.time() < fin:
+    raiz2.update()
+    time.sleep(0.01)
+comprobar("roto el traslado del limite, la suite lo caza (ya no se lee)",
+          not (LIMITE in vn.texto.get("1.0", "end")))
+interfaz.Ventana._escribir_limite = interfaz.Ventana._escribir_limite_bueno
+
+raiz2.destroy()
 print("\n" + "=" * 62)
 print(f"COMPROBACIONES: {len(fallos)} fallos")
 for f in fallos:

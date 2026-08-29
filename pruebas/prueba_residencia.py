@@ -179,15 +179,43 @@ while v.motor is None and time.time() < fin:
 comprobar("la ventana carga", v.motor is not None)
 
 comprobar("hay un campo de comunidad", hasattr(v, "comunidad"))
-comprobar("  vacio de entrada, y nunca se rellena solo",
-          v.comunidad.get() == "", v.comunidad.get())
+# ────────────────────────────────────────────────────────────────────────
+# YA NO NACE VACIO. CAMBIADO EL 29/08/2026.
+# ────────────────────────────────────────────────────────────────────────
+#
+# Aqui se exigia «vacio de entrada, y nunca se rellena solo», con el
+# razonamiento de que rellenarlo seria suponer donde vive el cliente.
+#
+# LO QUE LO TUMBA: con el campo vacio no se elige entre suponer y no suponer,
+# se elige ENTRE DOS ERRORES. Vacio, la respuesta de Renta sale SIN el tramo
+# autonomico, impecable y a medias, y no lo nota nadie. Con Cataluña puesta,
+# si el cliente reside fuera la respuesta trae reglas catalanas — pero la
+# palabra «Cataluña» esta en la pantalla de pedir Y en el eco de la de leer.
+# Un fallo que se ve se corrige; uno que no se ve, no.
+#
+# LO QUE SIGUE PROTEGIDO, y es todo lo demas de esta suite: que la comunidad
+# NO bloquea, que se puede cambiar, que viaja al motor y al expediente, y que
+# el eco no la inventa cuando no la hay.
+comprobar("  llega puesta, y con la del despacho",
+          v.comunidad.get() == interfaz.COMUNIDAD_POR_DEFECTO, v.comunidad.get())
+comprobar("  pero se puede cambiar: no esta bloqueada",
+          str(v.caja_comunidad.cget("state")) == "normal",
+          v.caja_comunidad.cget("state"))
 comprobar("  con las 17 comunidades y las 2 ciudades para elegir",
           len(interfaz.COMUNIDADES) == 20, len(interfaz.COMUNIDADES))
+comprobar("  y la lista deja escoger «ninguna» dejandola en blanco",
+          "" in interfaz.COMUNIDADES)
 v.ejercicio.set("2023")
 v.caja.insert("1.0", ALQUILER)
 raiz.update()
 comprobar("SIN comunidad se puede consultar: no bloquea como el año",
           str(v.boton["state"]) == "normal", str(v.boton["state"]))
+v.comunidad.set("")
+raiz.update()
+comprobar("  y vaciada A MANO tampoco bloquea",
+          str(v.boton["state"]) == "normal", str(v.boton["state"]))
+v.comunidad.set(interfaz.COMUNIDAD_POR_DEFECTO)
+raiz.update()
 v.ejercicio.set("")
 raiz.update()
 comprobar("  y sin AÑO no se puede: esa si bloquea",

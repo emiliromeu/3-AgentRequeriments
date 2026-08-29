@@ -87,11 +87,22 @@ comprobar("se dice que no hay texto por no superar la comprobacion",
 
 # ------------------------------------ 2. EL BORRADOR NO LLEGA A PANTALLA
 print("\n=== 2. EL BORRADOR RECHAZADO NO LLEGA A PANTALLA ===")
-# El expediente vive en `pie_respuesta`, en la barra de arriba de la vista de
-# lectura. `v.pie` es el pie de la OTRA vista -la de preguntar- y dice cuantos
-# preceptos hay cargados: desde que hay dos vistas no son lo mismo.
-traza = Path(v.pie_respuesta.cget("text")
-             .replace("Expediente guardado en ", "").strip())
+# SE PREGUNTA A LA VENTANA, NO SE LEE DE UNA ETIQUETA. Cambiado el 29/08/2026.
+#
+# Aqui se sacaba la ruta del expediente PARSEANDO el texto que se pinta en
+# pantalla: `pie_respuesta.cget("text").replace("Expediente guardado en ", "")`.
+# Funcionaba, y aun asi estaba mal por dos motivos:
+#
+#   · ataba una comprobacion de fondo -que el borrador rechazado no llega a la
+#     pantalla- a la REDACCION de una etiqueta. Cambiar una palabra del rotulo
+#     rompia una suite que no tiene nada que ver con el rotulo;
+#   · y esa etiqueta ya no lleva la ruta. Llevaba una ruta absoluta de ESTE
+#     ordenador, que en el PC de la oficina señala a otro sitio.
+#
+# `expediente_actual` es lo que la ventana sabe de verdad, y se rellena en
+# `_terminar` antes de cualquier rama: tambien en un NO ENCONTRADO seco, que es
+# justo el caso de esta suite y donde antes no habia nada que leer.
+traza = Path(v.expediente_actual)
 borradores = sorted(traza.glob("borrador_*.txt")) if traza.is_dir() else []
 print(f"    borradores en la traza: {[b.name for b in borradores]}")
 comprobar("el expediente SI guarda el borrador (la traza queda intacta)",

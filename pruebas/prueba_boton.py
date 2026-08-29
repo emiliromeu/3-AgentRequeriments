@@ -76,11 +76,17 @@ print("  lee el comentario que explica por que algo NO se hace.\n")
 
 
 def lo_que_se_ve(v) -> str:
-    """Solo lo de la vista PUESTA. Lo de la otra no lo lee nadie."""
+    """Solo lo de la vista PUESTA. Lo de la otra no lo lee nadie.
+
+    SE PREGUNTA A LA VENTANA, NO A UNA ETIQUETA. Cambiado el 29/08/2026.
+    Desde que la cinta apila -veinte sitios escriben en ella y al arrancar
+    puede haber cinco cosas que decir-, `aviso_motor` es solo la fila de
+    «ahora»: los avisos de estado tienen fila propia. Leer esa etiqueta sola
+    daba «no dice nada» sobre una pantalla que estaba diciendo justo lo que
+    esta suite existe para exigir.
+    """
     if v.vista_consulta.grid_info():
-        if not v.marco_motor.winfo_manager():
-            return ""
-        return v.aviso_motor.cget("text")
+        return "  ".join(v.cintas_visibles())
     return (v.etiqueta_estado.cget("text") + " " +
             v.texto.get("1.0", "end")).strip()
 
@@ -253,13 +259,11 @@ try:
     def pulsar(f, *a):
         """Pulsa y devuelve lo que se ve DESPUES. La cinta se limpia antes
         para no dar por bueno un mensaje que ya estaba puesto."""
-        v3.aviso_motor.configure(text="")
-        v3.marco_motor.pack_forget()
+        v3.limpiar_cintas()
         with contextlib.redirect_stdout(io.StringIO()):
             f(*a)
         raiz3.update()
-        return (v3.aviso_motor.cget("text")
-                if v3.marco_motor.winfo_manager() else "")
+        return "  ".join(v3.cintas_visibles())
 
     # A · SEGUIR sin nada escrito.
     v3.traza_actual = "/una/traza"
@@ -311,8 +315,7 @@ try:
     # F · UNA RESPUESTA BUENA SIN EXPEDIENTE. El disco lleno: la respuesta
     # vale, pero no hay carpeta de donde reescribir.
     v3.motor = object()
-    v3.aviso_motor.configure(text="")
-    v3.marco_motor.pack_forget()
+    v3.limpiar_cintas()
     with contextlib.redirect_stdout(io.StringIO()):
         v3.avisos.put(("hecho", {
             "estado": "CRITERIO CLARO", "respuesta": "un texto cualquiera",
@@ -329,8 +332,7 @@ try:
     comprobar("con respuesta pero SIN expediente, reescribir queda apagado",
               str(v3.boton_cliente.cget("state")) == "disabled",
               v3.boton_cliente.cget("state"))
-    visible3 = (v3.aviso_motor.cget("text")
-                if v3.marco_motor.winfo_manager() else "")
+    visible3 = "  ".join(v3.cintas_visibles())
     comprobar("  y se explica en vez de quedarse gris en silencio",
               "expediente" in visible3, visible3[:110])
     comprobar("  diciendo que la respuesta de arriba SI vale",

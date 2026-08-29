@@ -18,9 +18,16 @@ profesional que va a firmar el trabajo:
 1. NUNCA se ensena texto que no haya pasado el verificador. Ni en gris, ni con
    aviso, ni a titulo orientativo. Si `respuesta` viene vacia, no hay nada que
    ensenar y se dice por que.
-2. EL EJERCICIO NO SE RELLENA SOLO. Nunca con el ano en curso. Una consulta de
-   2023 contestada con la ley de hoy sale impecable y esta mal, y no lo nota
-   nadie. Es el fallo mas silencioso de todo el sistema.
+2. EL EJERCICIO NO PUEDE ESTAR MAL EN SILENCIO. Una consulta de 2023
+   contestada con la ley de hoy sale impecable y esta mal, y no lo nota nadie.
+   Es el fallo mas silencioso de todo el sistema.
+
+   Hasta el 29/08/2026 esta regla se cumplia dejando el campo VACIO. Ya no: se
+   rellena -con el año que diga la pregunta, o con el natural en curso- y lo
+   que sostiene la regla son tres cosas juntas, que van siempre juntas:
+   sigue siendo obligatorio, el campo DICE de donde salio lo que lleva, y esa
+   marca desaparece en cuanto alguien teclea. Ver la nota larga junto al
+   campo.
 3. NINGUNA TRAZA DE PYTHON en pantalla, y la clave no aparece jamas, ni entera
    ni en trozos. Todo fallo sale en una frase de persona.
 """
@@ -487,6 +494,30 @@ def en_cristiano(mensaje: str) -> str:
 # escribir mas rapido, NO una lista de cobertura: lo que se cubre lo dice el
 # corpus -`normas.comunidades()`- y hoy es solo Cataluña. Se puede escribir
 # cualquier otra cosa a mano; el campo no valida nada.
+# CON CUAL SE ABRE. El despacho esta en Cataluña y es la unica comunidad de la
+# que hay normativa cargada hoy -`normas.comunidades()`-, pero eso NO es el
+# motivo: el motivo es que abrir vacio elige el fallo silencioso. Ver la nota
+# larga junto al campo. Se puede escribir cualquier otra cosa a mano.
+COMUNIDAD_POR_DEFECTO = "Cataluña"
+
+# EL AVISO DEL AÑO DICE LO QUE PASA SI ESTA MAL, NO QUE ES OBLIGATORIO.
+#
+# Decia «obligatorio: la ley cambia cada año». Es la regla, y una regla se
+# obedece sin entenderla: quien la lee teclea cuatro digitos y sigue. Lo que
+# hace comprobar es saber que el error NO SE VE -la respuesta sale igual de
+# bien redactada y citada, con su enlace, y es de otra ley-, que es
+# exactamente por lo que este es el fallo mas silencioso del sistema.
+AVISO_EJERCICIO = (
+    "Si el año no es el del caso, la respuesta sale igual de bien redactada y "
+    "citada — pero de otra ley, y eso no se nota leyéndola."
+)
+# DE DONDE SALIO EL AÑO QUE HAY EN EL CAMPO. Se enseña al lado, y desaparece en
+# cuanto alguien teclea: un año puesto por el programa no se puede confundir
+# nunca con uno elegido por una persona.
+MARCA_EN_CURSO = "año en curso"
+MARCA_DE_LA_PREGUNTA = "lo dice tu pregunta"
+MARCA_VARIOS = "tu pregunta menciona varios años: elige"
+
 COMUNIDADES = (
     "", "Andalucía", "Aragón", "Asturias", "Baleares", "Canarias", "Cantabria",
     "Castilla-La Mancha", "Castilla y León", "Cataluña", "Ceuta",
@@ -495,6 +526,25 @@ COMUNIDADES = (
 )
 
 RE_ENLACE = re.compile(r"https?://[^\s)\]}>,;]+")
+
+# El nombre de la carpeta de un expediente ES su sello de tiempo:
+# `20260828T121300`, y `-2` detras cuando hubo dos en el mismo segundo.
+RE_SELLO = re.compile(r"(\d{8})T(\d{4})")
+
+
+def _cuando(traza) -> str:
+    """De un expediente a «28/08/2026 a las 12:13». Vacio si no se puede.
+
+    NO SE INVENTA UNA FECHA. Si el nombre no lleva sello -no deberia pasar,
+    pero un expediente cargado de otro sitio podria- se devuelve cadena vacia y
+    quien llame no pinta nada. Un «(sin fecha)» en pantalla es ruido; una fecha
+    supuesta seria peor.
+    """
+    m = RE_SELLO.search(Path(str(traza or "")).name)
+    if not m:
+        return ""
+    d, h = m.group(1), m.group(2)
+    return f"{d[6:8]}/{d[4:6]}/{d[0:4]} a las {h[0:2]}:{h[2:4]}"
 
 
 def _cobertura():
@@ -519,6 +569,14 @@ class Ventana:
         self.trabajando = False
         self.respuesta_actual = ""
         self.traza_actual = ""
+        # EL EXPEDIENTE QUE HAY EN PANTALLA, PASE LO QUE PASE.
+        #
+        # `traza_actual` no sirve para esto y es un fallo aparte: solo se
+        # rellena cuando hay respuesta aceptada o orientacion, porque su
+        # trabajo es decir si se puede REESCRIBIR. Un NO ENCONTRADO seco dejaba
+        # la ventana sin saber que expediente estaba enseñando, aunque el
+        # expediente existiera y tuviera dentro todo lo que se buscó.
+        self.expediente_actual = ""
         self.ejercicio_usado = None
         # EL HILO. `vuelta` es solo para enseñarlo: el hilo de verdad se
         # reconstruye por `viene_de`, que va en cada expediente.
@@ -534,6 +592,19 @@ class Ventana:
         # guarda para que los botones NUEVOS -continuar, escribir para el
         # cliente- puedan decirlo tambien en vez de no hacer nada.
         self.bloqueada = False
+        # ¿HA TERMINADO YA DE INTENTARLO EL ARRANQUE?
+        #
+        # El motor tarda un instante -`raiz.after(120, ...)`- y hasta entonces
+        # `self.motor` es None, que es indistinguible de «no ha podido». El
+        # aviso de «los botones estan apagados porque el agente no ha podido
+        # prepararse» es CIERTO despues y FALSO durante, y salia durante en
+        # cuanto algo tocaba `_revisar_boton` en esos 120 ms -lo que ahora
+        # ocurre siempre, porque el año se rellena al construir-.
+        #
+        # Antes no se veia porque el aviso siguiente lo PISABA: la cinta era
+        # una sola linea. Apilada, el mensaje falso se queda en pantalla. El
+        # apilado no ha creado el fallo, lo ha destapado.
+        self._arranque_terminado = False
         self.ix = None
         self.grafo = None
         self.motor = None
@@ -787,6 +858,10 @@ class Ventana:
 
         self._construir_consulta(self.vista_consulta)
         self._construir_respuesta(self.vista_respuesta)
+        # EL AÑO, PUESTO ANTES DE QUE LLEGUE NADIE. Con el campo vacio la
+        # accion principal nace apagada, siempre; puesto y marcado, la ventana
+        # abre con algo que confirmar de un vistazo en vez de un tramite.
+        self._proponer_ejercicio()
         self.caja.focus_set()
 
     # ------------------------------------------------------- vista 1: pedir
@@ -812,22 +887,51 @@ class Ventana:
         centro.bind("<Configure>", lambda _e: self._suelo_de_la_ventana())
         centro.grid(row=1, column=1, rowspan=4, sticky="n")
 
-        tk.Label(centro, text="D E P A R T A M E N T O   F I S C A L",
-                 bg=PAPEL, fg=TINTA3, font=self.fuente_rotulo,
-                 anchor="w").pack(anchor="w")
-        # El titular tambien: se rellena en `_arrancar` con lo que diga el
-        # corpus. Aqui solo se deja el sitio, sin nombrar ningun impuesto.
+        # AQUI HABIA UN MEMBRETE: «D E P A R T A M E N T O   F I S C A L»,
+        # en versalitas espaciadas. No contestaba a ninguna pregunta de nadie:
+        # quien abre esta ventana sabe en que departamento trabaja. Ocupaba una
+        # linea encima del titular y no decia nada que el titular no diga.
+        #
+        # El titular se rellena en `_arrancar` con lo que diga el corpus. Aqui
+        # solo se deja el sitio, sin nombrar ningun impuesto.
         self.titular = tk.Label(centro, text="Consulta fiscal", bg=PAPEL,
                                 fg=TINTA, font=self.fuente_titular, anchor="w")
         self.titular.pack(anchor="w", pady=(AIRE, 0))
 
-        self.marco_motor = tk.Frame(centro, bg=PAPEL2)
-        tk.Frame(self.marco_motor, width=3, bg=LILA).pack(side="left", fill="y")
-        self.aviso_motor = tk.Label(
-            self.marco_motor, text="", bg=PAPEL2, fg=TINTA2, anchor="w",
-            justify="left", font=self.fuente, padx=HUECO2, pady=HUECO2 - 2,
-            wraplength=ANCHO_TARJETA - 40)
-        self.aviso_motor.pack(side="left", fill="x", expand=True)
+        # ────────────────────────────────────────────────────────────────
+        # LA CINTA ES UNA PILA, NO UNA LINEA. ARREGLADO EL 29/08/2026.
+        # ────────────────────────────────────────────────────────────────
+        #
+        # ESTO ERA UN FALLO, no una cuestion de gusto. `mostrar_cinta` escribia
+        # sobre UNA etiqueta, y en el codigo hay VEINTE sitios que la llaman.
+        # Al arrancar puede haber CINCO cosas que decir a la vez, todas ellas
+        # cosas que han pasado de verdad:
+        #
+        #   · el modo de prueba, que dice que las respuestas son falsas;
+        #   · la hoja de instrucciones rehecha, que hay que reimprimir;
+        #   · el criterio nuevo que bajo la cola anoche;
+        #   · la cola atascada o la fuente callada;
+        #   · los documentos que entraron de golpe con el ultimo `git pull`.
+        #
+        # Se pintaban las cinco, una encima de otra, en la misma etiqueta, en
+        # el mismo `after`. SE VEIA LA ULTIMA. Las otras cuatro se escribian y
+        # se perdian sin dejar rastro, y ninguna volvia a decirse: son avisos
+        # de arranque, y el arranque ya habia pasado. El de «las respuestas son
+        # FALSAS» es uno de ellos.
+        #
+        # LA SEPARACION QUE LO ARREGLA no es «apilar todo»: hay llamadas que
+        # son la respuesta a una pulsacion -«escribe primero que quieres
+        # añadir»- y esas SI tienen que sustituirse, porque son de ahora.
+        #
+        #   con `clave` .... aviso de estado. Tiene fila propia y se queda
+        #                    hasta que se cierra. Repetir la misma clave
+        #                    actualiza SU fila, no crea otra.
+        #   sin `clave` .... mensaje de ahora. Van todos a la misma fila
+        #                    -`aviso_motor`- y el ultimo manda, que es lo
+        #                    correcto para una respuesta a un clic.
+        self.marco_motor = tk.Frame(centro, bg=PAPEL)
+        self._cintas: dict = {}
+        self.fila_ahora, self.aviso_motor = self._fila_de_cinta()
 
         self.tarjeta = tarjeta = tk.Frame(centro, bg=PAPEL2,
                                           highlightthickness=1,
@@ -897,10 +1001,47 @@ class Ventana:
                                         width=7, font=self.fuente,
                                         style="Campo.TEntry", justify="center")
         self.caja_ejercicio.pack(side="left", padx=(HUECO2, HUECO2 - 4))
-        # Se deja VACIO a proposito. Ver la regla 2 de la cabecera.
-        tk.Label(fila, text="obligatorio: la ley cambia cada año",
-                 bg=PAPEL2, fg=TINTA2, font=self.fuente_menuda
-                 ).pack(side="left")
+        # ────────────────────────────────────────────────────────────────
+        # EL AÑO SE RELLENA. CAMBIADO EL 29/08/2026.
+        # ────────────────────────────────────────────────────────────────
+        #
+        # ESTO INVIERTE LA REGLA 2 DE LA CABECERA, y el motivo viejo se borra
+        # entero a proposito -igual que se hizo con el orden de los botones-:
+        # dejarlo escrito haria que alguien lo devolviera dentro de tres meses
+        # leyendo un razonamiento que ya no aplica.
+        #
+        # LO QUE DECIA, y por que valia: rellenar el año es suponerlo, y un año
+        # supuesto es un año equivocado que no nota nadie. Cierto entonces,
+        # porque el campo no decia de donde salia su contenido: un 2026 puesto
+        # por el programa y un 2026 tecleado por una persona se veian igual.
+        #
+        # LO QUE VALE AHORA: vacio, se llega a la ventana con LA ACCION
+        # PRINCIPAL APAGADA, siempre, y la unica pista es un gris de once
+        # pixeles. Eso no protege de nada: no evita el año equivocado, solo
+        # obliga a teclear el correcto CADA VEZ, y quien teclea cuatro digitos
+        # por inercia cuarenta veces al dia no los esta pensando mas que quien
+        # confirma uno puesto.
+        #
+        # LO QUE HACE QUE SEA SEGURO, y es la diferencia entera:
+        #   · SIGUE SIENDO OBLIGATORIO. Si se vacia, los botones se apagan
+        #     igual que antes. No se ha quitado el requisito.
+        #   · EL CAMPO DICE DE DONDE SALIO SU CONTENIDO -«año en curso», «lo
+        #     dice tu pregunta»- y esa marca DESAPARECE en cuanto alguien
+        #     teclea. Un año puesto por el programa nunca se puede confundir
+        #     con uno elegido.
+        #   · Y EL AVISO DICE LA CONSECUENCIA, no la regla. Ver `_avisar_del_año`.
+        self.marca_ejercicio = tk.Label(
+            fila, text="", bg=PAPEL2, fg=LILA, font=self.fuente_menuda)
+        self.marca_ejercicio.pack(side="left")
+        # A MANO O PUESTO POR EL PROGRAMA: LA DIFERENCIA NO LA SABE EL TRACE.
+        #
+        # `trace_add("write")` salta igual con una tecla que con un `set()`, asi
+        # que apagar la marca desde ahi la habria borrado en su propio primer
+        # relleno. Lo unico que distingue las dos cosas es un evento de
+        # teclado sobre el campo.
+        self._ejercicio_a_mano = False
+        for evento in ("<KeyRelease>", "<<Paste>>"):
+            self.caja_ejercicio.bind(evento, self._ejercicio_tocado)
 
         # LA COMUNIDAD, AL LADO DEL AÑO Y POR EL MISMO MOTIVO.
         #
@@ -916,24 +1057,63 @@ class Ventana:
         # impuesto es la pregunta hasta que el analizador la lee, o sea
         # despues de pulsar; exigirla aqui obligaria a saberlo antes.
         #
-        # Vacia por defecto y nunca se rellena sola, ni siquiera con Cataluña:
-        # rellenarla seria suponer donde vive el cliente.
+        # ────────────────────────────────────────────────────────────────
+        # LA COMUNIDAD SE RELLENA CON CATALUÑA. CAMBIADO EL 29/08/2026.
+        # ────────────────────────────────────────────────────────────────
+        #
+        # AQUI DECIA que se dejaba vacia y que no se rellenaba sola «ni
+        # siquiera con Cataluña, porque rellenarla seria suponer donde vive el
+        # cliente». Se borra el razonamiento entero por lo de siempre: dejarlo
+        # escrito invita a devolverlo.
+        #
+        # LO QUE FALLA CON EL CAMPO VACIO: no se elige entre suponer y no
+        # suponer. Se elige ENTRE DOS ERRORES, y vacio se coge el peor.
+        #
+        #   VACIO  ...... la respuesta sale sin el tramo autonomico, impecable
+        #                 y a medias, y NADIE LO NOTA. Un fallo silencioso.
+        #   CATALUÑA .... si el cliente reside fuera, la respuesta trae reglas
+        #                 catalanas -que es el fallo que puso este campo aqui-
+        #                 pero la palabra «Cataluña» esta EN LA PANTALLA de
+        #                 pedir Y en el eco de la de leer. Un fallo visible.
+        #
+        # Un fallo que se ve se corrige; uno que no se ve, no. Y el despacho
+        # esta en Cataluña: el caso de fuera es el raro, que es justo el que
+        # tiene que chirriar.
+        #
+        # EL CAMPO NO SE QUITA NI SE BLOQUEA, por el motivo de siempre: sigue
+        # sin bloquear -el año no tiene alternativa segura y la comunidad si:
+        # contestar solo con lo estatal, diciendolo- y sigue siendo editable,
+        # que es lo unico que hace legitimo traerlo puesto.
         fila = self.grupo_comunidad = tk.Frame(self.fila_campos, bg=PAPEL2)
         tk.Label(fila, text="Comunidad:", bg=PAPEL2, fg=TINTA,
                  font=self.fuente).pack(side="left")
-        self.comunidad = tk.StringVar()
+        self.comunidad = tk.StringVar(value=COMUNIDAD_POR_DEFECTO)
         self.caja_comunidad = ttk.Combobox(
             fila, textvariable=self.comunidad, width=14, font=self.fuente,
             state="normal", values=COMUNIDADES)
         self.caja_comunidad.pack(side="left", padx=(HUECO2, HUECO2 - 4))
-        tk.Label(fila, text="solo si el caso tiene tramo autonomico",
+        tk.Label(fila, text="cámbialo si el cliente reside en otra",
                  bg=PAPEL2, fg=TINTA2, font=self.fuente_menuda
                  ).pack(side="left")
         self._plegada = None
         self.fila_campos.bind("<Configure>", self._plegar_campos)
 
+        # LA CONSECUENCIA, DEBAJO Y A TODO LO ANCHO.
+        #
+        # «obligatorio: la ley cambia cada año» decia LA REGLA. Quien lee una
+        # regla obedece o la salta; quien lee lo que pasa si se equivoca,
+        # comprueba. Y va DEBAJO y no al lado porque `_plegar_campos` mide lo
+        # que piden los dos grupos para decidir si los apila: una frase larga
+        # dentro del grupo del año lo pliega siempre, en cualquier pantalla.
+        self.aviso_ejercicio = tk.Label(
+            tarjeta, text=AVISO_EJERCICIO, bg=PAPEL2, fg=TINTA2,
+            font=self.fuente_menuda, anchor="w", justify="left",
+            wraplength=ANCHO_TARJETA - 40)
+        self.aviso_ejercicio.grid(row=3, column=0, sticky="ew",
+                                  pady=(AIRE, 0))
+
         tk.Frame(tarjeta, height=1, bg=FILETE).grid(
-            row=3, column=0, sticky="ew", pady=(HUECO, HUECO))
+            row=4, column=0, sticky="ew", pady=(HUECO, HUECO))
 
         # DOS BOTONES, SIEMPRE LOS DOS. Ya no dependen de ningun fichero: si
         # se decide usar solo la ley, se decide aqui -no pulsando el segundo-,
@@ -964,7 +1144,7 @@ class Ventana:
         # hay dudas -de puro texto de la norma- donde el criterio solo añade
         # ruido y espera.
         fila_criterio = tk.Frame(tarjeta, bg=PAPEL2)
-        fila_criterio.grid(row=4, column=0, sticky="ew")
+        fila_criterio.grid(row=5, column=0, sticky="ew")
         fila_criterio.columnconfigure(0, weight=1)
         self.boton_criterio = ttk.Button(
             fila_criterio, text=BOTON_CRITERIO, style="Primario.TButton",
@@ -983,7 +1163,7 @@ class Ventana:
         # Y el de la ley DEBAJO y en su propia fila: con los dos al lado se
         # pulsa el que queda mas a mano, no el que se queria.
         fila_ley = tk.Frame(tarjeta, bg=PAPEL2)
-        fila_ley.grid(row=5, column=0, sticky="ew", pady=(HUECO2, 0))
+        fila_ley.grid(row=6, column=0, sticky="ew", pady=(HUECO2, 0))
         self.boton = ttk.Button(fila_ley, text=BOTON_LEY,
                                 style="Segundo.TButton",
                                 command=lambda: self._lanzar(False),
@@ -1317,15 +1497,114 @@ class Ventana:
 
     # ---------------------------------------------------- cambiar de vista
 
-    def mostrar_cinta(self, texto: str) -> None:
-        """La cinta de aviso sobre la tarjeta. `pack`, no `grid`.
+    def _fila_de_cinta(self, con_cierre: bool = False):
+        """Una fila de aviso: el filete lila, el texto y -si toca- la cruz.
+
+        Devuelve (fila, etiqueta). La fila nace sin colocar; la coloca quien
+        la pide, que es el unico que sabe en que orden va.
+        """
+        fila = tk.Frame(self.marco_motor, bg=PAPEL2)
+        tk.Frame(fila, width=3, bg=LILA).pack(side="left", fill="y")
+        if con_cierre:
+            # LA CRUZ, PARA QUE CINCO AVISOS NO SEAN UNA PARED PERMANENTE.
+            # Un aviso de arranque se lee una vez; sin forma de cerrarlo,
+            # empuja el formulario hacia abajo toda la sesion.
+            cerrar = tk.Label(fila, text="✕", bg=PAPEL2, fg=TINTA3,
+                              font=self.fuente_menuda, padx=HUECO2)
+            cerrar.pack(side="right", fill="y")
+            self._pinchable(cerrar)
+        # EL RELLENO ES MENOR QUE CUANDO ERA UNA SOLA CINTA, y es a proposito:
+        # con `HUECO2` cada fila se llevaba 28 px solo de aire, y tres avisos
+        # de arranque empujaban el formulario 90 px hacia abajo. Apilar solo
+        # sale a cuenta si cada fila es barata.
+        et = tk.Label(fila, text="", bg=PAPEL2, fg=TINTA2, anchor="w",
+                      justify="left", font=self.fuente, padx=HUECO2,
+                      pady=AIRE - 2, wraplength=ANCHO_TARJETA - 40)
+        et.pack(side="left", fill="x", expand=True)
+        if con_cierre:
+            cerrar.bind("<Button-1>", lambda _e, f=fila: self._cerrar_cinta(f))
+        return fila, et
+
+    def _cerrar_cinta(self, fila) -> None:
+        """Quita una fila de aviso, y el marco entero si era la ultima."""
+        fila.pack_forget()
+        self._cintas = {k: v for k, v in self._cintas.items() if v[0] is not fila}
+        if not any(f.winfo_manager() for f, _e in self._cintas.values()) \
+                and not self.fila_ahora.winfo_manager():
+            self.marco_motor.pack_forget()
+
+    def cintas_visibles(self) -> list:
+        """Todo lo que hay puesto en la cinta ahora mismo, de arriba abajo.
+
+        Existe porque desde que los avisos se apilan ya no vale con mirar
+        `aviso_motor`: esa etiqueta es solo la fila de «ahora», y los avisos de
+        estado -bloqueo, expediente, cola- tienen fila propia. Quien quiera
+        saber que se esta diciendo tiene que preguntarlo aqui y no adivinarlo
+        de un widget concreto.
+        """
+        if not self.marco_motor.winfo_manager():
+            return []
+        vistas = [et.cget("text") for f, et in self._cintas.values()
+                  if f.winfo_exists() and f.winfo_manager()]
+        if self.fila_ahora.winfo_manager() and self.aviso_motor.cget("text"):
+            vistas.append(self.aviso_motor.cget("text"))
+        return [t for t in vistas if t]
+
+    def limpiar_cintas(self) -> None:
+        """Quita todos los avisos. Es lo que hace `_nueva_consulta` por dentro
+        y lo que necesitan las suites para no dar por bueno un mensaje que ya
+        estaba puesto de antes."""
+        for clave in list(self._cintas):
+            self.ocultar_cinta(clave)
+        self.aviso_motor.configure(text="")
+        self.fila_ahora.pack_forget()
+        self.marco_motor.pack_forget()
+
+    def ocultar_cinta(self, clave: str) -> None:
+        """Retira un aviso de estado que ha dejado de ser verdad.
+
+        Hace falta desde que los avisos se apilan: antes, uno que dejaba de
+        valer se tapaba solo -lo pisaba el siguiente-, y eso era un accidente,
+        no un mecanismo. Con fila propia, un aviso que nadie retira se queda en
+        pantalla diciendo algo falso.
+        """
+        fila, _et = self._cintas.get(clave, (None, None))
+        if fila is not None and fila.winfo_exists():
+            self._cerrar_cinta(fila)
+
+    def mostrar_cinta(self, texto: str, clave: str = "") -> None:
+        """Un aviso sobre la tarjeta. `pack`, no `grid`.
 
         Dentro de un contenedor gestionado por `pack` no se puede meter un hijo
         con `grid`: tkinter no lo mezcla y lanza «cannot use geometry manager».
-        Y va con `before=` porque `pack` coloca por orden de llegada, y esta
-        nace despues de la tarjeta que tiene que ir debajo.
+        Y va con `before=` porque `pack` coloca por orden de llegada, y el
+        marco nace despues de la tarjeta que tiene que ir debajo.
+
+        CON `clave`, el aviso tiene fila propia y se queda; sin ella va a la
+        fila de «ahora» y sustituye a lo que hubiera. Ver la nota larga donde
+        se construye el marco.
         """
-        self.aviso_motor.configure(text=texto)
+        if clave:
+            fila, et = self._cintas.get(clave, (None, None))
+            if fila is None or not fila.winfo_exists():
+                fila, et = self._fila_de_cinta(con_cierre=True)
+                self._cintas[clave] = (fila, et)
+            et.configure(text=texto)
+            # Los de estado van ARRIBA y en el orden en que llegaron; el de
+            # «ahora» siempre el ultimo, pegado a la tarjeta.
+            #
+            # `before=` EXIGE QUE EL DE REFERENCIA ESTE COLOCADO. La fila de
+            # «ahora» nace sin colocar -no hay nada que decir todavia- y
+            # pedirle a `pack` que se ponga antes de algo que no esta lanza
+            # «window isn't packed», que es un TclError en mitad de pintar una
+            # respuesta. Si no esta, no hay nada delante de lo que ponerse.
+            if self.fila_ahora.winfo_manager():
+                fila.pack(fill="x", pady=(0, 2), before=self.fila_ahora)
+            else:
+                fila.pack(fill="x", pady=(0, 2))
+        else:
+            self.aviso_motor.configure(text=texto)
+            self.fila_ahora.pack(fill="x")
         self.marco_motor.pack(fill="x", pady=(HUECO, 0), before=self.tarjeta)
 
     def _mostrar(self, cual: str) -> None:
@@ -1976,6 +2255,7 @@ class Ventana:
         try:
             self._arrancar()
         except Exception as e:                   # noqa: BLE001
+            self._arranque_terminado = True
             self._bloquear(
                 "El agente no ha podido prepararse. Haz doble clic en "
                 "«diagnostico»: deja un fichero diagnostico.txt en esta "
@@ -2012,6 +2292,7 @@ class Ventana:
             # programa lo baja solo es mandar a alguien a esperar por gusto:
             # se dice que se cierre y se vuelva a abrir, que es lo que lo
             # arregla.
+            self._arranque_terminado = True
             self._bloquear(
                 "Falta el texto de las normas. Cierra esta ventana y vuelve "
                 "a abrir el agente: se baja solo y tarda unos minutos. Si "
@@ -2021,6 +2302,9 @@ class Ventana:
             return
 
         motor, err = fase4.preparar_motor(self.motor_nombre, silencioso=True)
+        # A PARTIR DE AQUI YA SE SABE. Antes de esta linea, «los botones estan
+        # apagados» solo puede querer decir «todavia no».
+        self._arranque_terminado = True
         if motor is None:
             # SI LO QUE FALLA ES LA CREDENCIAL, HAY BOTON. Hasta ahora la
             # ventana decia lo que pasaba y ahi se acababa: para arreglarlo
@@ -2033,6 +2317,9 @@ class Ventana:
                 self._ofrecer_cambiar_clave()
             return
         self.motor = motor
+        # Y SI LLEGO A DECIRSE, SE RETIRA. Un aviso de averia encima de una
+        # ventana que funciona es peor que no avisar.
+        self.ocultar_cinta("bloqueo")
 
         # AHORA QUE HAY CORPUS, EL TITULO PUEDE DECIR LO QUE CUBRE. Sale de
         # `cobertura`, que lo cuenta del corpus: un impuesto cuenta cuando hay
@@ -2047,7 +2334,7 @@ class Ventana:
         if not motor.es_modelo_real:
             self.mostrar_cinta(
                 "MODO DE PRUEBA: las respuestas las fabrica una regla fija, "
-                "NO son una consulta real.")
+                "NO son una consulta real.", clave="prueba")
         self._escribir_texto([
             ("Escribe tu duda, pon el año del caso y pulsa Consultar.\n\n",
              "apagado"),
@@ -2055,15 +2342,27 @@ class Ventana:
             # solo con la Ley y el Reglamento del IVA» con trece normas y
             # cuatro impuestos cargados. El detalle por impuesto esta en «Qué
             # hay dentro»; aqui va el titular, con sus cifras.
+            # LA SEGUNDA FRASE SE HA IDO, Y ERA LA PRIMERA DE LAS DOS
+            # REPETIDAS. Decia «El segundo añade ademas el criterio guardado;
+            # en "Que hay dentro" esta de que impuestos y cuanto». Eso mismo,
+            # con las cifras y no con una remision, lo dice el pie del segundo
+            # boton -que esta A DOS CENTIMETROS, pegado al boton del que
+            # habla-. Dos sitios que dicen lo mismo son dos sitios que pueden
+            # quedarse viejos por separado; se queda el que esta en el momento
+            # de decidir.
             (f"El primer botón responde con la ley: {len(self.ix.docs)} "
-             f"artículos de {len(self.ix.rutas)} normas. El segundo añade "
-             f"además el criterio guardado; en «Qué hay dentro» está de qué "
-             f"impuestos y cuánto.\n", "apagado"),
+             f"artículos de {len(self.ix.rutas)} normas.\n", "apagado"),
         ])
-        self.pie.configure(
-            text=f"{len(self.ix.docs)} preceptos cargados  ·  "
-                 f"cada consulta queda guardada en el expediente"
-        )
+        # AQUI DECIA «N PRECEPTOS CARGADOS · cada consulta queda guardada en el
+        # expediente». Las dos mitades sobraban, cada una por su motivo:
+        #
+        #   · la cuenta de preceptos no contesta a ninguna pregunta de nadie.
+        #     Ya esta en la bienvenida de arriba, donde SI dice algo -«con esto
+        #     responde el primer boton»-; suelta en un pie es una cifra.
+        #   · «queda guardada en el expediente» PROMETIA UN SITIO AL QUE NO SE
+        #     PUEDE IR. Informar de que existe algo que no se puede abrir no
+        #     informa: frustra. El pie se queda vacio hasta que haya donde
+        #     mandar a la gente.
         # DE QUE HAY CRITERIO, CONTADO DE LA DESPENSA. Nunca escrito.
         from agente_fiscal import cobertura as _C
         self.pie_criterio.configure(
@@ -2078,7 +2377,7 @@ class Ventana:
             hecho = CONF.asegurar(self.ix)
             if hecho:
                 self.mostrar_cinta(hecho + " Imprímela otra vez si la tienes "
-                                          "en la mesa.")
+                                          "en la mesa.", clave="guia")
         except Exception:  # noqa: BLE001 - la guia nunca impide consultar
             pass
 
@@ -2104,7 +2403,7 @@ class Ventana:
                     f"Encontré criterio sobre {traido['articulos']} "
                     f"artículo(s) que preguntasteis: "
                     f"{traido['consultas']} consulta(s) nuevas. "
-                    f"Ya están en el segundo botón.")
+                    f"Ya están en el segundo botón.", clave="cola-nuevo")
             # UNO SOLO, Y EL DE LA FUENTE MANDA. Los dos hablan de la cola pero
             # de cosas distintas: «la fuente no responde» es una averia que hay
             # que mirar, y «la cola no da abasto» se arregla abriendo el agente
@@ -2118,7 +2417,7 @@ class Ventana:
             # va a funcionar.
             aviso = _COLA.aviso_de_silencio() or _COLA.aviso_de_atasco()
             if aviso:
-                self.mostrar_cinta(aviso)
+                self.mostrar_cinta(aviso, clave="cola-estado")
             # Y SI HA ENTRADO CRITERIO NUEVO, QUE SE SEPA. La despensa la
             # llena el Mac y viaja por git: en la oficina crece de golpe al
             # hacer pull, y hasta ahora no habia nada que lo dijera. Compara
@@ -2126,7 +2425,7 @@ class Ventana:
             try:
                 nuevo = _cobertura().aviso_de_novedades(self.ix)
                 if nuevo:
-                    self.mostrar_cinta(nuevo)
+                    self.mostrar_cinta(nuevo, clave="novedades")
             except Exception:                    # noqa: BLE001
                 pass
         except Exception:  # noqa: BLE001 - la cola nunca impide consultar
@@ -2174,7 +2473,7 @@ class Ventana:
             self._sin_nada_que_copiar()
         except Exception:                        # noqa: BLE001
             pass
-        self.mostrar_cinta(frase)
+        self.mostrar_cinta(frase, clave="bloqueo")
         self._pintar_estado("NO SE PUEDE CONSULTAR", frase,
                             EST.NO_ENCONTRADO)
         self._escribir_texto([(frase + "\n", "titulo")])
@@ -2216,12 +2515,17 @@ class Ventana:
             # se dispara al escribir en la caja, o sea SIEMPRE y despues, asi
             # que sin esta guarda borraba la buena en cuanto el gestor tecleaba
             # la primera letra.
-            if not self.bloqueada:
+            #
+            # Y NO SE DICE MIENTRAS TODAVIA ESTA CARGANDO: ahi los botones
+            # estan apagados porque aun no ha llegado el motor, no porque haya
+            # fallado. Decirlo entonces es dar por rota una ventana que esta
+            # arrancando bien.
+            if not self.bloqueada and self._arranque_terminado:
                 self.mostrar_cinta(
                     "Los botones están apagados porque el agente no ha podido "
                     "prepararse. Haz doble clic en «diagnostico»: deja un "
                     "fichero diagnostico.txt en esta misma carpeta. "
-                    "Envíaselo a Emili tal cual.")
+                    "Envíaselo a Emili tal cual.", clave="bloqueo")
             return
         duda = self.caja.get("1.0", "end").strip()
         # LA REGLA DEL AÑO, UNA SOLA VEZ. Aqui habia una TERCERA copia escrita
@@ -2238,7 +2542,59 @@ class Ventana:
     def _caja_cambiada(self, _evento=None) -> None:
         """Cualquier cambio en la caja, incluido pegar con el raton."""
         self.caja.edit_modified(False)
+        self._proponer_ejercicio()
         self._revisar_boton()
+
+    # ------------------------------------------------------------- el año
+
+    def _ejercicio_tocado(self, _evento=None) -> None:
+        """Alguien ha tecleado en el campo del año. A partir de aqui es suyo.
+
+        Es lo unico que distingue un año elegido de un año puesto: el
+        `trace_add` del StringVar salta igual con un `set()` del programa.
+        """
+        self._ejercicio_a_mano = True
+        self.marca_ejercicio.configure(text="")
+
+    def _proponer_ejercicio(self) -> None:
+        """Rellena el año, y DICE de donde lo ha sacado.
+
+        TRES CASOS, Y EL TERCERO ES EL QUE HACE QUE ESTO NO MIENTA:
+
+            la pregunta dice UN año ....... ese, y se marca «lo dice tu
+                                            pregunta»
+            la pregunta no dice ninguno ... el año natural en curso, marcado
+            la pregunta dice VARIOS ....... NO SE ELIGE. Se deja lo que hubiera
+                                            y se pide que elija una persona.
+
+        El tercero es la misma regla que ya aplica `analizador.leer_ejercicio`
+        con «2023-2024»: dos ejercicios son dos leyes, y ante la duda se
+        pregunta. Adivinar cual de los dos vale seria justo el fallo que este
+        campo existe para evitar, con la pinta de una comodidad.
+
+        LOS AÑOS SE LEEN CON `annos_escritos`, QUE YA EXISTE. Es la funcion que
+        usa `resolver_ejercicio` para aceptar o rechazar el año del analizador.
+        Escribir aqui una segunda expresion regular seria la CUARTA copia de la
+        regla del año en este proyecto -hubo tres, y coincidian hasta que
+        alguien arreglo una-.
+        """
+        if self._ejercicio_a_mano:
+            return
+        import datetime
+        en_curso = datetime.date.today().year
+        duda = self.caja.get("1.0", "end")
+        # Se acotan por arriba al año en curso: `annos_escritos` llega hasta
+        # 2100 -sirve a otra cosa- y un «2030» dentro de una pregunta no es el
+        # ejercicio de un caso, es una cifra cualquiera.
+        dichos = sorted(a for a in AN.annos_escritos(duda) if a <= en_curso)
+        if len(dichos) == 1:
+            self.ejercicio.set(str(dichos[0]))
+            self.marca_ejercicio.configure(text=MARCA_DE_LA_PREGUNTA)
+        elif len(dichos) > 1:
+            self.marca_ejercicio.configure(text=MARCA_VARIOS)
+        else:
+            self.ejercicio.set(str(en_curso))
+            self.marca_ejercicio.configure(text=MARCA_EN_CURSO)
 
     def _avisar_del_largo(self, duda: str) -> bool:
         """Enseña el aviso de largo si toca. Devuelve si la duda cabe.
@@ -2286,6 +2642,14 @@ class Ventana:
             self._revisar_boton()
             return
         self.trabajando = True
+        # A PARTIR DE AQUI EL AÑO YA NO SE PROPONE, y no es un detalle.
+        #
+        # `_seguir` compone la pregunta anterior MAS lo añadido y la escribe en
+        # la caja, lo que dispara `<<Modified>>`. Sin esto, un «y si hubiera
+        # sido en 2019» cambiaria el año A ESPALDAS de quien pregunta y la
+        # vuelta se consultaria contra otra ley. Un año que ya ha sostenido una
+        # consulta es una decision tomada: el programa no la toca mas.
+        self._ejercicio_a_mano = True
         self.con_criterio = con_criterio
         # «CONSULTANDO...» VA EN EL BOTON QUE SE HA PULSADO. Estaba fijo en el
         # de la ley, asi que al invertir el orden quien pulsaba arriba veia
@@ -2619,9 +2983,9 @@ class Ventana:
                 tk.Label(f, text=der, bg=PAPEL2, fg=ENLACE,
                          font=self.fuente_referencia, anchor="e").pack(side="right")
 
-        tk.Label(marco, text="D E N T R O   D E   L A   H E R R A M I E N T A",
-                 bg=PAPEL, fg=TINTA3, font=self.fuente_rotulo,
-                 anchor="w").pack(fill="x")
+        # El segundo membrete espaciado, fuera por el mismo motivo que el de la
+        # pantalla de consultar: el titulo de debajo ya dice lo que es, y la
+        # ventana se llama «Qué hay dentro» en su propia barra.
         tk.Label(marco, text="Qué hay dentro", bg=PAPEL,
                  fg=TINTA, font=self.fuente_titular, anchor="w"
                  ).pack(fill="x", pady=(AIRE, 0))
@@ -2767,37 +3131,11 @@ class Ventana:
             self._pinchable(boton_pliegue)
             self.boton_pliegue_normas = boton_pliegue
 
-            # QUE EL CORPUS ESTA ENTERO, DICHO EN LA PANTALLA QUE SE ENSEÑA
-            # PARA DUDAR DE UNA RESPUESTA. Un corpus truncado no da error: da
-            # respuestas peores en silencio. Quien venga aqui a preguntarse
-            # «¿esto lo tiene?» tiene que poder ver que si, y que se ha
-            # comprobado, no que se supone. Ver `sellos`.
-            # EL ESTADO DE LA COLA, sin barra de progreso. La cola avanza a
-            # saltos, por detras y solo al abrir: una barra sugiere que algo se
-            # mueve ahora y que se puede esperar, y las dos cosas son falsas.
-            try:
-                from agente_fiscal import cola as _COLA
-                frase_cola = _COLA.frase_de_estado()
-                if frase_cola:
-                    tk.Label(c, text="·  " + frase_cola, bg=PAPEL2, fg=TINTA,
-                             font=self.fuente_menuda, anchor="w",
-                             justify="left", wraplength=560, padx=RELLENO,
-                             ).pack(fill="x", pady=(HUECO2 - 4, 0))
-            except Exception:                    # noqa: BLE001
-                pass
-
-            from agente_fiscal import sellos as _S
-            est = _S.estado(self.ix.rutas)
-            tk.Label(c, text=("✓  " if not est["problemas"] and est["sellado"]
-                              else "·  ") + est["frase"],
-                     bg=PAPEL2,
-                     fg=(TINTA2 if est["sellado"] and not est["problemas"]
-                         else TINTA),
-                     font=self.fuente_menuda, anchor="w", justify="left",
-                     wraplength=560, padx=RELLENO,
-                     # `pady` de un WIDGET es UNA distancia. El par va en el
-                     # `pack`. Es la cuarta vez que caigo en esto.
-                     ).pack(fill="x", pady=(HUECO2 - 4, 0))
+            # EL ESTADO DE LA COLA Y EL SELLO DEL CORPUS SE HAN IDO A
+            # MANTENIMIENTO, al final de esta misma pantalla. Ver la nota de
+            # `_pintar_mantenimiento`: contestan a preguntas de quien CUIDA la
+            # herramienta, no de quien la usa, y aqui empujaban hacia abajo lo
+            # unico que se viene a mirar -si mi impuesto esta dentro-.
         else:
             linea(c, "cargando...")
 
@@ -2820,9 +3158,6 @@ class Ventana:
         # boton. Ahora es una sola tabla, por impuesto, contada de la copia
         # local: dice lo mismo que las tres cifras -la suma- y ademas lo que
         # aquellas no decian.
-        consultas = len(list(_D.DIR_CONSULTAS.glob("*.json"))) \
-            if _D.DIR_CONSULTAS.is_dir() else 0
-        todas = _T.CacheTEAC().todas()
         if self.ix is not None:
             from agente_fiscal import cobertura as _C
             filas = _C.por_impuesto(self.ix)
@@ -2831,11 +3166,19 @@ class Ventana:
             # LOS IMPUESTOS YA ESTAN ARRIBA, uno por linea, con su cifra de
             # criterio al lado de la de articulos. Repetirlos aqui era decir lo
             # mismo dos veces y hacer crecer la pantalla el doble de rapido.
-            linea(c, "Consultas de la Dirección General de Tributos "
-                     "y Doctrina del TEAC y tribunales regionales",
-                  f"{consultas} + {len(todas)}")
-            # Y LA CUENTA QUE CUADRA LA COLUMNA. La suma de arriba es mayor
-            # que esto, y aqui se ve por que.
+            #
+            # Y AQUI HABIA UNA LINEA MAS -«Consultas de la Direccion General de
+            # Tributos y Doctrina del TEAC y tribunales regionales · N + M»-,
+            # que era LA SEGUNDA DE LAS DOS FRASES REPETIDAS. Decia, palabra
+            # por palabra, lo que dice el pie del segundo boton, y su cifra era
+            # la suma de la columna de arriba. Tres sitios contando lo mismo
+            # son tres sitios que envejecen por separado, y el codigo ya se
+            # habia quemado con eso cuatro veces. Se queda el pie del boton,
+            # que es el que esta en el momento de decidir.
+            #
+            # LA CUENTA QUE CUADRA LA COLUMNA SE QUEDA: la suma de arriba es
+            # mayor que el numero de documentos, y sin esta linea eso se lee
+            # como un error.
             distintos, varios = _C.documentos(self.ix)
             linea(c, f"de ellos se encuentran, y {varios} hablan de más de "
                      f"un impuesto", f"{distintos}")
@@ -2857,56 +3200,25 @@ class Ventana:
         # pantalla de consultar. Tres sitios diciendo lo mismo son tres sitios
         # donde uno se puede quedar viejo.
 
-        # --- el canario ---
-        titulo("LAS FUENTES, AHORA MISMO")
-        c = caja()
-        self._estado_fuentes = {}
-        for nombre, mod in (("Tributos (consultas de la DGT)", _D),
-                            ("DYCTEA (resoluciones)", _T)):
-            viva, motivo = mod.fuente_viva()
-            texto = ("responde" if viva else
-                     f"sin comprobar hoy" if "no se ha comprobado" in motivo
-                     else "no responde")
-            f = tk.Frame(c, bg=PAPEL2)
-            f.pack(fill="x", padx=RELLENO, pady=3)
-            tk.Label(f, text=nombre, bg=PAPEL2, fg=TINTA, font=self.fuente,
-                     anchor="w").pack(side="left")
-            et = tk.Label(f, text=texto, bg=PAPEL2,
-                          fg=(ENLACE if viva else TINTA3),
-                          font=self.fuente_referencia, anchor="e")
-            et.pack(side="right")
-            self._estado_fuentes[nombre] = et
-
-            # EL CERTIFICADO, DONDE PASA LA GENTE. Ya existia
-            # `fuente_web.dias_de_certificado`, pero solo lo llamaban los
-            # guiones de consola: la comprobacion solo servia si alguien se
-            # acordaba de ejecutarla, y quien tiene que acordarse suele estar
-            # de viaje justo ese mes. El de PETETE caduca el 26/09.
-            #
-            # SE AVISA CON MARGEN Y SE DICE QUE HACER, no solo que caduca: un
-            # aviso que da una fecha y ningun verbo deja a quien lo lee igual
-            # de parado que sin aviso.
-            try:
-                dias_cert = mod.FW.dias_de_certificado(mod.BASE)
-            except Exception:  # noqa: BLE001 - sin red no se avisa de nada
-                dias_cert = None
-            if dias_cert is not None and dias_cert <= DIAS_AVISO_CERTIFICADO:
-                tk.Label(c, text=(
-                    f"   El certificado de esta web caduca en {dias_cert} "
-                    f"días. Cuando pase, el agente NO podrá ampliar con "
-                    f"criterio nuevo (lo guardado sigue sirviendo). No es "
-                    f"cosa nuestra: lo renueva el organismo. Si el día "
-                    f"llega y no responde, avisa a Emili."),
-                    bg=PAPEL2, fg=TINTA, font=self.fuente_menuda, anchor="w",
-                    justify="left", wraplength=540, padx=RELLENO
-                ).pack(fill="x")
-
-        tk.Label(c, text="Las respuestas salen SIEMPRE de la copia local: que "
-                         "una fuente no responda no impide consultar, solo "
-                         "quiere decir que hoy no se puede ampliar.",
-                 bg=PAPEL2, fg=TINTA2, font=self.fuente_menuda, anchor="w",
-                 justify="left", wraplength=560, padx=RELLENO,
-                 pady=HUECO2 - 4).pack(fill="x")
+        # --- mantenimiento ---
+        #
+        # TODO LO QUE HAY AQUI CONTESTA A UNA PREGUNTA DE QUIEN CUIDA LA
+        # HERRAMIENTA, NO DE QUIEN LA USA. Movido el 29/08/2026.
+        #
+        # Estaba mezclado con lo demas, y por eso esta pantalla no cabia de una
+        # vez: si las fuentes responden, si el corpus esta sellado, como va la
+        # cola, cuando caduca un certificado. Son cosas ciertas y utiles, y
+        # ninguna cambia lo que hace quien viene a preguntar «¿esta mi impuesto
+        # dentro?» — que es la unica pregunta de esta pantalla.
+        #
+        # Y HAY UNA FRASE QUE LO DEMUESTRA, y lleva aqui desde el principio:
+        # «las respuestas salen SIEMPRE de la copia local: que una fuente no
+        # responda no impide consultar». O sea que la propia pantalla ya decia
+        # que ese bloque no afecta a consultar.
+        #
+        # NO SE ESCONDE: se pliega, empieza cerrado y se abre de un clic. La
+        # diferencia entre esconder y plegar es si se puede llegar.
+        self._pintar_mantenimiento(marco, titulo, caja, linea, _D, _T)
 
         cerrar = ttk.Button(marco, text="Cerrar", command=v.destroy,
                             style="Discreto.TButton")
@@ -2917,10 +3229,123 @@ class Ventana:
         v.transient(self.raiz)
         v.lift()
 
+    def _pintar_mantenimiento(self, marco, titulo, caja, linea, _D, _T) -> None:
+        """LO QUE LE IMPORTA A QUIEN CUIDA LA HERRAMIENTA, PLEGADO Y AL FINAL.
+
+        Cuatro cosas, y las cuatro estaban antes mezcladas con lo que se viene
+        a mirar: si las fuentes responden, cuando caduca su certificado, como
+        va la cola y si el corpus esta entero. Todas ciertas; ninguna cambia lo
+        que hace quien consulta.
+
+        EMPIEZA CERRADO. Quien abre «Qué hay dentro» viene a saber si su
+        impuesto esta, no si DYCTEA contesta hoy.
+        """
+        titulo("MANTENIMIENTO · para quien cuida la herramienta")
+        c = caja()
+        abierto = {"si": False}
+        dentro = tk.Frame(c, bg=PAPEL2)
+        boton = ttk.Button(c, style="Discreto.TButton")
+
+        def plegar() -> None:
+            abierto["si"] = not abierto["si"]
+            if abierto["si"]:
+                dentro.pack(fill="x", before=boton)
+            else:
+                dentro.pack_forget()
+            boton.configure(text=("Ocultar el mantenimiento" if abierto["si"]
+                                  else "Ver el estado de la herramienta"))
+
+        boton.configure(command=plegar)
+        # EL BOTON SE COLOCA PRIMERO, y no es cosmetica: `before=boton` exige
+        # que el boton YA este puesto. Al reves lanza «window isn't packed».
+        # Colocado el, `dentro` se pone delante y queda encima, que es donde
+        # tiene que estar.
+        boton.pack(anchor="w", padx=RELLENO, pady=(AIRE, 0))
+        plegar(); plegar()          # deja el rotulo puesto y el detalle cerrado
+        self._pinchable(boton)
+
+        def nota(texto: str, color: str = TINTA) -> None:
+            tk.Label(dentro, text=texto, bg=PAPEL2, fg=color,
+                     font=self.fuente_menuda, anchor="w", justify="left",
+                     wraplength=560, padx=RELLENO).pack(fill="x", pady=(2, 0))
+
+        # --- que hay bajado, en crudo ---
+        consultas = len(list(_D.DIR_CONSULTAS.glob("*.json"))) \
+            if _D.DIR_CONSULTAS.is_dir() else 0
+        nota(f"·  En disco: {consultas} consulta(s) de la DGT y "
+             f"{len(_T.CacheTEAC().todas())} resolución(es).")
+
+        # --- el corpus esta entero ---
+        # Un corpus truncado no da error: da respuestas peores en silencio.
+        if self.ix is not None:
+            from agente_fiscal import sellos as _S
+            est = _S.estado(self.ix.rutas)
+            nota(("✓  " if not est["problemas"] and est["sellado"] else "·  ")
+                 + est["frase"],
+                 TINTA2 if est["sellado"] and not est["problemas"] else TINTA)
+
+        # --- la cola ---
+        # Sin barra de progreso: la cola avanza a saltos, por detras y solo al
+        # abrir. Una barra sugiere que algo se mueve ahora y que se puede
+        # esperar, y las dos cosas son falsas.
+        try:
+            from agente_fiscal import cola as _COLA
+            frase_cola = _COLA.frase_de_estado()
+            if frase_cola:
+                nota("·  " + frase_cola)
+        except Exception:                        # noqa: BLE001
+            pass
+
+        # --- el canario: si las fuentes contestan ahora mismo ---
+        self._estado_fuentes = {}
+        for nombre, mod in (("Tributos (consultas de la DGT)", _D),
+                            ("DYCTEA (resoluciones)", _T)):
+            viva, motivo = mod.fuente_viva()
+            texto = ("responde" if viva else
+                     "sin comprobar hoy" if "no se ha comprobado" in motivo
+                     else "no responde")
+            f = tk.Frame(dentro, bg=PAPEL2)
+            f.pack(fill="x", padx=RELLENO, pady=3)
+            tk.Label(f, text=nombre, bg=PAPEL2, fg=TINTA, font=self.fuente,
+                     anchor="w").pack(side="left")
+            et = tk.Label(f, text=texto, bg=PAPEL2,
+                          fg=(ENLACE if viva else TINTA3),
+                          font=self.fuente_referencia, anchor="e")
+            et.pack(side="right")
+            self._estado_fuentes[nombre] = et
+
+            # EL CERTIFICADO. Ya existia `fuente_web.dias_de_certificado`, pero
+            # solo lo llamaban los guiones de consola: la comprobacion solo
+            # servia si alguien se acordaba de ejecutarla, y quien tiene que
+            # acordarse suele estar de viaje justo ese mes.
+            #
+            # SE AVISA CON MARGEN Y SE DICE QUE HACER, no solo que caduca: un
+            # aviso que da una fecha y ningun verbo deja a quien lo lee igual
+            # de parado que sin aviso.
+            try:
+                dias_cert = mod.FW.dias_de_certificado(mod.BASE)
+            except Exception:  # noqa: BLE001 - sin red no se avisa de nada
+                dias_cert = None
+            if dias_cert is not None and dias_cert <= DIAS_AVISO_CERTIFICADO:
+                nota(f"   El certificado de esta web caduca en {dias_cert} "
+                     f"días. Cuando pase, el agente NO podrá ampliar con "
+                     f"criterio nuevo (lo guardado sigue sirviendo). No es "
+                     f"cosa nuestra: lo renueva el organismo. Si el día llega "
+                     f"y no responde, avisa a Emili.")
+
+        nota("Las respuestas salen SIEMPRE de la copia local: que una fuente "
+             "no responda no impide consultar, solo quiere decir que hoy no "
+             "se puede ampliar.", TINTA2)
+
     # ------------------------------------------------------------ pintar
 
     def _terminar(self, res: dict) -> None:
         self._parar_barra()
+        # LO PRIMERO, Y ANTES DE NINGUNA RAMA: de que expediente es esto. Vale
+        # igual para una respuesta aceptada que para un NO ENCONTRADO, y es lo
+        # que hace que la ventana pueda decir CUANDO fue sin leerselo de una
+        # etiqueta de pantalla.
+        self.expediente_actual = res.get("traza") or ""
         # LA VENTANA ENTERA PARA LEER. A partir de aqui el formulario estorba:
         # ya se ha usado, y cada pixel suyo es un pixel que no tiene el texto.
         self._mostrar("respuesta")
@@ -3009,7 +3434,7 @@ class Ventana:
                     "No se ha podido guardar el expediente de esta consulta, "
                     "así que «Escribirlo para el cliente» no está disponible. "
                     "La respuesta de arriba es válida: cópiala antes de cerrar. "
-                    "Suele ser el disco lleno.")
+                    "Suele ser el disco lleno.", clave="expediente")
         else:
             self._sin_nada_que_copiar()
             self._escribir_sin_respaldo(res)
@@ -3035,9 +3460,22 @@ class Ventana:
         # EL PIE NO PUEDE AFIRMAR QUE ALGO ESTA GUARDADO SIN SABERLO. Con el
         # disco lleno seguia diciendo «Expediente guardado en ...» señalando a
         # una carpeta que no existe. Lo dice `fase4`, que es quien escribe.
+        #
+        # Y YA NO DICE LA RUTA. Aqui salia en pantalla algo como
+        # «/Users/emili/Documents/agente_requeriments/datos/trazas/20260828T121300»:
+        #
+        #   · es la ruta DE ESTE ordenador. En el PC de la oficina el
+        #     expediente esta en otro sitio, asi que el dato es falso justo
+        #     donde se usa;
+        #   · nadie va a teclear eso en ningun sitio, y no habia nada que
+        #     pinchar;
+        #   · y ocupaba la barra de arriba entera con una cadena ilegible.
+        #
+        # Lo que si sirve para volver a encontrarla es CUANDO fue, que es como
+        # la busca una persona. El nombre de la carpeta ES el sello de tiempo,
+        # asi que no hay nada que inventar.
         if res.get("expediente", True):
-            self.pie_respuesta.configure(
-                text=f"Expediente guardado en {res.get('traza', '(sin traza)')}")
+            self.pie_respuesta.configure(text=_cuando(self.expediente_actual))
         else:
             self.pie_respuesta.configure(
                 text="AVISO: esta consulta NO ha quedado guardada en el "
@@ -3220,15 +3658,34 @@ class Ventana:
             limite del corpus ......... normas que no tenemos y no vamos a
                                         tener. Una linea, en gris, al final.
 
-        El segundo bloque SE PINTA SIEMPRE que hay respuesta, aunque este
-        vacio. Un bloque que solo aparece cuando hay algo que decir es un
-        bloque que nadie busca cuando no aparece: leer «no falta nada por
-        mirar» es informacion, y no verlo no lo es.
+        ────────────────────────────────────────────────────────────────
+        SOLO SE PINTA LO QUE HAY. CAMBIADO EL 29/08/2026.
+        ────────────────────────────────────────────────────────────────
 
-        El tercero va en una linea y en gris a proposito: sale en casi todas
-        las respuestas y no hay nada que hacer con el. Entero y arriba, ocupaba
-        el mismo sitio que los que si hay que leer, y se los llevaba por
-        delante. Un aviso que sale siempre no es un aviso, es decoracion.
+        AQUI DECIA que el bloque de cobertura se pinta SIEMPRE, aunque este
+        vacio, porque «leer -no falta nada por mirar- es informacion». Se borra
+        el razonamiento entero a proposito, que es lo que hace este proyecto
+        cuando invierte una decision propia.
+
+        LO QUE LO TUMBA ES LA CUENTA. Sobre las 79 consultas hechas con el
+        motor de verdad, SETENTA Y TRES no tienen ni un aviso: el bloque sale
+        diciendo «Nada que mirar» en el 92% de las respuestas. Un bloque que
+        casi siempre dice que no hay nada deja de leerse, y el dia que si tiene
+        algo -que es el dia que importa- ya nadie lo mira. La costumbre se
+        aprende en una semana; el aviso que se pierde puede ser el que
+        invalida la respuesta.
+
+        Y lo que se gana en el 92% es sitio: son cuatro lineas y un rotulo
+        encima de la respuesta, en la columna que compite con lo que se ha
+        venido a leer.
+
+        EL LIMITE DEL CORPUS SE VA DE AQUI, y no desaparece: se pinta debajo
+        del texto, en `_escribir_respuesta`. Sale en 1.626 de 4.933
+        expedientes -una de cada tres- y no hay NADA que hacer con el: es una
+        norma que no tenemos y no vamos a tener. Puesto arriba ocupaba el mismo
+        sitio que los avisos accionables y se los llevaba por delante. El
+        propio comentario que estaba aqui ya lo decia: un aviso que sale
+        siempre no es un aviso, es decoracion.
         """
         for w in self.panel_avisos.winfo_children():
             w.destroy()
@@ -3255,16 +3712,19 @@ class Ventana:
             for s in senales:
                 linea("• " + s)
 
-        rotulo("LO QUE NO SE HA PODIDO MIRAR")
         if cobertura:
+            rotulo("LO QUE NO SE HA PODIDO MIRAR")
             for s in cobertura:
                 linea("• " + s)
-        else:
-            linea("Nada que mirar: los articulos que sostienen la respuesta "
-                  "estan vigentes en el ejercicio y no hay doctrina pendiente "
-                  "de comprobar.", TINTA2)
-        if estructural:
-            linea(estructural, TINTA3)
+
+        # SIN NADA QUE DECIR, EL PANEL NO EXISTE. `pack_forget` y fuera: un
+        # marco vacio con su filete sigue ocupando alto y sigue pareciendo que
+        # dice algo.
+        if not senales and not cobertura:
+            self.panel_avisos.pack_forget()
+            self._ancho_previo = 0
+            self._reajustar()
+            return
         self.panel_avisos.pack(fill="x")
         self._atar_rueda_a_los_hijos(self.panel_avisos)
         self._ancho_avisos = 0
@@ -3371,9 +3831,29 @@ class Ventana:
                 f"Preceptos que la sostienen: {', '.join(verificadas)}.\n",
                 "apagado",
             )
+        self._escribir_limite(res)
         self._columna()
         self.texto.configure(state="disabled")
         self._arriba()
+
+    def _escribir_limite(self, res: dict) -> None:
+        """EL LIMITE PERMANENTE DEL CORPUS, DEBAJO DEL TEXTO Y NO ENCIMA.
+
+        Venia del panel de avisos, donde competia por el sitio con lo que SI
+        hay que leer antes de la respuesta. Sale en 1.626 de 4.933 expedientes
+        -una de cada tres- y no hay nada que hacer con el: es una norma que no
+        tenemos y no vamos a tener. Su sitio es despues del texto, con las
+        citas: se lee al terminar, si se quiere, y no antes de empezar.
+
+        NO SE PIERDE, Y ESO ES LO QUE HACE QUE SE PUEDA MOVER: dice de que NO
+        puede hablar esta respuesta, y eso sigue siendo verdad aunque no se
+        pueda accionar. Va en las DOS pantallas de texto -la que enseña una
+        respuesta y la que dice que no hay respaldo- porque en las dos es
+        igual de cierto.
+        """
+        if res.get("estructural"):
+            self.texto.insert("end", "\nLímite de la herramienta: "
+                              + res["estructural"] + "\n", "apagado")
 
     def _escribir_sin_respaldo(self, res: dict) -> None:
         """NO ENCONTRADO: nunca el borrador, solo lo recuperado en crudo.
@@ -3424,6 +3904,7 @@ class Ventana:
                     if self.ix is not None else "") +
                 "Si la duda es de otro impuesto, no puede contestarla.\n",
             )
+        self._escribir_limite(res)
         self._columna()
         self.texto.configure(state="disabled")
         self._arriba()
@@ -3575,7 +4056,7 @@ def main(argv: list[str]) -> int:
     ventana = Ventana(raiz, args.motor)
     if aviso_guia:
         # En una linea y sin alarma: se ha arreglado solo, no ha pasado nada.
-        ventana.mostrar_cinta(aviso_guia)
+        ventana.mostrar_cinta(aviso_guia, clave="guia")
     raiz.mainloop()
     return 0
 
