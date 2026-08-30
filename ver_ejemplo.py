@@ -208,6 +208,10 @@ def cargar(expediente: str) -> tuple:
     # EL EXPEDIENTE EXISTE -lo acabamos de abrir-, asi que la ventana no puede
     # decir que la consulta no quedo guardada.
     res["expediente"] = True
+    # VIENE DE DISCO, Y HAY QUE SABERLO. Lo que la ventana cuenta de HOY -que
+    # impuestos cubre, cuanto criterio hay- es cierto ahora y falso sobre una
+    # consulta de hace tres semanas. Ver `_escribir_sin_respaldo`.
+    res["_de_expediente"] = True
 
     res["traza"] = str(traza)
     return res, faltan

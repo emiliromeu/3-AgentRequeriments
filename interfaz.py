@@ -1585,11 +1585,18 @@ class Ventana:
         self.marca_ejercicio.configure(text="")
         self.vuelta = len(grupo)
         self._terminar(res)
-        dia, hora = _cuando_partido(ultima["sello"])
-        self.mostrar_cinta(
-            f"Consulta guardada del {dia} a las {hora}. No es nueva: se lee "
-            f"tal como se enseñó ese día. Puedes seguir preguntando abajo.",
-            clave="guardada")
+        # LA CINTA DE «GUARDADA» SOLO SI HAY ALGO QUE LEER COMO RESPUESTA.
+        #
+        # Sobre un texto fabricado, `_terminar` ya ha puesto el aviso que
+        # importa y lo ha dejado solo. Añadir aqui «puedes seguir preguntando
+        # abajo» seria invitar a construir una conversacion encima de una
+        # regla fija, y ademas empujaria el aviso de verdad una linea abajo.
+        if not self.fabricada:
+            dia, hora = _cuando_partido(ultima["sello"])
+            self.mostrar_cinta(
+                f"Consulta guardada del {dia} a las {hora}. No es nueva: se "
+                f"lee tal como se enseñó ese día. Puedes seguir preguntando "
+                f"abajo.", clave="guardada")
         for f in faltan:
             print(f"[historial] {ultima['sello']}: {f}", file=sys.stderr)
 
@@ -3236,6 +3243,11 @@ class Ventana:
     def _escribir_para_cliente(self) -> None:
         """La misma respuesta, escrita para mandarsela al cliente.
 
+        NUNCA SOBRE UN TEXTO FABRICADO. El boton ya nace apagado en ese caso,
+        pero la regla no puede depender de que un widget este bien: esto llama
+        al modelo DE VERDAD y devolveria un texto pulido, con la firma del
+        despacho detras, sobre material que se invento una regla fija.
+
         Va en un hilo porque es una llamada al modelo y la ventana no se puede
         quedar congelada. Mientras tanto el boton se apaga: dos pulsaciones
         seguidas serian dos llamadas para lo mismo.
@@ -3266,6 +3278,11 @@ class Ventana:
             self.mostrar_cinta(
                 "No se puede reescribir porque no se ha podido guardar el "
                 "expediente de esta consulta. Suele ser el disco lleno.")
+            return
+        if getattr(self, "fabricada", False):
+            self.mostrar_cinta(
+                "Esta respuesta la escribió una regla fija del modo de "
+                "prueba, no un modelo: no hay nada que mandar a un cliente.")
             return
         self.trabajando = True
         self.boton_cliente.configure(state="disabled",
@@ -3824,6 +3841,12 @@ class Ventana:
         # que hace que la ventana pueda decir CUANDO fue sin leerselo de una
         # etiqueta de pantalla.
         self.expediente_actual = res.get("traza") or ""
+        # ¿LO ESCRIBIO UN MODELO O UNA REGLA FIJA? Se pregunta al RESULTADO,
+        # no a `self.motor`. Es la misma consulta la que lo dice, venga de
+        # ahora mismo o de un expediente de hace tres semanas: por eso la
+        # marca ya no se queda en la sesion. Ver `expedientes.es_fabricada`.
+        from agente_fiscal import expedientes as _EX
+        self.fabricada = _EX.es_fabricada(res)
         # LA VENTANA ENTERA PARA LEER. A partir de aqui el formulario estorba:
         # ya se ha usado, y cada pixel suyo es un pixel que no tiene el texto.
         self._mostrar("respuesta")
@@ -3864,9 +3887,25 @@ class Ventana:
         self.con_criterio = bool(res.get("con_criterio"))
         self.comunidad_usada = res.get("comunidad") or ""
         self.aviso_territorial = res.get("cobertura_territorial") or ""
-        self._pintar_estado(estado, explicacion(estado, self.con_criterio),
-                            estado)
-        self.etiqueta_hecha_con.configure(text=HECHA_CON[self.con_criterio])
+        if self.fabricada:
+            # NI EL ROTULO NI LA EXPLICACION SON LOS DE SIEMPRE. «CRITERIO
+            # CLARO» sobre un texto que fabrica una regla fija es la afirmacion
+            # mas peligrosa que puede hacer esta ventana.
+            #
+            # EN GRIS, con la clave de NO ENCONTRADO: no es una averia, es un
+            # texto de prueba. El gris ya significa «aqui no hay nada que
+            # sostenga esto», que es exactamente lo que pasa.
+            from agente_fiscal import expedientes as _EX
+            self._pintar_estado("RESPUESTA DE PRUEBA", _EX.FABRICADA,
+                                EST.NO_ENCONTRADO)
+            self.etiqueta_hecha_con.configure(
+                text="Hecha con el motor de ensayo, que no llama a ningún "
+                     "modelo.")
+        else:
+            self._pintar_estado(estado, explicacion(estado, self.con_criterio),
+                                estado)
+            self.etiqueta_hecha_con.configure(
+                text=HECHA_CON[self.con_criterio])
         self._pintar_aporte(res)
         # El aviso territorial va con los de cobertura, que es lo que es: no
         # es un desacuerdo entre textos -eso mueve el estado- sino algo que no
@@ -3881,9 +3920,18 @@ class Ventana:
         #    cuando no se puede ensenar, y entonces se ensena otra cosa.
         if res.get("respuesta"):
             self.es_orientacion = False
-            self.respuesta_actual = res["respuesta"]
             self._escribir_respuesta(res["respuesta"], res)
-            self.boton_copiar.configure(state="normal")
+            # LA PUERTA DE SALIDA, Y ES LO QUE DE VERDAD CIERRA EL AGUJERO.
+            #
+            # El texto se SIGUE VIENDO -esconderlo dejaria el historial
+            # inservible para quien depura, y el riesgo no es leerlo- pero no
+            # sale de aqui: ni al portapapeles ni a un correo. Lo que no puede
+            # llegar a un cliente es lo que no se puede copiar.
+            if self.fabricada:
+                self._sin_nada_que_copiar()
+            else:
+                self.respuesta_actual = res["respuesta"]
+                self.boton_copiar.configure(state="normal")
             # La traza es lo unico que hace falta para reescribir: el material
             # esta dentro. Se guarda aqui, con la respuesta aceptada delante.
             self.traza_actual = res.get("traza") or ""
@@ -3899,8 +3947,13 @@ class Ventana:
             # caja de arriba ya esta para eso.
             self.marco_seguir.grid()
             self.caja_seguir.delete("1.0", "end")
-            if self.traza_actual:
+            if self.traza_actual and not self.fabricada:
                 self.boton_cliente.configure(state="normal")
+            elif self.fabricada:
+                # Reescribir para el cliente es una llamada NUEVA al modelo de
+                # verdad sobre un material inventado: saldria un texto
+                # impecable con la firma del despacho detras de una regla fija.
+                self.boton_cliente.configure(state="disabled")
             else:
                 # SIN EXPEDIENTE NO SE PUEDE REESCRIBIR: el material vive
                 # dentro de la carpeta, y sin ella no hay de que partir. Pasa
@@ -3934,6 +3987,14 @@ class Ventana:
                 self.boton_cliente.configure(state="disabled")
                 self.marco_seguir.grid()
                 self.caja_seguir.delete("1.0", "end")
+
+        # EL AVISO, EL PRIMERO Y SOLO. Se limpia lo que hubiera puesto -la
+        # cinta de «consulta guardada», por ejemplo- porque aqui no hay nada
+        # mas importante que decir: lo que se esta leyendo no es una respuesta.
+        if self.fabricada:
+            from agente_fiscal import expedientes as _EX
+            self.limpiar_cintas()
+            self.mostrar_cinta(_EX.FABRICADA, clave="fabricada")
 
         # EL PIE NO PUEDE AFIRMAR QUE ALGO ESTA GUARDADO SIN SABERLO. Con el
         # disco lleno seguia diciendo «Expediente guardado en ...» señalando a
@@ -4377,9 +4438,18 @@ class Ventana:
         else:
             self.texto.insert(
                 "end",
+                # LA SEGUNDA FRASE SOLO EN UNA CONSULTA DE AHORA.
+                #
+                # `frase_de_la_ley` cuenta el corpus de HOY, y en un expediente
+                # guardado eso es una fuga de la sesion: a un «no encontrado»
+                # de cuando solo habia IVA cargado le pondria delante la lista
+                # de los siete impuestos de hoy, como si entonces hubiera
+                # podido contestar con ellos. La frase es cierta ahora y falsa
+                # sobre aquello.
                 "No se encontro ningun articulo. " + (
                     _cobertura().frase_de_la_ley(self.ix).capitalize() + ". "
-                    if self.ix is not None else "") +
+                    if self.ix is not None and not res.get("_de_expediente")
+                    else "") +
                 "Si la duda es de otro impuesto, no puede contestarla.\n",
             )
         self._escribir_limite(res)
@@ -4388,6 +4458,15 @@ class Ventana:
         self._arriba()
 
     def _leer_recuperado(self, res: dict) -> list:
+        """Los articulos que se encontraron, leidos del expediente.
+
+        SE ENRIQUECEN CON EL CORPUS DE HOY -la rubrica y el enlace salen de
+        `self.ix`- y eso es una fuga de la sesion conocida y aceptada: si una
+        norma se ha rebajado del BOE desde entonces, un articulo puede salir
+        sin rubrica. Se acepta porque lo que se afirma -«esto es lo que se
+        encontro»- sale del expediente; lo de hoy solo adorna. Si algun dia
+        hiciera falta, la rubrica esta en `recuperado.json`.
+        """
         """(referencia, rubrica, enlace) de lo recuperado, desde la traza.
 
         La rubrica no esta en la traza: se saca del corpus, que ya esta

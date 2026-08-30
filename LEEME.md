@@ -5829,3 +5829,80 @@ escapa bien sus paréntesis y `abrir_agente.bat` usa `pythonw` a propósito, que
 el único que quiere esconder la consola—, pero ahora **el día que alguien escriba
 un `echo` con un paréntesis, se pone rojo aquí y no en un portátil de la
 oficina**.
+
+
+---
+
+# FASE 39 · UN ESTADO QUE VIVE EN LA SESIÓN SE PIERDE AL CRUZAR SU FRONTERA
+
+Es el error de esta tanda, y no lo encontró ninguna suite: lo vio Emili
+abriendo una consulta del historial y encontrándose «el texto predeterminado».
+
+## Qué pasaba
+
+Abrir del historial una consulta hecha con `--motor ensayo` —cuyo texto lo
+fabrica **una regla fija** de `modelo.py`, no un modelo— la pintaba así:
+
+```
+estado en pantalla  : CRITERIO CLARO
+copiar              : normal
+escribir al cliente : normal
+¿lo copiado avisa de que es fabricado?   False
+```
+
+Un texto inventado, presentado como respuesta verificada, **copiable y
+mandable a un cliente sin una palabra que lo desmintiera**.
+
+## La causa, que es lo que hay que recordar
+
+El aviso de «esto es de prueba» vivía en la **sesión**: `motor.es_modelo_real`,
+cierto mientras esa ventana estaba abierta. Cuando la consulta se hacía, la
+cinta salía y todo era honesto. El expediente guardaba el dato en disco desde
+siempre —`motor: "ensayo"`, `modelo: "(ninguno)"`— y **nadie lo miraba**.
+
+El historial cruza la frontera de la sesión. El aviso no cruzó con él.
+
+> **La regla, generalizada:** un estado que vive en la sesión y no en el dato se
+> pierde en el instante en que algo cruza esa frontera — y no da error, porque
+> desde el otro lado el estado simplemente *no existe* y todo lo demás sigue
+> funcionando. Si una afirmación es sobre un dato, tiene que salir del dato.
+
+Y un agravante que es mío: el filtro «Ocultar las de prueba» tapaba esas 2.128
+respuestas fabricadas, así que **parecía** que no pasaba nada. Ese filtro se
+puso para ordenar la lista, no para proteger a nadie, y una casilla que se puede
+desmarcar no puede ser lo único que separa un texto inventado de un correo a un
+cliente. Un control de limpieza cargando con una responsabilidad de seguridad es
+un control que va a fallar el día que alguien lo use para lo que es.
+
+## Qué se hizo
+
+`expedientes.es_fabricada(res)` pregunta **al resultado**, venga de ahora mismo
+o de un expediente de hace tres semanas. Con eso:
+
+- el estado no dice CRITERIO CLARO sino **RESPUESTA DE PRUEBA**, en gris;
+- **copiar y «escribirlo para el cliente» quedan apagados** —es lo que de verdad
+  cierra el agujero: lo que no puede llegar a un cliente es lo que no se puede
+  copiar—, y `_escribir_para_cliente` se niega también si se le llama a mano,
+  porque la regla no puede depender de que un widget esté bien;
+- el aviso sale **el primero y solo**, sin la cinta de «consulta guardada»
+  compitiendo con él;
+- el texto **se sigue viendo**: esconderlo no arregla nada y deja el historial
+  inservible para quien depura. El riesgo no era leerlo, era exportarlo.
+
+**Se decide por afirmación, no por sospecha.** Sólo se dice «fabricada» cuando
+el expediente lo dice. Está medido: de las 2.159 respuestas ACEPTADAS que hay en
+disco, **cero** no llevan campo `motor`, así que la duda hoy no existe; y si
+algún día existiera, el silencio es el lado correcto en el que equivocarse.
+
+## Y se buscaron las demás fugas de la misma familia
+
+Porque la pregunta no era el caso concreto. Buscando en `_terminar` y en todo lo
+que llama, aparecieron dos más:
+
+| Dónde | Qué contaba de HOY sobre una consulta VIEJA |
+|---|---|
+| `_escribir_sin_respaldo` | `frase_de_la_ley(self.ix)` le ponía a un «no encontrado» de cuando sólo había IVA cargado la lista de los siete impuestos de hoy, como si entonces hubiera podido contestar con ellos. **Corregido**: la frase sólo sale en una consulta de ahora. |
+| `_leer_recuperado` | La rúbrica y el enlace de cada artículo salen del corpus de hoy. **Se acepta y se documenta**: lo que se afirma —«esto es lo que se encontró»— sale del expediente; lo de hoy sólo adorna, y si una norma se rebajó, el artículo sale sin rúbrica. |
+
+`_terminar` en sí no usaba nada de la sesión. Las tres fugas estaban en lo que
+llama, que es donde no se mira.

@@ -399,6 +399,79 @@ comprobar("  con la pregunta anterior delante, no compuesta por dentro",
           v.caja.get("1.0", "end")[:90])
 raiz.destroy()
 
+# ======= 7 bis. UN TEXTO FABRICADO NO SALE DE LA HERRAMIENTA =======
+print("\n=== 7 bis. LA MARCA DE «PRUEBA» VIAJA CON EL EXPEDIENTE ===")
+print("  El aviso vivia en la SESION -`motor.es_modelo_real`- y el historial")
+print("  cruza esa frontera: una respuesta que fabrica una regla fija se")
+print("  abria como CRITERIO CLARO, con copiar y «al cliente» encendidos.\n")
+raiz = tk.Tk()
+raiz.geometry("1280x900+40+40")
+v = interfaz.Ventana(raiz, "ensayo")
+bombear(1.2)
+falsa = EX._leer_expediente("20260826T120000")   # motor de ensayo
+comprobar("el expediente dice con que motor se hizo",
+          falsa["motor"] == "ensayo", falsa["motor"])
+# `es_fabricada` mira DOS cosas: el motor Y que haya texto. La fila del indice
+# no lleva la respuesta -no la guarda a proposito-, asi que se pregunta con lo
+# que de verdad se va a pintar.
+comprobar("y `es_fabricada` lo lee de ahi, no de la sesion",
+          EX.es_fabricada(dict(falsa, respuesta="un texto cualquiera")))
+comprobar("  pero sin texto no hay nada que marcar: un NO ENCONTRADO del "
+          "motor de ensayo sigue siendo un NO ENCONTRADO",
+          not EX.es_fabricada({"motor": "ensayo", "respuesta": ""}))
+v.limpiar_cintas()
+v._abrir_expediente([falsa])
+bombear(0.6)
+comprobar("NO se pinta CRITERIO CLARO sobre un texto inventado",
+          v.etiqueta_estado.cget("text") != "CRITERIO CLARO",
+          v.etiqueta_estado.cget("text"))
+comprobar("  se dice lo que es",
+          "PRUEBA" in v.etiqueta_estado.cget("text").upper(),
+          v.etiqueta_estado.cget("text"))
+comprobar("COPIAR apagado: lo que no puede llegar a un cliente no se copia",
+          str(v.boton_copiar.cget("state")) == "disabled",
+          v.boton_copiar.cget("state"))
+comprobar("«escribirlo para el cliente» apagado",
+          str(v.boton_cliente.cget("state")) == "disabled",
+          v.boton_cliente.cget("state"))
+comprobar("  y no queda nada guardado que copiar por otro camino",
+          not v.respuesta_actual, v.respuesta_actual[:40])
+cintas = v.cintas_visibles()
+comprobar("el aviso es el PRIMERO", cintas and "REGLA FIJA" in cintas[0],
+          cintas[:1])
+comprobar("  y esta SOLO: nada compite con el", len(cintas) == 1, cintas)
+comprobar("el texto se sigue viendo: esconderlo no arregla nada y estorba",
+          bool(v.texto.get("1.0", "end").strip()))
+# NI POR EL CAMINO LARGO. El boton nace apagado, pero la regla no puede
+# depender de que un widget este bien.
+v.motor = object()
+v.trabajando = False
+v.bloqueada = False
+v.traza_actual = "/una/traza"
+v.limpiar_cintas()
+v._escribir_para_cliente()
+bombear(0.3)
+comprobar("llamando a reescribir A MANO, tampoco: se niega y lo dice",
+          any("regla fija" in c.lower() for c in v.cintas_visibles()),
+          v.cintas_visibles())
+
+# Y UNA DE VERDAD NO SE TOCA.
+buena = EX._leer_expediente("20260825T101500")   # motor anthropic
+v.limpiar_cintas()
+v._abrir_expediente([buena])
+bombear(0.5)
+comprobar("una consulta de verdad sigue igual: su estado",
+          v.etiqueta_estado.cget("text") == "CRITERIO CLARO",
+          v.etiqueta_estado.cget("text"))
+comprobar("  y se puede copiar y mandar",
+          str(v.boton_copiar.cget("state")) == "normal"
+          and str(v.boton_cliente.cget("state")) == "normal")
+
+# LA OTRA FUGA DE LA SESION: describir una consulta vieja con el corpus de HOY.
+comprobar("un expediente cargado se marca como venido de disco",
+          ver_ejemplo.cargar("20260825T101500")[0].get("_de_expediente") is True)
+raiz.destroy()
+
 # ==================================================== 8. CONTROL NEGATIVO
 print("\n=== 8. CONTROL NEGATIVO: ¿CAZA ESTA SUITE LO QUE DICE CAZAR? ===")
 print("  Lo de arriba solo vale si se pone rojo cuando se rompe de verdad.\n")
@@ -421,7 +494,16 @@ falso["expedientes"]["20260825T101500"]["respuesta"] = "El articulo 95 dice que 
 comprobar("si el indice guardase el texto, la comprobacion 1 se pondria roja",
           "El articulo 95 dice que no" in json.dumps(falso, ensure_ascii=False))
 
-# 4 · una fecha inventada se cazaria.
+# 4 · si la marca volviera a leerse de la SESION, esta suite lo cazaria: un
+#     expediente de ensayo abierto desde una ventana con motor real daria
+#     «no fabricada», que es justo el fallo del 30/08.
+comprobar("leer la marca de la sesion y no del expediente se cazaria",
+          EX.es_fabricada({"motor": "ensayo", "respuesta": "x"}) is True
+          and EX.es_fabricada({"motor": "anthropic", "respuesta": "x"}) is False)
+comprobar("  y un expediente sin campo motor NO se acusa de falso",
+          EX.es_fabricada({"respuesta": "x"}) is False)
+
+# 5 · una fecha inventada se cazaria.
 comprobar("y una fecha supuesta no pasaria por buena",
           EX.fecha_de("no_es_un_sello") != ("29/08/2026", "00:00"))
 

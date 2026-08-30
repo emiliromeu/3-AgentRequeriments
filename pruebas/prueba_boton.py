@@ -322,7 +322,14 @@ try:
             "traza": "", "expediente": False, "preceptos": [],
             "preceptos_enviados": [], "analisis": {}, "senales": [],
             "cobertura": [], "consumo": {}, "con_criterio": False,
-            "codigo": 0, "motor": "ensayo", "ejercicio": 2023,
+            # EL MOTOR, «anthropic» Y NO «ensayo». Cambiado el 30/08/2026.
+            # Este caso prueba EL DISCO LLENO -una respuesta buena que no se ha
+            # podido guardar- y el motor estaba puesto a «ensayo» de pasada,
+            # porque es con el que corre la ventana en las suites. Desde que un
+            # texto del motor de ensayo se marca como fabricado y no se puede
+            # copiar, ese valor incidental cambiaba el caso que se prueba: ya
+            # no era «respuesta buena sin expediente» sino «texto de prueba».
+            "codigo": 0, "motor": "anthropic", "ejercicio": 2023,
             "preceptos_descartados": [], "aporte": {}, "estructural": "",
             "recuperado": {}, "intentos": 1, "reintentos": 0,
             "cobertura_territorial": "", "comunidad": "", "pregunta": "x",

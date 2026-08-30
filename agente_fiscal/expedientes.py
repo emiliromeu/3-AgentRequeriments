@@ -155,6 +155,56 @@ def es_de_prueba(fila: dict) -> bool:
     return (fila.get("estado") or "") in NUNCA_FUE_CONSULTA
 
 
+# ¿LA ESCRIBIO UN MODELO, O UNA REGLA FIJA?
+#
+# ESTA ES LA PREGUNTA DE SEGURIDAD, Y NO ES LA MISMA QUE `es_de_prueba`.
+# Aquella ordena la lista y se puede apagar con una casilla; esta decide si un
+# texto puede salir de la herramienta, y no se apaga con nada.
+#
+# EL FALLO QUE LA TRAE, del 30/08/2026: abriendo del historial una consulta
+# hecha con `--motor ensayo` -cuyo texto lo fabrica una regla fija de
+# `modelo.py`, no un modelo- la ventana la pintaba como CRITERIO CLARO, con sus
+# citas, y con «Copiar respuesta» y «Escribirlo para el cliente» ENCENDIDOS. Lo
+# copiado no llevaba ni una palabra diciendo que era inventado.
+#
+# LA CAUSA, Y ES LO QUE HAY QUE RECORDAR: el aviso de «esto es de prueba» vivia
+# en la SESION -`motor.es_modelo_real`, cierto mientras esa ventana estaba
+# abierta- y no en el EXPEDIENTE. El historial cruza esa frontera y el aviso no
+# cruzaba con el. El dato estaba en disco desde siempre; nadie lo miraba.
+#
+# SE DECIDE POR AFIRMACION, NO POR SOSPECHA. Solo se dice «fabricada» cuando el
+# expediente lo dice. Si no lleva el campo no se afirma nada: no se puede
+# acusar a un expediente de ser falso por no llevar una etiqueta. Y esta
+# medido: de las 2.159 respuestas ACEPTADAS que hay en disco, CERO no llevan
+# campo `motor`. La duda no existe hoy, y si algun dia existiera, el silencio
+# es el lado correcto en el que equivocarse -no marca de mas, no bloquea de
+# mas- porque el texto de un expediente sin motor es texto que un verificador
+# acepto.
+FABRICADA = (
+    "Esta respuesta la escribió una REGLA FIJA del modo de prueba, no un "
+    "modelo. No es una consulta real: no vale para nada más que para probar "
+    "la herramienta, y por eso no se puede copiar ni mandar a nadie."
+)
+
+
+def es_fabricada(res: dict) -> bool:
+    """¿HAY UN TEXTO, y lo invento el motor de ensayo?
+
+    LAS DOS MITADES HACEN FALTA, y la segunda me la salte al primer intento:
+    marcaba la CONSULTA entera y no el TEXTO. Un «NO ENCONTRADO» hecho con el
+    motor de ensayo no tiene nada fabricado dentro -no hay texto- y su estado
+    lo calculo el codigo por reglas, igual de cierto con un motor que con
+    otro. Marcarlo de prueba tapaba una respuesta legitima con un aviso que no
+    le tocaba, y ademas rompia `prueba_no_encontrado`, que hace justo eso.
+
+    Lo que hay que proteger es el TEXTO que sale de aqui hacia un cliente. Sin
+    texto no hay nada de lo que proteger.
+    """
+    if (res.get("motor") or "") not in MOTORES_DE_PRUEBA:
+        return False
+    return bool(res.get("respuesta") or res.get("orientacion"))
+
+
 # ---------------------------------------------------------------- el indice
 
 
