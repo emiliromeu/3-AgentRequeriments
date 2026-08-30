@@ -3841,6 +3841,14 @@ class Ventana:
         # que hace que la ventana pueda decir CUANDO fue sin leerselo de una
         # etiqueta de pantalla.
         self.expediente_actual = res.get("traza") or ""
+        # EL AÑO CON EL QUE SE CONTESTO, ARRIBA Y ANTES DE NINGUNA RAMA.
+        #
+        # Estaba solo dentro de la rama de «hay respuesta», asi que una
+        # ORIENTACION -que tambien se puede copiar- salia al portapapeles sin
+        # ejercicio. Es el mismo hueco que tenia `expediente_actual`: un dato
+        # de la consulta guardado en el sitio donde solo llega la mitad de los
+        # caminos.
+        self.ejercicio_usado = res.get("ejercicio")
         # ¿LO ESCRIBIO UN MODELO O UNA REGLA FIJA? Se pregunta al RESULTADO,
         # no a `self.motor`. Es la misma consulta la que lo dice, venga de
         # ahora mismo o de un expediente de hace tres semanas: por eso la
@@ -3938,8 +3946,8 @@ class Ventana:
             # EL EJERCICIO QUE SE USO, no el que haya ahora en la caja: el
             # gestor puede haberlo cambiado mientras leia, y la reescritura
             # tiene que verificarse contra la MISMA version de la ley que la
-            # respuesta que reescribe.
-            self.ejercicio_usado = res.get("ejercicio")
+            # respuesta que reescribe. (Se pone arriba del todo, con el
+            # expediente: tambien hace falta en una orientacion.)
             self.analisis_actual = res.get("analisis") or {}
             self.preceptos_actuales = res.get("preceptos_enviados") or []
             # SOLO CON RESPUESTA: seguir hablando sobre un «no encontrado» no
@@ -4149,7 +4157,19 @@ class Ventana:
             # SIN PROMETER UNA HORA. La cola avanza al abrir el agente, asi que
             # decir «mañana» seria inventarse un plazo que depende de cuando
             # vuelvan a abrirlo.
+            # LA COLA DE HOY NO DICE NADA DE UNA CONSULTA DE OTRO DIA.
+            #
+            # «Ya esta apuntado para buscarlo» es una promesa sobre lo que va a
+            # pasar a partir de AHORA, y se leia sobre un expediente de hace
+            # tres semanas: para entonces, o ya se bajo -y entonces la frase
+            # sobra- o se desapunto -y entonces es falsa-. La cola es estado de
+            # la sesion; el expediente es un dato de aquel dia.
+            #
+            # Hoy no se veia porque los expedientes viejos no llevan
+            # `apuntados_en_cola`. En cuanto se reabra uno reciente, si.
             try:
+                if res.get("_de_expediente"):
+                    raise LookupError("expediente guardado: la cola es de hoy")
                 from agente_fiscal import cola as _COLA
                 apuntados = _COLA.apuntados_de(
                     [(x["cuerpo"], x["articulo"])
@@ -4161,6 +4181,8 @@ class Ventana:
                               + ", ".join(apuntados[:6])
                               + ". Vuelve a preguntar esto más adelante y, si "
                                 "la fuente tiene algo, estará aquí.")
+            except LookupError:
+                pass          # es de un expediente: no se promete nada
             except Exception:                    # noqa: BLE001
                 pass
 
@@ -4508,9 +4530,28 @@ class Ventana:
         # una respuesta de Renta pegada en unas notas no dice, por si sola, si
         # llevaba la deduccion autonomica de Cataluña o si salio estatal.
         cabecera = HECHA_CON[getattr(self, "con_criterio", False)]
+        # EL EJERCICIO VA EN LO COPIADO, Y ES LO MISMO QUE EL AÑO EN PANTALLA.
+        #
+        # Faltaba, y es el fallo silencioso del año por el camino de salida: la
+        # ventana enseña «ejercicio 2023» en el eco, pero lo pegado en un correo
+        # o en unas notas no lo llevaba. Dentro de tres meses, una respuesta sin
+        # año se lee como si fuera del ejercicio en curso — y la ley de otro año
+        # se lee igual de bien.
+        #
+        # SALE DEL RESULTADO, no del campo: el campo puede haberse cambiado
+        # mientras se leia. `ejercicio_usado` es el que sostuvo esta respuesta.
+        ejercicio = getattr(self, "ejercicio_usado", None)
+        if ejercicio:
+            cabecera += f" · ejercicio {ejercicio}"
         com = getattr(self, "comunidad_usada", "")
         if com:
             cabecera += f" · comunidad: {com}"
+        # Y CUANDO SE COMPROBO. Una respuesta pegada no dice por si sola si es
+        # de esta mañana o de hace tres meses, y el criterio cambia. Sale del
+        # sello del expediente, que es un dato y no la hora de ahora.
+        cuando = _cuando(getattr(self, "expediente_actual", ""))
+        if cuando:
+            cabecera += f" · comprobada el {cuando}"
         # LA VUELTA VA EN LA CABECERA. Se copia SOLO la ultima respuesta -el
         # hilo lleva versiones que ya se superaron- y sin decir cual es, dos
         # correos con dos vueltas de la misma consulta serian indistinguibles.

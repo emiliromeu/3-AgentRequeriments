@@ -5967,3 +5967,71 @@ sobre un artículo real del corpus: lo único que cambia entre los dos es el
 material. Y la cita nombra su norma a propósito — sin eso, «Artículo 1» existe
 en 19 cuerpos, el verificador la deja en NO_VERIFICABLE antes de llegar a esta
 regla, y se estaría probando otra cosa. Caí en ello escribiéndola.
+
+
+---
+
+# FASE 41 · LA FAMILIA ENTERA: ESTADO EN LA SESIÓN, DATO EN EL DISCO
+
+La fase 39 contó un caso. Buscándolo bien salieron **tres**, y las tres son el
+mismo error con distinta ropa:
+
+> **Un estado que vive en la sesión y no en el dato se pierde en el instante en
+> que algo cruza esa frontera** — y no da error, porque desde el otro lado el
+> estado simplemente no existe y todo lo demás sigue funcionando.
+
+**El historial es la frontera que las destapó todas.** Mientras una consulta se
+hacía y se leía en la misma ventana, sesión y dato eran indistinguibles: todo lo
+que la ventana sabía era, por casualidad, cierto sobre lo que estaba en pantalla.
+Poder abrir una consulta de hace tres semanas separó las dos cosas, y lo que
+antes coincidía dejó de coincidir.
+
+| | El estado de la sesión | Lo que decía sobre un expediente de otro día |
+|---|---|---|
+| **El ensayo** | `motor.es_modelo_real` | Un texto fabricado por una regla fija se abría como CRITERIO CLARO, **copiable y mandable a un cliente**. |
+| **El corpus de hoy** | `self.ix` | «Escríbelo para el cliente» rerredactaba con el corpus actual una consulta contestada sobre otra redacción de la ley. Y `_escribir_sin_respaldo` le ponía a un «no encontrado» de cuando sólo había IVA la lista de los siete impuestos de hoy. |
+| **La cola de hoy** | `cola.json` | «Ya está apuntado para buscarlo» es una promesa sobre lo que va a pasar **a partir de ahora**, leída sobre una consulta de hace tres semanas: o ya se bajó —y sobra— o se desapuntó —y es falsa—. |
+
+## Cómo se arreglan, que no es igual en las tres
+
+**El ensayo**: el dato ya estaba en disco (`motor`, `modelo`) y nadie lo miraba.
+Se pregunta al resultado. Fase 39.
+
+**La cola**: no hay nada que rescatar —la cola de entonces no se guardó— así que
+lo correcto es **no decir nada**. `_de_expediente` corta la promesa. Callar es la
+respuesta cuando el dato no existe.
+
+**El corpus** es el interesante, porque no se puede resolver como los otros dos:
+no hay una copia de la ley de agosto y reconstruirla no es posible. Así que la
+pregunta cambia. No es «¿puedo verificar contra aquello?» sino **«¿ha cambiado
+aquello?»** — y eso sí se puede saber sin guardar nada nuevo, porque
+`version_usada` va por cita en `verificacion_N.json` desde siempre. Si la versión
+con la que se comprueba ahora un precepto no es la misma con la que se comprobó
+entonces, el corpus se ha movido debajo del expediente y **no se reescribe**: se
+dice qué artículo cambió y se deja la respuesta comprobada aquel día.
+
+Se compara **la versión usada, no cuántas hay**: que el corpus haya crecido con
+una consolidación posterior al ejercicio no cambia el texto que sostiene esa
+respuesta, y apagar el botón ahí sería apagarlo por algo que no afecta.
+
+## Y la que no era una fuga, sino su gemela
+
+Lo copiado **no llevaba el ejercicio ni la fecha**. No es estado de sesión: es
+contexto que sólo vivía en pantalla y que la salida perdía. Una respuesta pegada
+en un correo sin año se lee como si fuera del ejercicio en curso, y la ley de
+otro año se lee igual de bien — el fallo silencioso del año, por el camino de
+salida. Ahora la cabecera lleva ejercicio, comunidad y **cuándo se comprobó**,
+y el año sale de `ejercicio_usado` y no del campo, que pudo cambiarse mientras
+se leía.
+
+De paso: `ejercicio_usado` sólo se rellenaba dentro de la rama de «hay
+respuesta», así que una **orientación** copiada salía sin año. Es el mismo hueco
+que tenía `expediente_actual` — un dato de la consulta guardado en un sitio al
+que sólo llega la mitad de los caminos.
+
+## La que queda, dicha en voz alta
+
+`_leer_recuperado` saca la rúbrica y el enlace de cada artículo del corpus de
+hoy. **Se acepta**: lo que se *afirma* —«esto es lo que se encontró»— sale del
+expediente, y lo de hoy sólo adorna; si una norma se rebajó, el artículo saldrá
+sin rúbrica. Queda escrito para que se sepa que es una decisión y no un olvido.

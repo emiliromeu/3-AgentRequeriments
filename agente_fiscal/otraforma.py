@@ -88,3 +88,57 @@ def material_del_expediente(traza: Path | str) -> str:
             f"el expediente {d.name} no guarda el material: no se puede "
             f"reescribir sin volver a buscar, y eso seria otra consulta")
     return materiales[-1].read_text(encoding="utf-8")
+
+
+def claves_del_material(traza: Path | str) -> set | None:
+    """Los preceptos que se le pusieron delante al redactor AQUEL DIA.
+
+    `None` si el expediente no lo guarda -los anteriores al 30/08/2026 no lo
+    llevan-, y `None` quiere decir «no se me ha dicho», no «ninguno»: sin el
+    dato no se exige nada. Suponer que el material era el de hoy seria
+    exactamente la fuga que este fichero acaba de cerrar.
+    """
+    import json
+    f = Path(traza) / "material_claves.json"
+    try:
+        d = json.loads(f.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    claves = d.get("claves")
+    return set(claves) if isinstance(claves, list) else None
+
+
+def versiones_de_la_primera(traza: Path | str) -> dict:
+    """Con QUE VERSION de cada precepto se comprobo la respuesta que se enseño.
+
+    Es lo que permite saber si el corpus se ha movido debajo de un expediente:
+    `version_usada` va guardada por cita en `verificacion_N.json` desde
+    siempre, y comparar la de entonces con la de ahora contesta la pregunta sin
+    tener que guardar una copia de la ley.
+
+    Devuelve {clave: {"orden": n, "fecha_vigencia_efectiva": "..."}}.
+    """
+    import json
+    d = Path(traza)
+    ultima = None
+    for f in sorted(d.glob("verificacion_*.json")):
+        if f.name.startswith("verificacion_para_cliente"):
+            continue
+        try:
+            j = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if j.get("veredicto") == "ACEPTADO":
+            ultima = j
+    if not ultima:
+        return {}
+    fuera = {}
+    for c in ultima.get("citas") or []:
+        if c.get("estado") != "VERIFICADA" or not c.get("clave"):
+            continue
+        v = c.get("version_usada") or {}
+        fuera[c["clave"]] = {
+            "orden": v.get("orden"),
+            "fecha_vigencia_efectiva": v.get("fecha_vigencia_efectiva"),
+        }
+    return fuera

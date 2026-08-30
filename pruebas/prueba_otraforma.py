@@ -189,6 +189,88 @@ finally:
     shutil.rmtree(d, ignore_errors=True)
 
 
+# ============ 3 bis. EL EXPEDIENTE ES DE OTRO DIA, Y EL CORPUS SE MUEVE
+print("\n=== 3 bis. SI EL CORPUS SE HA MOVIDO, NO SE REESCRIBE ===")
+print("  El material sale del expediente, pero el VERIFICADOR es el de hoy.")
+print("  No hay copia de la ley de agosto, asi que la pregunta no es «¿puedo")
+print("  verificar contra aquello?» sino «¿ha cambiado aquello?».\n")
+
+from agente_fiscal import otraforma as OF  # noqa: E402
+
+
+def con_verificacion(d, version):
+    """Le pone al expediente la verificacion de «aquel dia», con su version."""
+    citas = []
+    for dic in VF.Verificador(ix).verificar_texto(BIEN, 2023).dictamenes:
+        if dic.estado != VF.VERIFICADA:
+            continue
+        citas.append({"estado": "VERIFICADA", "clave": dic.clave,
+                      "version_usada": version})
+    (d / "verificacion_1.json").write_text(
+        json.dumps({"veredicto": "ACEPTADO", "citas": citas}),
+        encoding="utf-8")
+    return len(citas)
+
+
+# --- el corpus NO se ha movido: la misma version de entonces ---
+d = expediente_de_mentira()
+try:
+    real = [dic for dic in VF.Verificador(ix).verificar_texto(BIEN, 2023).dictamenes
+            if dic.estado == VF.VERIFICADA]
+    comprobar("el texto de prueba trae alguna cita verificada", bool(real))
+    misma = {"orden": (real[0].version_usada or {}).get("orden"),
+             "fecha_vigencia_efectiva":
+                 (real[0].version_usada or {}).get("fecha_vigencia_efectiva")}
+    con_verificacion(d, misma)
+    r = fase4.otra_forma(d, 2023, motor_que_escribe(BIEN), ix)
+    comprobar("con la MISMA version que aquel dia, se reescribe",
+              r["veredicto"] == VF.ACEPTADO and r["respuesta"], r.get("motivo"))
+finally:
+    shutil.rmtree(d, ignore_errors=True)
+
+# --- el corpus SE HA MOVIDO: otra version de entonces ---
+d = expediente_de_mentira()
+try:
+    con_verificacion(d, {"orden": 99,
+                         "fecha_vigencia_efectiva": "1900-01-01"})
+    r = fase4.otra_forma(d, 2023, motor_que_escribe(BIEN), ix)
+    comprobar("con OTRA version, NO se reescribe",
+              r["veredicto"] == VF.RECHAZADO and not r["respuesta"],
+              r.get("veredicto"))
+    comprobar("  y se dice QUE articulo ha cambiado",
+              "ha cambiado el texto de" in r["motivo"], r["motivo"][:100])
+    comprobar("  sin llamarlo error: la respuesta de arriba sigue valiendo",
+              "sigue siendo la que se comprobo" in r["motivo"],
+              r["motivo"][:140])
+finally:
+    shutil.rmtree(d, ignore_errors=True)
+
+# --- LA REGLA DEL MATERIAL, tambien al reescribir ---
+d = expediente_de_mentira()
+try:
+    (d / "material_claves.json").write_text(
+        json.dumps({"claves": ["BOE-INVENTADO#0#articulo 999"]}),
+        encoding="utf-8")
+    comprobar("las claves del material se leen del expediente",
+              OF.claves_del_material(d) == {"BOE-INVENTADO#0#articulo 999"},
+              OF.claves_del_material(d))
+    r = fase4.otra_forma(d, 2023, motor_que_escribe(BIEN), ix)
+    comprobar("una reescritura que cita FUERA de su material se rechaza",
+              r["veredicto"] == VF.RECHAZADO, r["veredicto"])
+finally:
+    shutil.rmtree(d, ignore_errors=True)
+
+d = expediente_de_mentira()
+try:
+    comprobar("y un expediente VIEJO, sin ese fichero, no exige nada",
+              OF.claves_del_material(d) is None)
+    r = fase4.otra_forma(d, 2023, motor_que_escribe(BIEN), ix)
+    comprobar("  asi que se sigue pudiendo reescribir",
+              r["veredicto"] == VF.ACEPTADO, r.get("motivo"))
+finally:
+    shutil.rmtree(d, ignore_errors=True)
+
+
 # ==================================== 4. CONTROL NEGATIVO
 print("\n=== 4. LA PRUEBA SABE PONERSE ROJA ===")
 print("  Se quita la verificacion, que es la tentacion exacta: «el material")

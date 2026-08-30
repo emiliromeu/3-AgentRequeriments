@@ -248,8 +248,13 @@ def otra_forma(traza, ejercicio, motor, ix) -> dict:
         return res
 
     borrador = (resp.texto or "").strip()
-    informe = VF.Verificador(ix).verificar_texto(borrador, ejercicio,
-                                                exigir_norma=True)
+    # LA MISMA REGLA QUE EN UNA CONSULTA: no se puede citar lo que no se le
+    # puso delante. Aqui el material sale del expediente, asi que las claves
+    # tambien. En los expedientes anteriores al 30/08/2026 no estan y devuelve
+    # `None`: no se exige lo que no se puede saber.
+    informe = VF.Verificador(ix).verificar_texto(
+        borrador, ejercicio, exigir_norma=True,
+        claves_del_material=OF.claves_del_material(traza))
     res["veredicto"] = informe.veredicto
     res["verificacion"] = informe.a_json()
 
@@ -273,6 +278,48 @@ def otra_forma(traza, ejercicio, motor, ix) -> dict:
                          "ha cambiado al reescribirla. Se queda la respuesta "
                          "de antes, que si esta comprobada.")
         return res
+
+    # ─────────────────────────────────────────────────────────────────────
+    # ¿SE HA MOVIDO EL CORPUS DEBAJO DE ESTE EXPEDIENTE? 30/08/2026.
+    # ─────────────────────────────────────────────────────────────────────
+    #
+    # El material sale del expediente, pero el VERIFICADOR es el de hoy, con el
+    # corpus de hoy. No hay forma de reconstruir la ley tal como estaba en
+    # agosto -no se guarda una copia- asi que la pregunta no es «¿puedo
+    # verificar contra aquello?», es «¿ha cambiado aquello?».
+    #
+    # Y ESO SI SE PUEDE SABER, sin guardar nada nuevo: `version_usada` va por
+    # cita en `verificacion_N.json` desde siempre. Si la version con la que se
+    # comprueba AHORA un precepto no es la misma con la que se comprobo
+    # ENTONCES, el texto sobre el que se razono ha cambiado, y lo que saldria
+    # seria una redaccion que cita la ley de hoy razonando sobre la de agosto.
+    # Eso es lo que va a un cliente.
+    #
+    # SE COMPARA LA VERSION USADA, NO CUANTAS HAY. Que el corpus haya crecido
+    # -una consolidacion nueva posterior al ejercicio- no cambia el texto que
+    # sostiene ESTA respuesta, y refusar ahi seria apagar el boton por algo que
+    # no afecta.
+    antes = OF.versiones_de_la_primera(traza)
+    if antes:
+        movidos = []
+        for d in informe.dictamenes:
+            if d.estado != VF.VERIFICADA or d.clave not in antes:
+                continue
+            ahora = {"orden": (d.version_usada or {}).get("orden"),
+                     "fecha_vigencia_efectiva":
+                         (d.version_usada or {}).get("fecha_vigencia_efectiva")}
+            if ahora != antes[d.clave]:
+                movidos.append(d.referencia_corpus or d.clave)
+        if movidos:
+            res["veredicto"] = VF.RECHAZADO
+            res["motivo"] = (
+                "no se reescribe: desde que se contesto esta consulta ha "
+                "cambiado el texto de " + ", ".join(sorted(set(movidos))[:3])
+                + ". La respuesta de arriba sigue siendo la que se comprobo "
+                "aquel dia; una version «para el cliente» citaria la ley de "
+                "hoy razonando sobre la de entonces. Si el caso sigue vivo, "
+                "haz la consulta de nuevo.")
+            return res
 
     res["respuesta"] = borrador
     return res
@@ -945,6 +992,11 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
         # exactamente lo que `construir_material` ha puesto delante: un bloque
         # por registro y ninguno mas. Ver la nota larga en `verificar_cita`.
         claves_del_material = {r["clave"] for r in registros if r.get("clave")}
+        # Y SE GUARDAN EN EL EXPEDIENTE. Sin esto, reescribir para el cliente
+        # dentro de tres semanas no puede saber cual era el material y tiene
+        # que renunciar a la regla. Ver `otraforma.claves_del_material`.
+        tr.json("material_claves.json",
+                {"claves": sorted(claves_del_material)})
         informe = verificador.verificar_texto(
             borrador, ejercicio, exigir_norma=True,
             claves_del_material=claves_del_material)

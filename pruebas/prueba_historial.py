@@ -467,9 +467,37 @@ comprobar("  y se puede copiar y mandar",
           str(v.boton_copiar.cget("state")) == "normal"
           and str(v.boton_cliente.cget("state")) == "normal")
 
-# LA OTRA FUGA DE LA SESION: describir una consulta vieja con el corpus de HOY.
+# LAS OTRAS FUGAS DE LA SESION, que el historial destapo por ser la frontera.
 comprobar("un expediente cargado se marca como venido de disco",
           ver_ejemplo.cargar("20260825T101500")[0].get("_de_expediente") is True)
+
+# LA COLA DE HOY NO PROMETE NADA SOBRE UNA CONSULTA DE OTRO DIA. «Ya esta
+# apuntado para buscarlo» habla de lo que va a pasar a partir de AHORA: sobre
+# un expediente de hace tres semanas, o ya se bajo -y sobra- o se desapunto -y
+# es falso-.
+v.limpiar_cintas()
+v._pintar_aporte({"con_criterio": True, "_de_expediente": True,
+                  "aporte": {"impuesto": "IVA"},
+                  "apuntados_en_cola": [{"cuerpo": "c", "articulo": "95"}]})
+bombear(0.3)
+_textos = [w.cget("text") for w in v.panel_aporte.winfo_children()]
+comprobar("sobre un expediente guardado NO se promete la cola de hoy",
+          not any("apuntado" in t.lower() for t in _textos),
+          str(_textos)[:120])
+
+# Y LO COPIADO LLEVA EL AÑO Y LA FECHA: sin ejercicio, una respuesta pegada se
+# lee como del año en curso, y la ley de otro año se lee igual de bien.
+v._abrir_expediente([EX._leer_expediente("20260825T101500")])
+bombear(0.5)
+v._copiar()
+bombear(0.3)
+_cab = raiz.clipboard_get().splitlines()[0]
+comprobar("lo copiado lleva el EJERCICIO con el que se contesto",
+          "ejercicio 2024" in _cab, _cab[:140])
+comprobar("  y cuando se comprobo, que es un dato y no la hora de ahora",
+          "25/08/2026" in _cab, _cab[:140])
+comprobar("  y sigue llevando con que se hizo y la comunidad",
+          "Cataluña" in _cab and "criterio" in _cab.lower(), _cab[:140])
 raiz.destroy()
 
 # ==================================================== 8. CONTROL NEGATIVO
