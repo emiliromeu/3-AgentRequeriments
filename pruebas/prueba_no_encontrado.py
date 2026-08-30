@@ -182,6 +182,63 @@ comprobar("y la de copiar tambien",
 print("    (las dos han detectado el texto peligroso: la prueba SI mide algo)")
 
 raiz.destroy()
+
+# =====================================================================
+print("\n=== 6. NO SE PUEDE CITAR LO QUE NO SE LE PUSO DELANTE ===")
+print("  El verificador resuelve contra el CORPUS ENTERO: una cita a")
+print("  cualquier articulo cargado se comprueba bien, la hubiera visto el")
+print("  redactor o no. Comprobar que una cita es literal y comprobar que la")
+print("  respuesta se apoya en lo que se le dio son dos cosas distintas.\n")
+from agente_fiscal import verificador as VF  # noqa: E402
+import fase4 as _F4  # noqa: E402
+
+_ix, _grafo = _F4.cargar_corpus()
+_v = VF.Verificador(_ix)
+
+# UN ARTICULO REAL, Y NOMBRANDO SU NORMA. La cita tiene que ser literal y
+# RESOLUBLE: sin decir de que norma es, «Articulo 1» existe en 19 cuerpos y el
+# verificador la deja en NO_VERIFICABLE antes de llegar a esta regla — se
+# estaria probando otra cosa. Se escribe como las escribe el redactor.
+_CLAVE = "BOE-A-1992-28740#0#articulo 95"
+_doc = _ix.por_clave[_CLAVE]
+_frag = " ".join((_doc.registro["texto_vigente"] or "").split())
+# Del cuerpo del articulo, no de su rubrica: el epigrafe no sostiene nada.
+_frag = _frag[_frag.index("Uno."):][:170]
+_cita = (f"El {_doc.registro['referencia']} de la Ley 37/1992 dispone que "
+         f"«{_frag}» ({_doc.registro['url']}).")
+_mio = {_CLAVE}
+# Otro precepto REAL del corpus: si el material de mentira fuera una clave
+# inventada, el caso adversario podria estar pasando por un camino de error y
+# no por la regla.
+_otro = {"BOE-A-1992-28740#0#articulo 97"}
+
+# --- EL POSITIVO: la misma cita, con su precepto en el material ---
+_inf = _v.verificar_texto(_cita, None, claves_del_material=_mio)
+comprobar("POSITIVO: con su precepto en el material, la cita se VERIFICA",
+          all(d.estado == VF.VERIFICADA for d in _inf.dictamenes)
+          and _inf.dictamenes,
+          [(d.estado, d.motivo[:60]) for d in _inf.dictamenes])
+
+# --- EL ADVERSARIO: la MISMA cita, con otro material ---
+_inf2 = _v.verificar_texto(_cita, None, claves_del_material=_otro)
+comprobar("ADVERSARIO: la misma cita, con otro material, se RECHAZA",
+          _inf2.veredicto == VF.RECHAZADO, _inf2.veredicto)
+comprobar("  y se dice por que, sin llamarla falsa: es literal, pero no se le "
+          "puso delante",
+          any("NO SE LE PUSO DELANTE" in d.motivo for d in _inf2.dictamenes),
+          [d.motivo[:90] for d in _inf2.dictamenes])
+
+# --- SIN DECIR EL MATERIAL, NO SE EXIGE: es lo que deja en pie a la bateria ---
+_inf3 = _v.verificar_texto(_cita, None)
+comprobar("sin material declarado no se exige nada (la bateria sigue en pie)",
+          all(d.estado == VF.VERIFICADA for d in _inf3.dictamenes),
+          [(d.estado, d.motivo[:50]) for d in _inf3.dictamenes])
+
+# --- Y UN CONJUNTO VACIO NO ES «NO SE ME HA DICHO» ---
+_inf4 = _v.verificar_texto(_cita, None, claves_del_material=set())
+comprobar("un material VACIO si exige: no es lo mismo que no declararlo",
+          _inf4.veredicto == VF.RECHAZADO, _inf4.veredicto)
+
 print("\n" + "=" * 62)
 print(f"FALLOS: {len(fallos)}")
 for f in fallos:

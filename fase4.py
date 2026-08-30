@@ -940,7 +940,14 @@ def consultar(pregunta: str, ejercicio_cli, motor, ix, grafo,
             return _fin(res, tr)
 
         paso("verificacion", "Comprobando cada cita contra el texto oficial...")
-        informe = verificador.verificar_texto(borrador, ejercicio, exigir_norma=True)
+        # EL MATERIAL DE ESTA VUELTA, para que una cita no pueda apoyarse en un
+        # precepto que la busqueda de AHORA no ha traido. `registros` es
+        # exactamente lo que `construir_material` ha puesto delante: un bloque
+        # por registro y ninguno mas. Ver la nota larga en `verificar_cita`.
+        claves_del_material = {r["clave"] for r in registros if r.get("clave")}
+        informe = verificador.verificar_texto(
+            borrador, ejercicio, exigir_norma=True,
+            claves_del_material=claves_del_material)
         tr.json(f"verificacion_{intento}.json", informe.a_json())
 
         r = informe.resumen

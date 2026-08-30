@@ -5906,3 +5906,64 @@ que llama, aparecieron dos más:
 
 `_terminar` en sí no usaba nada de la sesión. Las tres fugas estaban en lo que
 llama, que es donde no se mira.
+
+
+---
+
+# FASE 40 · NO SE PUEDE CITAR LO QUE NO SE LE PUSO DELANTE
+
+## El hueco
+
+El verificador comprueba que una cita es **literal** y que el **enlace** resuelve.
+Lo hace contra `self.ix`, que es **el corpus entero**: una cita a cualquier
+artículo cargado se comprueba bien, la hubiera visto el redactor o no.
+
+Comprobar que una cita es literal y comprobar que la respuesta **se apoya en lo
+que se le dio** son dos cosas distintas, y sólo estaba la primera.
+
+## Y una medición mía que estaba mal
+
+Al proponerlo dije que el 12,2 % de las respuestas aceptadas citaban un precepto
+que no se les envió. **Era falso, y por un error de medida**: comparé
+`resultado.json["preceptos"]` contra la lista «enviado» de `seleccion.json`, y
+no son lo mismo — `construir_material` pone delante más de lo que esa lista
+recoge.
+
+Medido contra el material de verdad, que está guardado en cada expediente
+(`material_N.txt`):
+
+| | aceptadas | citan fuera del material |
+|---|---:|---:|
+| motor de ensayo | 2.194 | **0** |
+| `claude-opus-5` | 31 | **0** |
+
+**Cero en 2.225.** Y el motivo es simple: hoy el redactor sólo ve el material,
+así que no tiene de dónde sacar otro artículo.
+
+## Entonces por qué se pone
+
+Porque la memoria de la conversación va a darle al redactor **la respuesta
+anterior, que nombra artículos**. Ése es el empujón que hoy no existe. Sin esta
+regla, la vuelta 2 podría apoyarse en un artículo que trajo la búsqueda de la
+vuelta 1 y que la de ahora **no** ha traído —porque el dato nuevo cambió qué
+aplica— y saldría impecable, con su cita literal y su enlace, sobre el artículo
+equivocado. Es la furgoneta otra vez, por un camino nuevo.
+
+**Un cerrojo se pone cuando la puerta todavía no se ha abierto.** Que dispare
+cero veces el día que se instala no es un argumento en contra: es la única forma
+de instalarlo sin romper nada, y está comprobado —las 17 rojas del banco siguen
+siendo las mismas.
+
+## `None` no es un conjunto vacío
+
+`claves_del_material=None` quiere decir **«no se me ha dicho cuál era el
+material»**, y entonces no se exige nada: es lo que mantiene en pie a la batería,
+a `verificar_json` y a quien verifique un texto suelto sin consulta detrás. Un
+conjunto **vacío** sí exige, y rechaza todo. Sólo `fase4` sabe el material y sólo
+`fase4` lo pasa. Las dos cosas se comprueban por separado.
+
+El caso adversario y el positivo son **la misma cita**, palabra por palabra,
+sobre un artículo real del corpus: lo único que cambia entre los dos es el
+material. Y la cita nombra su norma a propósito — sin eso, «Artículo 1» existe
+en 19 cuerpos, el verificador la deja en NO_VERIFICABLE antes de llegar a esta
+regla, y se estaría probando otra cosa. Caí en ello escribiéndola.

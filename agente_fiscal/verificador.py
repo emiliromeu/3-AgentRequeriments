@@ -474,7 +474,8 @@ class Verificador:
         return d
 
     def verificar_cita(
-        self, cita: C.Cita, ejercicio: int | None, exigir_norma: bool = False
+        self, cita: C.Cita, ejercicio: int | None, exigir_norma: bool = False,
+        claves_del_material: set | None = None,
     ) -> Dictamen:
         ref = cita.referencia
         d = Dictamen(
@@ -586,6 +587,54 @@ class Verificador:
                     f"; el fragmento si aparece en: "
                     f"{self.nombrar_varios(h.clave for h in otros[:5])}"
                 )
+            return d
+
+        # ─────────────────────────────────────────────────────────────────
+        # NO SE PUEDE CITAR LO QUE NO SE LE PUSO DELANTE. 30/08/2026.
+        # ─────────────────────────────────────────────────────────────────
+        #
+        # Aqui ya se sabe A QUE PRECEPTO apunta la cita, y es el sitio exacto
+        # para preguntar lo unico que faltaba: ¿estaba ese precepto en el
+        # material de ESTA vuelta?
+        #
+        # POR QUE NO BASTABA CON LO QUE YA HABIA. El verificador resuelve
+        # contra `self.ix`, que es el CORPUS ENTERO: una cita a cualquier
+        # articulo cargado se comprueba bien -el texto esta, el enlace esta- la
+        # hubiera visto el redactor o no. Comprobar que una cita es literal y
+        # comprobar que la respuesta se apoya en lo que se le dio son dos cosas
+        # distintas, y solo estaba la primera.
+        #
+        # POR QUE AHORA. Hasta hoy el redactor solo veia el material, asi que
+        # no tenia de donde sacar otro articulo: medido sobre las 2.225
+        # respuestas ACEPTADAS que hay en disco, CERO citan fuera de su
+        # material -ni las 31 del modelo de verdad, ni las 2.194 del motor de
+        # ensayo-. La regla no arregla nada que este roto hoy.
+        #
+        # Se pone porque la memoria de la conversacion va a darle al redactor
+        # LA RESPUESTA ANTERIOR, que NOMBRA ARTICULOS. Ese es el empujon que
+        # hoy no existe. Sin esta regla, la vuelta 2 podria apoyarse en un
+        # articulo que trajo la busqueda de la vuelta 1 y que la de ahora NO ha
+        # traido -porque el dato nuevo cambio que aplica-, y saldria impecable,
+        # con su cita literal y su enlace, sobre el articulo equivocado. Es la
+        # furgoneta otra vez, por un camino nuevo.
+        #
+        # Un cerrojo se pone cuando la puerta todavia no se ha abierto.
+        #
+        # `None` NO ES UN CONJUNTO VACIO: quiere decir «no se me ha dicho cual
+        # era el material», y entonces no se exige nada. Es lo que mantiene en
+        # pie a la bateria, a `verificar_json` y a quien verifique un texto
+        # suelto sin consulta detras. Solo `fase4` sabe el material y solo
+        # `fase4` lo pasa.
+        if claves_del_material is not None and clave not in claves_del_material:
+            d.clave = clave
+            d.referencia_corpus = self.ix.por_clave[clave].registro["referencia"]
+            d.estado = NO_VERIFICADA
+            d.motivo = (
+                f"el fragmento es literal y esta en "
+                f"{self.nombrar(clave)}, pero ESE PRECEPTO NO SE LE PUSO "
+                f"DELANTE en esta consulta: la respuesta se estaria apoyando "
+                f"en algo que esta busqueda no ha traido"
+            )
             return d
 
         reg = self.ix.por_clave[clave].registro
@@ -774,11 +823,20 @@ class Verificador:
     # ------------------------------------------------------------ informe
 
     def verificar_texto(
-        self, texto: str, ejercicio: int | None, exigir_norma: bool = False
+        self, texto: str, ejercicio: int | None, exigir_norma: bool = False,
+        claves_del_material: set | None = None,
     ) -> Informe:
+        """Verifica un texto entero.
+
+        `claves_del_material` son los preceptos que se le pusieron delante al
+        redactor. Con `None` -el valor por defecto- no se exige: es lo que
+        deja en pie a la bateria y a quien verifique un texto suelto. Ver la
+        nota larga dentro de `verificar_cita`.
+        """
         lista, sueltas = C.extraer(texto, registro=self.ix.normas)
         dictamenes = [
-            self.verificar_cita(c, ejercicio, exigir_norma) for c in lista
+            self.verificar_cita(c, ejercicio, exigir_norma,
+                                claves_del_material) for c in lista
         ]
 
         if not dictamenes:
