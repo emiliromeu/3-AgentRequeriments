@@ -1949,6 +1949,101 @@ class Ventana:
                 and not self.fila_ahora.winfo_manager():
             self.marco_motor.pack_forget()
 
+    # ═══════════════════════════════════════════════════════════════════
+    # LO QUE LA VENTANA SABE CONTESTAR DE SI MISMA
+    # ═══════════════════════════════════════════════════════════════════
+    #
+    # Las suites leian la pantalla hurgando en widgets: `etiqueta_estado`,
+    # `panel_avisos.winfo_children()`, `boton_copiar.cget("state")`. Medido:
+    # 126 accesos directos en `prueba_interfaz` contra 7 preguntas. Eso ata una
+    # comprobacion de FONDO -«no se enseña texto sin verificar»- a la FORMA de
+    # la maqueta, y el dia que la maqueta cambia salen rojas que no dicen nada
+    # de lo que protegen.
+    #
+    # LA VARA PARA ELEGIRLAS: que sigan teniendo respuesta cuando la respuesta
+    # sea una CONVERSACION DE SEIS VUELTAS y no un `Text`. Una pregunta que
+    # solo tiene sentido con la maqueta de hoy no vale: seria el mismo
+    # acoplamiento con otro nombre.
+    #
+    # NO SON UNA API PARA NADIE MAS. Son la forma que tiene la ventana de
+    # decir lo que esta enseñando, y las usa quien la vigila.
+
+    def estado_en_pantalla(self) -> dict:
+        """El rotulo, su explicacion y con que se hizo. Vacios si no hay."""
+        return {
+            "rotulo": str(self.etiqueta_estado.cget("text")),
+            "explicacion": str(self.etiqueta_explicacion.cget("text")),
+            "hecha_con": str(self.etiqueta_hecha_con.cget("text")),
+        }
+
+    def avisos_en_pantalla(self) -> dict:
+        """Lo que puede invalidar la respuesta, por ejes.
+
+        Devuelve {"desacuerdo": [...], "sin_mirar": [...]}. Las dos listas
+        vacias quiere decir que no hay nada que avisar, que desde el 29/08 es
+        tambien que el panel no se pinta.
+        """
+        fuera = {"desacuerdo": [], "sin_mirar": []}
+        if not self.panel_avisos.winfo_manager():
+            return fuera
+        eje = None
+        for w in self.panel_avisos.winfo_children():
+            try:
+                t = str(w.cget("text"))
+            except tk.TclError:                  # pragma: no cover
+                continue
+            if "DESACUERDO" in t:
+                eje = "desacuerdo"
+            elif "NO SE HA PODIDO MIRAR" in t:
+                eje = "sin_mirar"
+            elif eje and t.startswith("•"):
+                fuera[eje].append(t.lstrip("• ").strip())
+        return fuera
+
+    def lo_que_se_puede_hacer(self) -> dict:
+        """Que acciones estan VIVAS ahora mismo.
+
+        SE ENUMERA AQUI, NO EN LA PRUEBA, y ese es el punto entero. El fallo
+        que trajo estas comprobaciones fue que alguien añadio un segundo boton
+        y se olvido de apagarlo; una prueba que enumera botones por su nombre
+        es la que deja pasar el tercero. Preguntando, el dia que se añada uno
+        la respuesta lo incluye sola.
+
+        SE MIRA EL `state`, NO SI ESTA A LA VISTA: hay suites que corren con la
+        ventana retirada -`withdraw()`- y ahi nada esta mapeado. Lo que se
+        afirma es si la accion se puede ejecutar, que es lo que importa.
+        """
+        def vivo(w) -> bool:
+            try:
+                return w is not None and str(w.cget("state")) != "disabled"
+            except tk.TclError:                  # pragma: no cover
+                return False
+
+        fuera = {"consultar": vivo(getattr(self, "boton", None)),
+                 "copiar": vivo(getattr(self, "boton_copiar", None)),
+                 "cliente": vivo(getattr(self, "boton_cliente", None))}
+        # El de criterio existe hoy y puede no existir mañana. Se pregunta por
+        # lo que hay, no por lo que se supone que hay.
+        if getattr(self, "boton_criterio", None) is not None:
+            fuera["consultar_con_criterio"] = vivo(self.boton_criterio)
+        # Seguir no es un boton apagado: es una caja que esta o no esta.
+        fuera["seguir"] = bool(self.marco_seguir.winfo_manager())
+        return fuera
+
+    def lo_que_se_lee(self) -> str:
+        """El texto de la respuesta, sin que quien pregunta sepa como se pinta.
+
+        Hoy es un `Text`; con el chat seran varios, uno por vuelta. Quien
+        comprueba «no se enseña texto sin verificar» no tiene por que
+        enterarse de ese cambio.
+        """
+        return self.texto.get("1.0", "end")
+
+    def vuelta_en_pantalla(self) -> tuple:
+        """(cual, de cuantas). (1, 1) cuando no hay conversacion."""
+        n = int(getattr(self, "vuelta", 1) or 1)
+        return n, n
+
     def cintas_visibles(self) -> list:
         """Todo lo que hay puesto en la cinta ahora mismo, de arriba abajo.
 

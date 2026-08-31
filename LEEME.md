@@ -6076,3 +6076,60 @@ prueba **sola**, no de rebote: decide si un texto sale hacia un cliente. Su
 control negativo rompe el lector de versiones para que devuelva vacío —el fallo
 más fácil de cometer— y comprueba que entonces la decisión diría «adelante»
 siempre y nadie se enteraría.
+
+
+---
+
+# FASE 43 · CONTAR POR EL SÍNTOMA NO ES CONTAR POR LO QUE PROTEGE
+
+Propuse pasar de **doce suites de ventana a cinco**. La medida con la que llegué
+a esa cifra era: *doce suites abren una ventana Tk, luego doce suites son de la
+pantalla*.
+
+Desglosando sus 522 comprobaciones por secciones, **sólo una lo era**:
+
+| Suite | Lo que protege de verdad |
+|---|---|
+| `prueba_entradas` | el catalán, el año mal interpretado, la pregunta como la escribe la gente — **del motor** |
+| `prueba_residencia` | que la normativa autonómica sólo entra si se sabe dónde reside — **del motor** |
+| `prueba_cobertura` | que la cobertura se cuenta y no se escribe — **del corpus** |
+| `prueba_caducan` | las tres cosas que caducan solas — **de `frescura`** |
+| `prueba_dialogo` | el diálogo de la clave — **de otra ventana**, la del primer arranque |
+| `prueba_hilo` | que cada vuelta se busca y verifica de cero — **del motor**, y su §5 ni abre ventana: lee el código con `in` |
+
+Abrían una ventana **para una cola de tres o cuatro comprobaciones**, y esa cola
+es de su tema —la comunidad es de residencia, el aviso de largo es de entradas—,
+no de la pantalla. Fusionarlas habría metido la deducción autonómica y el aviso
+de certificado en la misma suite que los contrastes de color, y **se habría
+perdido lo que cada una nombra**, que es lo que hace que una roja diga algo.
+
+> **La lección:** contar por el síntoma no es contar por lo que protege. «Abre
+> una ventana» es un síntoma; «protege que la respuesta diga con qué comunidad
+> se hizo» es lo que hay que contar. La primera se mide con un `grep` y por eso
+> tienta.
+
+## Lo que sí había que arreglar, que era otra cosa
+
+El número de ficheros no era el problema. Lo medido:
+
+- **22 ventanas Tk** en una pasada completa — la causa de las rojas
+  intermitentes por robo de foco que ya nos habíamos comido.
+- **126 accesos directos a widgets** en `prueba_interfaz` contra **7** preguntas
+  a la ventana. Eso ata una comprobación de fondo a la forma de la maqueta.
+
+Así que el objetivo pasa a ser **22 → 8 ventanas** y **126 → ~20 accesos**, con
+**una** suite menos, no siete.
+
+## Y la vara para elegir las preguntas
+
+Las cinco que sabe contestar ahora la ventana —`estado_en_pantalla`,
+`avisos_en_pantalla`, `lo_que_se_puede_hacer`, `lo_que_se_lee`,
+`vuelta_en_pantalla`— se eligieron con un criterio: **que sigan teniendo
+respuesta cuando la respuesta sea una conversación de seis vueltas y no un
+`Text`**. Una pregunta que sólo tiene sentido con la maqueta de hoy sería el
+mismo acoplamiento con otro nombre.
+
+`lo_que_se_puede_hacer` **enumera en la ventana, no en la prueba**, y ése es su
+punto entero: el fallo que trajo esas comprobaciones fue que alguien añadió un
+segundo botón y se olvidó de apagarlo. Una prueba que enumera botones por su
+nombre es justo la que deja pasar el tercero.
