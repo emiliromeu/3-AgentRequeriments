@@ -6134,3 +6134,57 @@ mismo acoplamiento con otro nombre.
 punto entero: el fallo que trajo esas comprobaciones fue que alguien añadió un
 segundo botón y se olvidó de apagarlo. Una prueba que enumera botones por su
 nombre es justo la que deja pasar el tercero.
+
+
+---
+
+# FASE 44 · DOS LECCIONES DE MÉTODO DE LA TANDA DE LAS SUITES
+
+## 1 · Cuando un análisis se cae, hay que recalcular lo que colgaba de él
+
+Propuse **12 suites de ventana → 5**, y de ahí saqué dos objetivos: **22 → 8**
+ventanas Tk y **126 → ~20** accesos directos a widgets.
+
+El desglose posterior tumbó la premisa: sólo una de las doce era de la pantalla.
+Lo dije, corregí el plan… **y seguí persiguiendo las cifras**. Reales al
+terminar: 22 → 21 ventanas, 126 → 119 accesos, 50 → **51** suites.
+
+> **La lección:** un objetivo numérico no es independiente del análisis que lo
+> produjo. Cuando el análisis se cae, las cifras que colgaban de él se caen con
+> él y hay que recalcularlas en voz alta — si no, se siguen persiguiendo por
+> inercia y acaban midiendo el esfuerzo en vez del resultado.
+
+Recalculado de verdad, la cifra que importaba era otra y estaba dentro de los
+126: **76 de los accesos que quedan son de maqueta** —«la respuesta larga se lee
+entera», «veinte líneas sin desplazar»— donde el widget **es** lo que se
+protege y preguntar sería inventar una pregunta que sólo repite lo que dice el
+widget. Los **43 restantes son de fondo**, y ahí sí se movió la aguja: de **7
+preguntas a la ventana a 42**.
+
+## 2 · Una suite se nombra por lo que protege, no por cómo se ve el fallo
+
+`prueba_boton` — «ningún botón se queda gris en silencio» — describía **el
+síntoma con el que se descubrió**: dos botones grises en un PC de Windows.
+
+Nombrar por el síntoma tiene dos costes que sólo se ven después:
+
+- **atrae lo que se le parece**: acabó guardando la ficha de
+  `comprobar_equipo`, que es de un programa de consola y no tiene botones,
+  sólo porque era el fichero abierto el día que se escribió;
+- **y oculta lo que de verdad protege**, así que al repasar se juzga por el
+  nombre. Yo mismo la di por «suite de botones» y propuse disolverla entera
+  sin mirar que sus tres primeros bloques **doblan el arranque antes de
+  construir la ventana** y no se pueden mudar a ninguna parte.
+
+Ahora es **`prueba_arranque`**: *el arranque que falla lo dice, en la pantalla
+que se mira*. El nombre es la propiedad, no la anécdota — y con él puesto, qué
+pertenece y qué no se decide solo.
+
+## Y lo que valió la pena no fueron las cifras
+
+Fueron **dos fallos vivos** que salieron al mudar las comprobaciones y romper el
+código a propósito: `_revisar_boton` reencendía los botones sobre una ventana
+bloqueada, y `avisos_en_pantalla` reconocía un aviso por el «•» —que lo pone
+quien llama—, de modo que un aviso sin viñeta se le colaba. **Dos de las tres
+roturas de control no se cazaban**, y una tercera comprobación mía partía de un
+estado que la hacía pasar sin probar nada.

@@ -132,6 +132,39 @@ LA CADENA, QUE NO TENIA NINGUNA (13/08/2026)
                          le pida, y cuenta cuantas tandas llega a hacer. Cero
                          red: nada de esto toca PETETE.
 
+EL CHAT, PRIMERA PIEZA (31/08/2026)
+-----------------------------------
+  prueba_chat.py         Una consulta es una CONVERSACION, y cada vuelta sigue
+                         siendo suya. `agente_fiscal/chat.py` agrupa
+                         expedientes encadenados en chats: titulo, cabecera,
+                         vueltas y lo que ha quedado atras.
+
+                         NO TOCA LA VENTANA. Es la primera pieza a proposito:
+                         el chat como DATO, para que el commit no pueda dejar
+                         la aplicacion sin arrancar.
+
+                         LO QUE PROTEGE: que un chat siga siendo una cadena de
+                         expedientes y no una conversacion guardada -guardarla
+                         como una cosa sola perderia que cada respuesta se
+                         verifico contra un material concreto-; que el año y la
+                         comunidad del chat sean los de la ULTIMA vuelta, no de
+                         la primera; y que se vea cuando una vuelta ha quedado
+                         atras, que es lo que un chat corriente no tiene.
+
+                         SU CASO QUE MANDA -el cambio de año entre vueltas- HOY
+                         NO PUEDE OCURRIR: al seguir un hilo el año no se puede
+                         cambiar, 0 de 327 vueltas medidas. Se escribe ANTES de
+                         abrir ese campo, no despues.
+
+                         Y AQUI SE ARREGLO UNA SUITE QUE SE MORIA A MITAD: las
+                         comprobaciones leian `d[sello][1]` a pelo, asi que en
+                         cuanto la primera fallaba el `KeyError` tumbaba el
+                         guion y las demas no se ejecutaban. Rompiendo el
+                         codigo a proposito salia UN fallo y una traza cuando
+                         lo correcto son OCHO. Un banco que solo cuenta el
+                         primer problema obliga a arreglar de uno en uno y
+                         esconde si hay mas.
+
 EL REPASO DEL 31/08/2026: MENOS VENTANAS, NO MENOS FICHEROS
 -----------------------------------------------------------
 Se propuso pasar de doce suites de ventana a cinco. La medida que llevo a esa
