@@ -108,6 +108,66 @@ def claves_del_material(traza: Path | str) -> set | None:
     return set(claves) if isinstance(claves, list) else None
 
 
+def puede_reescribirse(traza: Path | str, dictamenes) -> tuple:
+    """¿Sigue en pie la ley sobre la que se contesto? (puede, motivo).
+
+    ────────────────────────────────────────────────────────────────────────
+    LA PREGUNTA NO ERA CON QUE SE COMPROBO, SINO SI HA CAMBIADO
+    ────────────────────────────────────────────────────────────────────────
+
+    Reescribir para el cliente usa el material del expediente -eso ya estaba-
+    pero VERIFICA con el corpus de hoy, y no hay forma de arreglarlo por el
+    camino evidente: no se guarda una copia de la ley de agosto y
+    reconstruirla no es posible.
+
+    Se estuvo a punto de apagar el boton en todas las consultas antiguas. Lo
+    que lo evito fue ver que habia DOS preguntas que parecen la misma:
+
+        ¿puedo verificar contra la ley de entonces?   NO. Haria falta
+                                                      guardar una copia del
+                                                      corpus por consulta.
+        ¿HA CAMBIADO la ley de entonces?              SI, y sin guardar nada
+                                                      nuevo.
+
+    La segunda se contesta con lo que YA hay en el expediente: `version_usada`
+    va por cita en `verificacion_N.json` desde siempre. Comparar la version de
+    entonces con la de ahora dice si el corpus se ha movido debajo.
+
+    De las dos, solo una se puede contestar — y resulta que es la que hacia
+    falta. Preguntar lo que se puede saber en vez de lo que se querria saber
+    es la diferencia entre apagar el boton siempre y apagarlo cuando toca.
+
+    SE COMPARA LA VERSION USADA, NO CUANTAS HAY. Que el corpus haya crecido con
+    una consolidacion posterior al ejercicio no toca el texto que sostiene esta
+    respuesta, y refusar ahi seria apagar por algo que no afecta.
+
+    SIN VERIFICACION GUARDADA NO SE AFIRMA NADA: se devuelve que si. Un
+    expediente que no dice con que versiones se comprobo no puede acusarse de
+    haber cambiado, y es el mismo criterio que con el motor y con el material.
+    """
+    antes = versiones_de_la_primera(traza)
+    if not antes:
+        return True, ""
+    movidos = []
+    for d in dictamenes:
+        clave = getattr(d, "clave", "")
+        if getattr(d, "estado", "") != "VERIFICADA" or clave not in antes:
+            continue
+        v = getattr(d, "version_usada", None) or {}
+        ahora = {"orden": v.get("orden"),
+                 "fecha_vigencia_efectiva": v.get("fecha_vigencia_efectiva")}
+        if ahora != antes[clave]:
+            movidos.append(getattr(d, "referencia_corpus", "") or clave)
+    if not movidos:
+        return True, ""
+    return False, (
+        "no se reescribe: desde que se contesto esta consulta ha cambiado el "
+        "texto de " + ", ".join(sorted(set(movidos))[:3])
+        + ". La respuesta de arriba sigue siendo la que se comprobo aquel dia; "
+        "una version «para el cliente» citaria la ley de hoy razonando sobre "
+        "la de entonces. Si el caso sigue vivo, haz la consulta de nuevo.")
+
+
 def versiones_de_la_primera(traza: Path | str) -> dict:
     """Con QUE VERSION de cada precepto se comprobo la respuesta que se enseño.
 

@@ -6035,3 +6035,44 @@ que sólo llega la mitad de los caminos.
 hoy. **Se acepta**: lo que se *afirma* —«esto es lo que se encontró»— sale del
 expediente, y lo de hoy sólo adorna; si una norma se rebajó, el artículo saldrá
 sin rúbrica. Queda escrito para que se sepa que es una decisión y no un olvido.
+
+
+---
+
+# FASE 42 · DOS PREGUNTAS QUE PARECEN LA MISMA, Y SOLO UNA SE PUEDE CONTESTAR
+
+«Escríbemelo para el cliente» usa el material del expediente —eso ya estaba—
+pero **verifica con el corpus de hoy**. Sobre una consulta de hace tres semanas,
+lo que sale es una redacción que cita la ley de hoy razonando sobre la de
+entonces. Y eso es lo que va a un cliente.
+
+Estuve a punto de apagar el botón en todas las consultas antiguas. Lo que lo
+evitó fue ver que había **dos preguntas distintas** debajo de la misma
+intuición:
+
+| | ¿Se puede? |
+|---|---|
+| **¿Puedo verificar contra la ley de entonces?** | **No.** Haría falta guardar una copia del corpus por consulta. |
+| **¿Ha cambiado la ley de entonces?** | **Sí**, y sin guardar nada nuevo. |
+
+La segunda se contesta con lo que **ya** hay en el expediente: `version_usada` va
+por cita en `verificacion_N.json` desde siempre. Comparar la versión de entonces
+con la de ahora dice si el corpus se ha movido debajo.
+
+> **La lección:** cuando algo parece imposible, mirar si la pregunta que se está
+> haciendo es la que hace falta. Preguntar *lo que se puede saber* en vez de *lo
+> que se querría saber* fue la diferencia entre apagar el botón siempre y
+> apagarlo cuando toca.
+
+Y el matiz que evita el falso positivo: se compara **la versión usada, no cuántas
+hay**. Que el corpus haya crecido con una consolidación posterior al ejercicio no
+toca el texto que sostiene esa respuesta.
+
+## Y por eso la decisión se llama y vive aparte
+
+Estaba enterrada en cuarenta líneas dentro de `otra_forma`. Ahora es
+`otraforma.puede_reescribirse(traza, dictamenes) -> (puede, motivo)`, y se
+prueba **sola**, no de rebote: decide si un texto sale hacia un cliente. Su
+control negativo rompe el lector de versiones para que devuelva vacío —el fallo
+más fácil de cometer— y comprueba que entonces la decisión diría «adelante»
+siempre y nadie se enteraría.

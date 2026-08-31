@@ -135,6 +135,19 @@ comprobar("la fecha sale del nombre de la carpeta, sin abrir nada",
           EX.fecha_de("20260825T101500"))
 comprobar("  y un nombre sin sello no inventa una fecha",
           EX.fecha_de("copiada_a_mano") == ("", ""))
+# LA REGLA DE LA FECHA VIVE EN UN SOLO SITIO, y esto lo comprueba: la ventana
+# la pinta con `interfaz._cuando`, que llama aqui. Dos copias de una regla son
+# dos reglas en cuanto alguien cambie una.
+comprobar("la ventana usa ESTA regla, no una copia suya",
+          interfaz._cuando("20260825T101500") == "25/08/2026 a las 10:15",
+          interfaz._cuando("20260825T101500"))
+comprobar("  y tampoco inventa fecha cuando no la hay",
+          interfaz._cuando("cualquier_cosa") == "",
+          interfaz._cuando("cualquier_cosa"))
+# Con la ruta entera y con el sufijo de dos en el mismo segundo.
+comprobar("le da igual que venga con ruta o con sufijo",
+          EX.fecha_de("/a/b/20260825T101500-2") == ("25/08/2026", "10:15"),
+          EX.fecha_de("/a/b/20260825T101500-2"))
 
 # ============================== 2. VIEJO, ROTO O DE SOLO LECTURA: NO BLOQUEA
 print("\n=== 2. EL INDICE ES UNA CACHE. NUNCA BLOQUEA ===")
@@ -290,6 +303,16 @@ comprobar("  y dice a donde lleva",
           "anteriores" in v.boton_historial.cget("text").lower(),
           v.boton_historial.cget("text"))
 
+# BASTANTES PARA QUE EL PAGINADO EXISTA DE VERDAD.
+#
+# Con ocho expedientes nunca se cruza la pagina, asi que el `if` de mas abajo
+# se saltaba entero y el paginado -lo que colgo la ventana- se quedaba SIN
+# PROBAR con la suite en verde. Es exactamente la trampa que este proyecto ya
+# ha tenido tres veces: una comprobacion que no se ejecuta.
+for _i in range(interfaz.PAGINA_HISTORIAL + 12):
+    expediente(f"202608{20 + _i // 60:02d}T{_i // 60:02d}{_i % 60:02d}00",
+               f"consulta de relleno numero {_i}")
+
 v._abrir_historial()
 # ENSEGUIDA quiere decir: la vista esta puesta ANTES de que el disco conteste.
 # Se comprueba con `_historial_leido` todavia en False, que es lo que lo hace
@@ -326,9 +349,67 @@ v.ocultar_pruebas.set(True)
 v._pintar_historial()
 bombear(0.4)
 
-# EL PAGINADO. Es un limite de DIBUJO: 400 filas cuestan 4 segundos.
+# ================= EL PAGINADO, QUE YA COLGO LA VENTANA =================
+#
+# NO ES UN LIMITE DE LECTURA, ES DE DIBUJO, y por eso no se ve venir: leer las
+# 5.356 filas cuesta 0,03 s con el indice, pero DIBUJARLAS no es lineal —25
+# filas 0,04 s, 100 filas 0,30 s, 400 filas 4,08 s— porque cada fila son seis
+# widgets y tkinter se frena segun crece el contenedor. Construyendolo, la
+# primera version pinto la lista entera y la ventana se quedo colgada hasta que
+# la mato un timeout de cinco minutos.
+#
+# Se comprueba EL LIMITE y que NO SE PIERDE NADA por debajo: un paginado que
+# esconde filas para siempre no es un paginado, es un recorte.
+print("\n  EL PAGINADO:")
 comprobar("se pinta una pagina, no las mil y pico",
           v._tope_historial <= interfaz.PAGINA_HISTORIAL, v._tope_historial)
+_total = len(v._grupos_historial)
+if _total > interfaz.PAGINA_HISTORIAL:
+    comprobar("con mas de una pagina, hay boton para seguir",
+              v._boton_mas is not None)
+    comprobar("  y dice CUANTAS quedan, no solo «ver mas»",
+              any(c.isdigit() for c in v._boton_mas.cget("text")),
+              v._boton_mas.cget("text"))
+    _antes = v._tope_historial
+    v._mas_historial()
+    bombear(0.4)
+    comprobar("pulsarlo pinta MAS, sin rehacer lo de arriba",
+              v._tope_historial > _antes,
+              f"{_antes} -> {v._tope_historial}")
+    comprobar("  y no se salta ninguna: van seguidas",
+              v._tope_historial == min(_total,
+                                       _antes + interfaz.PAGINA_HISTORIAL),
+              v._tope_historial)
+    # HASTA EL FINAL, Y ENTONCES EL BOTON SE VA. Un boton que sigue ahi sin
+    # nada detras es una promesa que no se cumple.
+    _vueltas = 0
+    while v._boton_mas is not None and _vueltas < 200:
+        v._mas_historial()
+        _vueltas += 1
+    bombear(0.3)
+    comprobar("se llega al final, y ahi el boton desaparece",
+              v._boton_mas is None and v._tope_historial == _total,
+              f"{v._tope_historial} de {_total}")
+    comprobar("  y no se ha pintado ninguna de mas",
+              v._tope_historial == _total, v._tope_historial)
+else:
+    comprobar("con una sola pagina no hay boton de seguir",
+              v._boton_mas is None)
+
+# CADA FILA ABRE SU CONSULTA. La fila entera es pinchable, no un enlace
+# pequeño al final: es lo que hace que se pueda usar con prisa.
+v.buscar_texto.set("")
+v.ocultar_pruebas.set(True)
+v._pintar_historial()
+bombear(0.4)
+_filas = [w for w in v.pagina_historial.winfo_children()
+          if isinstance(w, tk.Frame)]
+comprobar("hay filas pintadas", bool(_filas), len(_filas))
+if _filas:
+    _hijos = [w for w in _filas[0].winfo_children()]
+    comprobar("  y TODA la fila responde al clic, no solo un trozo",
+              all(w.bind("<Button-1>") for w in _hijos if w.winfo_children() == []),
+              [str(w.winfo_class()) for w in _hijos])
 raiz.destroy()
 
 # ============ 7. ABRIR UNA DEL HISTORIAL Y SEGUIRLA, EN LA VENTANA

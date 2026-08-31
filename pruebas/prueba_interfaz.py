@@ -716,8 +716,21 @@ if hijas:
                   or "corpus" in abierto.lower(), abierto[-300:])
         comprobar("avisa de que una fuente caida NO impide consultar",
                   "no impide consultar" in abierto)
+        # LO QUE HAY DENTRO DE MANTENIMIENTO, comprobado una a una: son las
+        # cuatro cosas que se movieron aqui, y si alguna se cae por el camino
+        # nadie lo notaria — nadie mira este panel a diario.
+        comprobar("y cuando se bajaron las normas del BOE",
+                  "Bajada el" in abierto or "días" in abierto, abierto[-200:])
+        comprobar("el bloque se puede volver a cerrar",
+                  "Ocultar" in plegables[0].cget("text"),
+                  plegables[0].cget("text"))
         plegables[0].invoke()      # se deja como estaba, cerrado
-        bombear(0.2)
+        bombear(0.3)
+        cerrado = "\n".join(textos(ventana))
+        comprobar("  y cerrado vuelve a no ocupar la pantalla de llegada",
+                  "Tributos (consultas de la DGT)" not in cerrado,
+                  [l for l in cerrado.splitlines()
+                   if "Tributos (consultas" in l][:1])
     comprobar("ni una ruta de fichero ni una variable de entorno",
               "AGENTE_DGT" not in dentro and "/Users" not in dentro
               and ".json" not in dentro, dentro[:120])

@@ -271,6 +271,115 @@ finally:
     shutil.rmtree(d, ignore_errors=True)
 
 
+# ======== 3 ter. LA DECISION, A SOLAS Y SIN VENTANA NI MOTOR ========
+print("\n=== 3 ter. `puede_reescribirse`: la decision, comprobada aparte ===")
+print("  Decide si un texto va a un cliente, asi que se prueba sola y no")
+print("  solo de rebote a traves de `otra_forma`.\n")
+
+
+class _Dic:
+    """Un dictamen de mentira: solo lo que mira la decision."""
+
+    def __init__(self, clave, orden, fecha, estado="VERIFICADA", ref=""):
+        self.clave, self.estado = clave, estado
+        self.referencia_corpus = ref or clave
+        self.version_usada = {"orden": orden,
+                              "fecha_vigencia_efectiva": fecha}
+
+
+def _con(d, citas):
+    (d / "verificacion_1.json").write_text(
+        json.dumps({"veredicto": "ACEPTADO", "citas": citas}),
+        encoding="utf-8")
+
+
+V1 = {"orden": 1, "fecha_vigencia_efectiva": "1998-01-01", "de_un_total": 2}
+CIT = [{"estado": "VERIFICADA", "clave": "A#0#articulo 95",
+        "version_usada": V1}]
+
+d = expediente_de_mentira()
+try:
+    _con(d, CIT)
+    ok, _m = OF.puede_reescribirse(
+        d, [_Dic("A#0#articulo 95", 1, "1998-01-01")])
+    comprobar("misma version: se reescribe", ok is True)
+
+    ok, m = OF.puede_reescribirse(
+        d, [_Dic("A#0#articulo 95", 2, "2021-07-01", ref="Articulo 95")])
+    comprobar("otra version: NO se reescribe", ok is False)
+    comprobar("  y dice cual ha cambiado", "Articulo 95" in m, m[:90])
+
+    # QUE EL CORPUS HAYA CRECIDO NO ES QUE HAYA CAMBIADO. `de_un_total` sube
+    # con una consolidacion posterior al ejercicio, y esa no toca el texto que
+    # sostiene esta respuesta: apagar el boton ahi seria apagarlo por algo que
+    # no afecta.
+    dic = _Dic("A#0#articulo 95", 1, "1998-01-01")
+    dic.version_usada["de_un_total"] = 5
+    ok, _m = OF.puede_reescribirse(d, [dic])
+    comprobar("si solo ha crecido el numero de versiones, SI se reescribe",
+              ok is True)
+
+    # Una cita de OTRO precepto, que no estaba en la primera: no se afirma nada
+    # sobre ella aqui -de eso se ocupa la regla del material-.
+    ok, _m = OF.puede_reescribirse(d, [_Dic("B#0#articulo 7", 9, "2000-01-01")])
+    comprobar("un precepto que no estaba en la primera no dispara esto",
+              ok is True)
+
+    # Una cita NO verificada no dice nada de versiones.
+    ok, _m = OF.puede_reescribirse(
+        d, [_Dic("A#0#articulo 95", 9, "2000-01-01", estado="NO_VERIFICADA")])
+    comprobar("una cita no verificada no cuenta", ok is True)
+finally:
+    shutil.rmtree(d, ignore_errors=True)
+
+# SIN VERIFICACION GUARDADA NO SE ACUSA A NADIE.
+d = expediente_de_mentira()
+try:
+    ok, _m = OF.puede_reescribirse(
+        d, [_Dic("A#0#articulo 95", 9, "2000-01-01")])
+    comprobar("un expediente sin verificacion guardada no se acusa de cambiado",
+              ok is True)
+    comprobar("  y se dice que no se sabe, devolviendo el diccionario vacio",
+              OF.versiones_de_la_primera(d) == {})
+finally:
+    shutil.rmtree(d, ignore_errors=True)
+
+# LA VERIFICACION DE «PARA EL CLIENTE» NO ES LA PRIMERA. Si se colara, se
+# estaria comparando la reescritura consigo misma y esto no cazaria nunca.
+d = expediente_de_mentira()
+try:
+    (d / "verificacion_para_cliente_1.json").write_text(
+        json.dumps({"veredicto": "ACEPTADO",
+                    "citas": [{"estado": "VERIFICADA", "clave": "X",
+                               "version_usada": {"orden": 9}}]}),
+        encoding="utf-8")
+    comprobar("la verificacion «para cliente» NO se toma por la primera",
+              OF.versiones_de_la_primera(d) == {},
+              OF.versiones_de_la_primera(d))
+finally:
+    shutil.rmtree(d, ignore_errors=True)
+
+# --- CONTROL NEGATIVO: se rompe la comparacion y tiene que caerse ---
+print("\n  CONTROL NEGATIVO de esto mismo:")
+d = expediente_de_mentira()
+try:
+    _con(d, CIT)
+    bueno = OF.versiones_de_la_primera
+    # Si el lector devolviera siempre vacio -el fallo mas facil de cometer-,
+    # la decision diria «adelante» SIEMPRE y nadie se enteraria.
+    OF.versiones_de_la_primera = lambda _t: {}
+    ok, _m = OF.puede_reescribirse(
+        d, [_Dic("A#0#articulo 95", 2, "2021-07-01")])
+    comprobar("con el lector roto, la comprobacion de arriba se pondria roja",
+              ok is True)
+    OF.versiones_de_la_primera = bueno
+    ok, _m = OF.puede_reescribirse(
+        d, [_Dic("A#0#articulo 95", 2, "2021-07-01")])
+    comprobar("  y con el lector bueno vuelve a cazarlo", ok is False)
+finally:
+    shutil.rmtree(d, ignore_errors=True)
+
+
 # ==================================== 4. CONTROL NEGATIVO
 print("\n=== 4. LA PRUEBA SABE PONERSE ROJA ===")
 print("  Se quita la verificacion, que es la tentacion exacta: «el material")

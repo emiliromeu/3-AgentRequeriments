@@ -279,47 +279,14 @@ def otra_forma(traza, ejercicio, motor, ix) -> dict:
                          "de antes, que si esta comprobada.")
         return res
 
-    # ─────────────────────────────────────────────────────────────────────
-    # ¿SE HA MOVIDO EL CORPUS DEBAJO DE ESTE EXPEDIENTE? 30/08/2026.
-    # ─────────────────────────────────────────────────────────────────────
-    #
-    # El material sale del expediente, pero el VERIFICADOR es el de hoy, con el
-    # corpus de hoy. No hay forma de reconstruir la ley tal como estaba en
-    # agosto -no se guarda una copia- asi que la pregunta no es «¿puedo
-    # verificar contra aquello?», es «¿ha cambiado aquello?».
-    #
-    # Y ESO SI SE PUEDE SABER, sin guardar nada nuevo: `version_usada` va por
-    # cita en `verificacion_N.json` desde siempre. Si la version con la que se
-    # comprueba AHORA un precepto no es la misma con la que se comprobo
-    # ENTONCES, el texto sobre el que se razono ha cambiado, y lo que saldria
-    # seria una redaccion que cita la ley de hoy razonando sobre la de agosto.
-    # Eso es lo que va a un cliente.
-    #
-    # SE COMPARA LA VERSION USADA, NO CUANTAS HAY. Que el corpus haya crecido
-    # -una consolidacion nueva posterior al ejercicio- no cambia el texto que
-    # sostiene ESTA respuesta, y refusar ahi seria apagar el boton por algo que
-    # no afecta.
-    antes = OF.versiones_de_la_primera(traza)
-    if antes:
-        movidos = []
-        for d in informe.dictamenes:
-            if d.estado != VF.VERIFICADA or d.clave not in antes:
-                continue
-            ahora = {"orden": (d.version_usada or {}).get("orden"),
-                     "fecha_vigencia_efectiva":
-                         (d.version_usada or {}).get("fecha_vigencia_efectiva")}
-            if ahora != antes[d.clave]:
-                movidos.append(d.referencia_corpus or d.clave)
-        if movidos:
-            res["veredicto"] = VF.RECHAZADO
-            res["motivo"] = (
-                "no se reescribe: desde que se contesto esta consulta ha "
-                "cambiado el texto de " + ", ".join(sorted(set(movidos))[:3])
-                + ". La respuesta de arriba sigue siendo la que se comprobo "
-                "aquel dia; una version «para el cliente» citaria la ley de "
-                "hoy razonando sobre la de entonces. Si el caso sigue vivo, "
-                "haz la consulta de nuevo.")
-            return res
+    # ¿SE HA MOVIDO EL CORPUS DEBAJO DE ESTE EXPEDIENTE? La decision vive en
+    # `otraforma.puede_reescribirse`, con la nota de por que la pregunta no
+    # era «¿con que se comprobo?» sino «¿ha cambiado?». Aqui solo se obedece.
+    puede, motivo = OF.puede_reescribirse(traza, informe.dictamenes)
+    if not puede:
+        res["veredicto"] = VF.RECHAZADO
+        res["motivo"] = motivo
+        return res
 
     res["respuesta"] = borrador
     return res
