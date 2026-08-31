@@ -132,6 +132,56 @@ LA CADENA, QUE NO TENIA NINGUNA (13/08/2026)
                          le pida, y cuenta cuantas tandas llega a hacer. Cero
                          red: nada de esto toca PETETE.
 
+EL REPASO DEL 31/08/2026: MENOS VENTANAS, NO MENOS FICHEROS
+-----------------------------------------------------------
+Se propuso pasar de doce suites de ventana a cinco. La medida que llevo a esa
+cifra -«doce suites abren una Tk, luego doce son de pantalla»- era CONTAR POR
+EL SINTOMA. Desglosadas sus 522 comprobaciones, solo UNA era de la pantalla:
+las demas son del motor, del corpus o de `frescura`, y abrian una ventana para
+una cola de tres comprobaciones que es de SU tema.
+
+Lo que si habia que arreglar, medido: 22 ventanas Tk por pasada -las rojas
+intermitentes por robo de foco- y 126 accesos directos a widgets en
+`prueba_interfaz` contra 7 preguntas a la ventana.
+
+  prueba_arranque.py     era `prueba_boton`. El nombre contaba el sintoma
+                         -«ningun boton se queda gris en silencio»- y no lo que
+                         protege: que una ventana que NO HA PODIDO PREPARARSE
+                         lo diga, y lo diga donde se esta mirando. Se quedo con
+                         lo que era suyo -doblar `preparar_motor` y
+                         `cargar_corpus` ANTES de construir la ventana, que no
+                         se puede hacer con la ventana de otra suite- y solto
+                         lo que no:
+                           §3    los dos botones se apagan juntos
+                                 -> prueba_interfaz, preguntando por TODOS los
+                                    caminos de consulta y no por dos nombres
+                           §3bis las nueve pulsaciones mudas
+                                 -> prueba_interfaz, sin ventana propia
+                           §4    la ficha de comprobar_equipo
+                                 -> prueba_equipo, cero ventanas
+
+  prueba_equipo.py       la ficha que se manda cuando algo falla en la oficina.
+                         Vivia dentro de una suite de VENTANA por accidente
+                         -era el fichero que habia abierto-, y es de un
+                         programa de consola. La que mas importa: LA FICHA NO
+                         PUEDE GASTAR, porque se ejecuta cuando algo va mal y a
+                         veces lo que va mal es el saldo.
+
+Y LA VENTANA APRENDIO A CONTESTAR DE SI MISMA -`estado_en_pantalla`,
+`avisos_en_pantalla`, `lo_que_se_puede_hacer`, `lo_que_se_lee`,
+`vuelta_en_pantalla`-, elegidas con una vara: que sigan teniendo respuesta
+cuando la respuesta sea una conversacion de seis vueltas y no un `Text`.
+
+DOS FALLOS QUE APARECIERON AL MUDARLAS, y que estaban vivos en el codigo:
+
+  1. `_revisar_boton` REENCENDIA los botones sobre una ventana bloqueada. El
+     arranque puede fallar DESPUES de dejar motor -`_arrancar_motor` envuelve
+     a `_arrancar` entero-, y entonces la pantalla decia «el agente no ha
+     podido prepararse» y el boton se encendia al escribir la primera letra.
+  2. `avisos_en_pantalla` miraba el «•» para reconocer un aviso, y el punto lo
+     pone quien llama: un aviso sin viñeta se colaba sin que la pregunta lo
+     viera. Lo caza su propio control negativo.
+
 EL HISTORIAL (29/08/2026)
 -------------------------
   prueba_historial.py    Volver a una consulta de hace una semana. Habia 5.325

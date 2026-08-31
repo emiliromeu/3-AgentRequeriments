@@ -2139,7 +2139,7 @@ que de verdad tiene la paleta, y se pone roja si alguno baja de 4,5:1. Una
 tabla en un comentario es una promesa sin quien la vigile.
 
 Se comprueba además que **el texto de un botón apagado se lee** (3,96:1): un
-botón gris ilegible es el «botón gris en silencio» que `prueba_boton` existe
+botón gris ilegible es el «botón gris en silencio» que `prueba_arranque` existe
 para impedir. Apagado no quiere decir invisible.
 
 Y que **no queda ni un color escrito a mano dentro de `_estilos`**. Había seis
@@ -5145,7 +5145,8 @@ escritas en `GUIA.md`. Ocho frases ahora, no seis.
 consulta, el año y la comunidad rellenados. Sin una palabra.
 
 Ya se había arreglado una vez: se envolvió el arranque entero para que ninguna
-excepción se perdiera, se escribió el detalle a disco, y `prueba_boton.py` se
+excepción se perdiera, se escribió el detalle a disco, y aquella suite —hoy
+`prueba_arranque.py`— se
 puso verde. **Y el fallo seguía.**
 
 **La causa real:** `_bloquear` escribía la explicación con `_pintar_estado` y

@@ -323,7 +323,7 @@ SELECCION = "#DCD3F5"   # el texto seleccionado con el raton
 # del otro modo. Ahora cada uno tiene nombre y vive aqui, con los demas.
 APAGADO = "#EDEAF3"       # el fondo de un boton que no se puede pulsar
 # Y SU TEXTO SE TIENE QUE LEER. 3,96:1 sobre el fondo de arriba, no 2,9:1: un
-# boton apagado ilegible es el «boton gris en silencio» que `prueba_boton`
+# boton apagado ilegible es el «boton gris en silencio» que `prueba_arranque`
 # existe para impedir. Apagado no quiere decir invisible.
 APAGADO_TINTA = "#767183"
 ROCE = "#F0EDF7"          # el segundo boton, al pasar por encima
@@ -1996,7 +1996,14 @@ class Ventana:
                 eje = "desacuerdo"
             elif "NO SE HA PODIDO MIRAR" in t:
                 eje = "sin_mirar"
-            elif eje and t.startswith("•"):
+            elif eje and t.strip():
+                # SIN MIRAR EL «•». Aqui ponia `t.startswith("•")`, y eso era
+                # el mismo acoplamiento que esta pregunta existe para quitar:
+                # el punto lo pone quien llama, no `linea()`, asi que un aviso
+                # sin viñeta -como estaba el limite del corpus hasta el
+                # 29/08- se colaba en el panel SIN QUE ESTA PREGUNTA LO VIERA.
+                # Lo caza su control negativo: al meter el limite otra vez
+                # entre los avisos, la comprobacion seguia en verde.
                 fuera[eje].append(t.lstrip("• ").strip())
         return fuera
 
@@ -3015,6 +3022,23 @@ class Ventana:
         los dos. Cual se pulsa es del que pregunta.
         """
         if self.trabajando:
+            return
+        # UNA VENTANA BLOQUEADA NO REENCIENDE NADA. Encontrado el 31/08/2026
+        # al mudar aqui la comprobacion de `prueba_boton` §3 -hoy
+        # `prueba_arranque`-.
+        #
+        # `_bloquear` apaga los botones y dice por que; esta funcion los volvia
+        # a encender en cuanto alguien tecleaba, porque solo miraba si habia
+        # motor. Y HAY UN CAMINO EN QUE SI LO HAY: `_arrancar_motor` envuelve a
+        # `_arrancar` ENTERO, asi que un fallo posterior a `self.motor = motor`
+        # -la guia, la cobertura, la cola- bloquea la ventana con el motor ya
+        # puesto. Resultado: la pantalla dice «el agente no ha podido
+        # prepararse» y el boton se enciende al escribir la primera letra.
+        #
+        # Es el mismo fallo que trajo `_bloquear` -algo pulsable sobre un
+        # arranque roto- por un camino distinto, y por eso la comprobacion que
+        # lo caza es la misma, preguntando por TODOS los caminos de consulta.
+        if self.bloqueada:
             return
         if self.motor is None:
             # UN BOTON GRIS SIN EXPLICACION ES EL PEOR MENSAJE POSIBLE: quien

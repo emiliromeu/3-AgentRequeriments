@@ -178,22 +178,24 @@ v.caja.insert("1.0", "una duda cualquiera")
 v.ejercicio.set("")
 v._revisar_boton()
 comprobar("sin ano, el boton de consultar esta APAGADO",
-          str(v.boton["state"]) == "disabled", str(v.boton["state"]))
+          not v.lo_que_se_puede_hacer()["consultar"],
+          v.lo_que_se_puede_hacer())
 v.ejercicio.set("2023")
 v._revisar_boton()
 comprobar("con ano y con duda, se enciende",
-          str(v.boton["state"]) == "normal", str(v.boton["state"]))
+          v.lo_que_se_puede_hacer()["consultar"], v.lo_que_se_puede_hacer())
 v.caja.delete("1.0", "end")
 v._revisar_boton()
 comprobar("sin duda tampoco se enciende, aunque haya ano",
-          str(v.boton["state"]) == "disabled")
+          not v.lo_que_se_puede_hacer()["consultar"])
 for malo in ("abc", "20", "0", "12345"):
     v.caja.delete("1.0", "end")
     v.caja.insert("1.0", "duda")
     v.ejercicio.set(malo)
     v._revisar_boton()
     comprobar(f"un ano invalido «{malo}» no enciende el boton",
-              str(v.boton["state"]) == "disabled", str(v.boton["state"]))
+              not v.lo_que_se_puede_hacer()["consultar"],
+              v.lo_que_se_puede_hacer())
 
 # =====================================================================
 print("\n=== 2. LOS TRES ESTADOS NO SON UN SEMAFORO ===")
@@ -305,7 +307,7 @@ for nombre, tinta, fondo in PARES:
 
 # EL BOTON APAGADO TAMBIEN SE TIENE QUE LEER. No es texto corriente -la norma
 # lo exime- pero un boton gris ilegible es el «boton gris en silencio» que
-# `prueba_boton` existe para impedir. Apagado no quiere decir invisible.
+# `prueba_arranque` existe para impedir. Apagado no quiere decir invisible.
 r = contra(I.APAGADO_TINTA, I.APAGADO)
 comprobar(f"el texto de un boton apagado se lee: {r:.2f}:1", r >= 3.0,
           f"{I.APAGADO_TINTA} sobre {I.APAGADO}")
@@ -333,11 +335,20 @@ for est in (EST.CLARO, EST.DISCUTIDO, EST.NO_ENCONTRADO):
         texto = interfaz.explicacion(est, con_criterio)
         v._pintar_estado(est, texto, est)
         bombear(0.10)
+        # SE LE PREGUNTA A LA VENTANA. Antes esto leia `etiqueta_estado` y
+        # `etiqueta_explicacion` a pelo: dos widgets que con el chat pasan a
+        # ser uno por vuelta. Lo que se protege -que el estado se pinta con SU
+        # rotulo y su explicacion- no cambia por eso.
+        en_pantalla = v.estado_en_pantalla()
         comprobar(f"«{est}» se pinta con su rotulo",
-                  v.etiqueta_estado.cget("text") == est,
-                  v.etiqueta_estado.cget("text"))
+                  en_pantalla["rotulo"] == est, en_pantalla["rotulo"])
         comprobar(f"«{est}» lleva explicacion, y no vacia",
-                  len(v.etiqueta_explicacion.cget("text")) > 40)
+                  len(en_pantalla["explicacion"]) > 40)
+        # EL COLOR SI SE MIRA EN EL WIDGET, y es correcto: lo que se protege
+        # aqui es la MAQUETA -que cada estado use su color y que no sea un
+        # semaforo-, y el color no tiene otra forma de mirarse. Preguntar por
+        # el seria inventar una pregunta que solo significa lo que ya dice el
+        # widget.
         comprobar(f"«{est}» usa su color en el rotulo",
                   v.etiqueta_estado.cget("fg") == interfaz.COLOR[est])
     comprobar(f"«{est}» NO dice lo mismo con un boton que con el otro",
@@ -370,23 +381,36 @@ except Exception as exc:  # noqa: BLE001
 comprobar("pintar avisos NO revienta la ventana", reventado is None,
           repr(reventado))
 if reventado is None:
+    # SE LE PREGUNTA A LA VENTANA. Antes esto recorria los hijos del panel y
+    # leia su `text`: para saber si un aviso salia habia que saber que los
+    # avisos son etiquetas dentro de un `Frame` y que empiezan por «•». Con el
+    # chat eso pasa a ser un bloque por vuelta, y ninguna de esas dos cosas
+    # sobrevive. Lo que se protege -que los dos ejes salen, separados, y con
+    # sus avisos enteros- no depende de como se pinten.
+    avisos = v.avisos_en_pantalla()
     etiquetas = [w.cget("text") for w in v.panel_avisos.winfo_children()]
     comprobar("el panel de avisos queda visible",
               bool(v.panel_avisos.winfo_ismapped()))
-    comprobar("sale el rotulo de DESACUERDO",
-              any("DESACUERDO" in t for t in etiquetas), str(etiquetas)[:120])
+    comprobar("sale el eje del DESACUERDO", bool(avisos["desacuerdo"]), avisos)
     comprobar("y el de LO QUE NO SE HA PODIDO MIRAR, aparte",
-              any("NO SE HA PODIDO MIRAR" in t for t in etiquetas))
+              bool(avisos["sin_mirar"]), avisos)
+    comprobar("cada aviso va en SU eje, no todos revueltos",
+              avisos["desacuerdo"] == SENALES
+              and avisos["sin_mirar"] == COBERTURA, avisos)
+    # EL ORDEN SE MIRA EN LA PANTALLA: es una propiedad de la maqueta -el
+    # desacuerdo se lee antes- y no la puede contestar una pregunta que
+    # devuelve dos listas.
     comprobar("el desacuerdo va ANTES que la cobertura",
               [t for t in etiquetas if "DESACUERDO" in t
                or "NO SE HA PODIDO MIRAR" in t][0].startswith("DESACUERDO"))
     comprobar("salen los tres avisos con su texto",
-              sum(1 for t in etiquetas if t.startswith("•")) == 3,
-              str(etiquetas))
+              len(avisos["desacuerdo"]) + len(avisos["sin_mirar"]) == 3,
+              avisos)
     # El limite del corpus ya no vive aqui: se comprueba mas abajo, debajo
     # del texto, que es donde se ha movido.
     comprobar("el limite del corpus NO ocupa sitio entre los avisos",
-              not any(ESTRUCTURAL in t for t in etiquetas), str(etiquetas)[:120])
+              ESTRUCTURAL not in str(v.avisos_en_pantalla()),
+              v.avisos_en_pantalla())
     # EL ORDEN SE MIDE EN LA PANTALLA, NO EN EL `grid`.
     #
     # Esto comparaba numeros de fila. Valia mientras el estado, el aporte, los
@@ -418,7 +442,7 @@ if reventado is None:
               max(y_avisos, y_aporte) < v.texto.winfo_rooty()
               + v.texto.winfo_height())
     comprobar("con respuesta verificada SI hay algo que copiar",
-              str(v.boton_copiar["state"]) == "normal")
+              v.lo_que_se_puede_hacer()["copiar"], v.lo_que_se_puede_hacer())
 
 # ────────────────────────────────────────────────────────────────────────
 # SIN NADA QUE AVISAR, NO HAY BLOQUE. CAMBIADO EL 29/08/2026.
@@ -439,11 +463,11 @@ v._terminar({"codigo": 0, "estado": EST.CLARO, "fallo": None, "senales": [],
              "cobertura": [], "estructural": "", "preceptos": ["Articulo 91"],
              "traza": None, "recuperado": [], "respuesta": "Sale al 21%."})
 bombear(0.3)
-comprobar("sin nada que avisar, el panel de avisos NO se pinta",
+comprobar("sin nada que avisar, no hay ni un aviso en pantalla",
+          v.avisos_en_pantalla() == {"desacuerdo": [], "sin_mirar": []},
+          v.avisos_en_pantalla())
+comprobar("  y el panel no se pinta: un marco vacio sigue ocupando alto",
           not v.panel_avisos.winfo_ismapped())
-comprobar("y no queda ni un rotulo suelto dentro",
-          not v.panel_avisos.winfo_children(),
-          str([w.cget("text") for w in v.panel_avisos.winfo_children()])[:120])
 
 # CON UN SOLO AVISO DE COBERTURA VUELVE A SALIR, entero y con su rotulo.
 v._terminar({"codigo": 0, "estado": EST.CLARO, "fallo": None, "senales": [],
@@ -451,12 +475,12 @@ v._terminar({"codigo": 0, "estado": EST.CLARO, "fallo": None, "senales": [],
              "estructural": "", "preceptos": ["Articulo 91"],
              "traza": None, "recuperado": [], "respuesta": "Sale al 21%."})
 bombear(0.3)
-etiquetas = [w.cget("text") for w in v.panel_avisos.winfo_children()]
 comprobar("con algo que avisar, el bloque vuelve",
-          v.panel_avisos.winfo_ismapped() and
-          any("NO SE HA PODIDO MIRAR" in t for t in etiquetas), str(etiquetas))
-comprobar("sin desacuerdo, ese rotulo no sale",
-          not any("DESACUERDO" in t for t in etiquetas))
+          v.panel_avisos.winfo_ismapped()
+          and bool(v.avisos_en_pantalla()["sin_mirar"]),
+          v.avisos_en_pantalla())
+comprobar("sin desacuerdo, ese eje viene vacio",
+          not v.avisos_en_pantalla()["desacuerdo"], v.avisos_en_pantalla())
 
 # --- EL LIMITE DEL CORPUS: FUERA DE LOS AVISOS, PERO NO PERDIDO ---
 #
@@ -469,15 +493,13 @@ v._terminar({"codigo": 0, "estado": EST.CLARO, "fallo": None, "senales": [],
              "preceptos": ["Articulo 80"], "traza": None, "recuperado": [],
              "respuesta": "Sale al 21%."})
 bombear(0.3)
-etiquetas = [w.cget("text") for w in v.panel_avisos.winfo_children()]
 comprobar("el limite del corpus ya NO va con los avisos",
-          not any(LIMITE in t for t in etiquetas), str(etiquetas)[:120])
+          LIMITE not in str(v.avisos_en_pantalla()), v.avisos_en_pantalla())
 comprobar("pero se sigue leyendo, debajo del texto",
-          LIMITE in v.texto.get("1.0", "end"),
-          v.texto.get("1.0", "end")[-200:])
+          LIMITE in v.lo_que_se_lee(), v.lo_que_se_lee()[-200:])
 comprobar("y va DESPUES de la respuesta, no antes",
-          v.texto.get("1.0", "end").index(LIMITE)
-          > v.texto.get("1.0", "end").index("Sale al 21%"))
+          v.lo_que_se_lee().index(LIMITE)
+          > v.lo_que_se_lee().index("Sale al 21%"))
 
 # =====================================================================
 print("\n=== 5. LAS CITAS Y SUS ENLACES SON LO MAS LEGIBLE ===")
@@ -529,7 +551,7 @@ v._terminar_roto(interfaz.FALLO_GENERICO)
 bombear(0.3)
 cuerpo = v.texto.get("1.0", "end")
 comprobar("un fallo deja el estado en NO ENCONTRADO, no en blanco",
-          v.etiqueta_estado.cget("text") != "")
+          v.estado_en_pantalla()["rotulo"] != "")
 comprobar("y nada que copiar", str(v.boton_copiar["state"]) == "disabled")
 comprobar("sin traza en pantalla",
           "Traceback" not in cuerpo and "File \"" not in cuerpo)
@@ -587,10 +609,70 @@ comprobar("ni dentro del boton",
 v.caja.delete("1.0", "end"); v.caja.insert("1.0", "duda")
 v.ejercicio.set("2023"); v._revisar_boton()
 comprobar("los dos se encienden juntos",
-          str(v.boton["state"]) == str(v.boton_criterio["state"]) == "normal")
+          all(vale for nombre, vale in v.lo_que_se_puede_hacer().items()
+              if nombre.startswith("consultar")),
+          v.lo_que_se_puede_hacer())
 v.ejercicio.set(""); v._revisar_boton()
 comprobar("y se apagan juntos",
-          str(v.boton["state"]) == str(v.boton_criterio["state"]) == "disabled")
+          not any(vale for nombre, vale in v.lo_que_se_puede_hacer().items()
+                  if nombre.startswith("consultar")),
+          v.lo_que_se_puede_hacer())
+
+# ────────────────────────────────────────────────────────────────────
+# EL MATIZ QUE VIENE DE `prueba_boton` -HOY `prueba_arranque`-, Y QUE AQUI
+# NO ESTABA.
+# ────────────────────────────────────────────────────────────────────
+#
+# Aquel §3 existe porque `_bloquear` apagaba SOLO el primero: la
+# ventana decia «no se puede consultar» y dejaba el segundo pulsable sobre un
+# motor que no hay. Al mudar la comprobacion se descubrio que aqui NO estaba
+# cubierta — rompiendo `_bloquear` a proposito, esta suite seguia en verde.
+# Lo caza el control negativo, que para eso esta.
+#
+# Y NO SE MUDA COMO ESTABA. Alli enumeraba los dos botones por su nombre, y
+# enumerar por nombre es justo lo que dejo pasar el segundo. Se pregunta por
+# TODOS los caminos de consulta: el dia que haya un tercero entra solo, y el
+# dia que quede uno la comprobacion sigue significando lo mismo.
+# CON LOS BOTONES ENCENDIDOS ANTES, si no esto no prueba nada: la linea de
+# arriba los deja apagados por falta de año, y `_bloquear` sobre algo ya
+# apagado no demuestra que lo apague. Es la trampa de siempre —una
+# comprobacion que pasa por el estado previo y no por lo que dice medir— y
+# aqui se cayo: rompiendo `_bloquear` a proposito, seguia en verde.
+v.ejercicio.set("2023")
+v._revisar_boton()
+bombear(0.2)
+comprobar("(partimos de los dos encendidos)",
+          all(vale for nombre, vale in v.lo_que_se_puede_hacer().items()
+              if nombre.startswith("consultar")),
+          v.lo_que_se_puede_hacer())
+v._bloquear("una causa cualquiera")
+bombear(0.25)
+comprobar("bloqueada, no queda NINGUN camino de consulta vivo",
+          not any(vale for nombre, vale in v.lo_que_se_puede_hacer().items()
+                  if nombre.startswith("consultar")),
+          v.lo_que_se_puede_hacer())
+# Y NO SE REENCIENDE AL ESCRIBIR, que es como se descubrio que faltaba: una
+# ventana bloqueada que vuelve a encender el boton en cuanto alguien teclea
+# ofrece consultar sobre un arranque que fallo a medias.
+v.caja.delete("1.0", "end")
+v.caja.insert("1.0", "una duda cualquiera")
+v.ejercicio.set("2023")
+v._revisar_boton()
+bombear(0.25)
+comprobar("  y escribir NO lo vuelve a encender",
+          not any(vale for nombre, vale in v.lo_que_se_puede_hacer().items()
+                  if nombre.startswith("consultar")),
+          v.lo_que_se_puede_hacer())
+
+# Se deja como estaba para lo que viene detras.
+v.bloqueada = False
+v._arranque_terminado = True
+v.limpiar_cintas()
+v.caja.delete("1.0", "end")
+v.caja.insert("1.0", "una duda cualquiera")
+v.ejercicio.set("2023")
+v._revisar_boton()
+bombear(0.25)
 
 print("\n  Y el estado NO se explica igual segun el boton:")
 for est in (EST.CLARO, EST.DISCUTIDO, EST.NO_ENCONTRADO):
@@ -775,7 +857,7 @@ for con, marca in ((False, "solo con la ley"), (True, "criterio de la DGT")):
                  "traza": None, "recuperado": [], "con_criterio": con,
                  "respuesta": "una respuesta"})
     bombear(0.3)
-    dice = v.etiqueta_hecha_con.cget("text")
+    dice = v.estado_en_pantalla()["hecha_con"]
     comprobar(f"con_criterio={con}: se dice arriba", marca in dice, dice)
     v._copiar()
     bombear(0.2)
@@ -1395,6 +1477,107 @@ except Exception as exc:  # noqa: BLE001
 comprobar("una clave que la ventana no conoce no revienta nada",
           reventado is None, repr(reventado))
 v.marco_pasos.pack_forget()
+
+# =====================================================================
+print("\n=== 14 ter. NINGUNA PULSACION MUDA ===")
+print("  Viene de `prueba_boton` §3bis -aquella suite es hoy")
+print("  `prueba_arranque`, con lo que si era suyo-. Un boton que")
+print("  se puede pulsar y se queda quieto es PEOR que uno apagado: apagado")
+print("  al menos se ve que no toca.")
+print("  SIN VENTANA PROPIA: alli abria una quinta Tk para esto; aqui usa la")
+print("  que ya hay. Cinco ventanas menos por pasada es cinco robos de foco")
+print("  menos, que es de donde salian las rojas intermitentes.\n")
+import contextlib as _ctx  # noqa: E402
+import io as _io  # noqa: E402
+
+_guardado = (v.traza_actual, v.trabajando, v.bloqueada, v.motor)
+v.motor = object()
+v.bloqueada = False
+
+
+def pulsar(f, *a):
+    """Pulsa y devuelve lo que se ve DESPUES.
+
+    La cinta se limpia antes para no dar por bueno un mensaje que ya estaba
+    puesto, y se PREGUNTA a la ventana lo que se ve: desde que los avisos se
+    apilan, `aviso_motor` es solo la fila de «ahora».
+    """
+    v.limpiar_cintas()
+    with _ctx.redirect_stdout(_io.StringIO()):
+        f(*a)
+    bombear(0.2)
+    return "  ".join(v.cintas_visibles())
+
+
+# A · SEGUIR sin nada escrito.
+v.traza_actual = "/una/traza"
+v.trabajando = False
+v.caja_seguir.delete("1.0", "end")
+dicho = pulsar(v._seguir)
+comprobar("seguir con la caja vacia lo DICE", bool(dicho), "no dice nada")
+comprobar("  y manda a escribir algo", "Escribe primero" in dicho, dicho[:80])
+
+# B · SEGUIR con una consulta en marcha.
+v.caja_seguir.insert("1.0", "y si fuera una furgoneta")
+v.trabajando = True
+dicho = pulsar(v._seguir)
+comprobar("seguir con una consulta en marcha lo DICE", bool(dicho),
+          "no dice nada")
+v.trabajando = False
+
+# C · SEGUIR sin expediente: el disco lleno.
+v.traza_actual = ""
+dicho = pulsar(v._seguir)
+comprobar("seguir sin expediente lo DICE", bool(dicho), "no dice nada")
+comprobar("  y dice la causa probable", "disco lleno" in dicho, dicho[:90])
+v.traza_actual = "/una/traza"
+
+# D · SEGUIR con el agente sin preparar.
+v.motor = None
+dicho = pulsar(v._seguir)
+comprobar("seguir con el agente sin preparar lo DICE", bool(dicho),
+          "no dice nada")
+comprobar("  y manda al diagnostico, que deja un fichero que se envia",
+          "diagnostico" in dicho, dicho[:90])
+v.motor = object()
+
+# E · REESCRIBIR en las mismas cuatro situaciones.
+v.traza_actual = ""
+dicho = pulsar(v._escribir_para_cliente)
+comprobar("reescribir sin expediente lo DICE", bool(dicho), "no dice nada")
+v.traza_actual = "/una/traza"
+v.trabajando = True
+dicho = pulsar(v._escribir_para_cliente)
+comprobar("reescribir con algo en marcha lo DICE", bool(dicho), "no dice nada")
+v.trabajando = False
+v.motor = None
+dicho = pulsar(v._escribir_para_cliente)
+comprobar("reescribir sin motor lo DICE", bool(dicho), "no dice nada")
+comprobar("  y manda al diagnostico, que deja un fichero que se envia",
+          "diagnostico" in dicho, dicho[:90])
+v.motor = object()
+
+# F · UNA RESPUESTA BUENA SIN EXPEDIENTE. El disco lleno: la respuesta vale,
+# pero no hay carpeta de donde reescribir.
+v.limpiar_cintas()
+with _ctx.redirect_stdout(_io.StringIO()):
+    v._terminar({"estado": EST.CLARO, "respuesta": "un texto cualquiera",
+                 "traza": "", "expediente": False, "preceptos": [],
+                 "preceptos_enviados": [], "analisis": {}, "senales": [],
+                 "cobertura": [], "con_criterio": False, "codigo": 0,
+                 "motor": "anthropic", "ejercicio": 2023, "aporte": {},
+                 "estructural": "", "recuperado": [], "fallo": None})
+bombear(0.3)
+comprobar("con respuesta pero SIN expediente, reescribir queda apagado",
+          not v.lo_que_se_puede_hacer()["cliente"], v.lo_que_se_puede_hacer())
+visible = "  ".join(v.cintas_visibles())
+comprobar("  y se explica en vez de quedarse gris en silencio",
+          "expediente" in visible, visible[:110])
+comprobar("  diciendo que la respuesta de arriba SI vale",
+          "válida" in visible, visible[:110])
+
+v.traza_actual, v.trabajando, v.bloqueada, v.motor = _guardado
+v.limpiar_cintas()
 
 # =====================================================================
 print("\n=== 15. CONTROL NEGATIVO: ¿CAZA ESTA SUITE LO QUE DICE CAZAR? ===")

@@ -1,44 +1,60 @@
 #!/usr/bin/env python3
-"""NINGUN BOTON SE QUEDA GRIS EN SILENCIO. Cero red, cero API.
+"""EL ARRANQUE QUE FALLA LO DICE, EN LA PANTALLA QUE SE MIRA. Cero red, cero API.
 
-    python pruebas/prueba_boton.py
+    python pruebas/prueba_arranque.py
 
-EL CASO REAL: en el PC de Windows los dos botones salian EN GRIS con la duda, el
-año y la comunidad rellenados, y sin una palabra. En el Mac funcionaba.
+ANTES SE LLAMABA `prueba_boton`, y el nombre contaba el sintoma -«ningun boton
+se queda gris en silencio»- en vez de lo que protege. Lo que protege es que
+una ventana que NO HA PODIDO PREPARARSE lo diga, y lo diga donde se esta
+mirando.
+
+EL CASO REAL: en el PC de Windows los dos botones salian EN GRIS con la duda,
+el año y la comunidad rellenados, y sin una palabra. En el Mac funcionaba.
 
 LA ASIMETRIA NO ESTABA EN EL CODIGO, ESTABA EN QUIEN PODIA LEER EL ERROR. El
 arranque va por `raiz.after`, asi que una excepcion que no cogiera nadie salia
 por la traza de Tk y dejaba la ventana abierta, muda y con los botones grises.
-En el Mac eso se ve en la terminal; Windows abre con `pythonw.exe`, QUE NO TIENE
-CONSOLA NI stderr, y ahi no se veia en ningun sitio.
+En el Mac eso se ve en la terminal; Windows abre con `pythonw.exe`, QUE NO
+TIENE CONSOLA NI stderr, y ahi no se veia en ningun sitio.
 
-Un boton apagado sin explicacion es el peor mensaje posible: quien lo mira no
-sabe si ha hecho algo mal o si la herramienta esta rota, y no tiene nada que
-hacer.
+POR QUE SIGUE SIENDO UNA SUITE APARTE, Y NO SE FUNDIO EN `prueba_interfaz`
+-31/08/2026-. Al repasarlas se propuso disolverla entera. Se pudo mudar lo que
+NO era suyo:
 
-LO QUE SE COMPRUEBA:
-  1. Que el arranque, pase lo que pase, acaba diciendo algo.
-  2. Que el boton apagado por falta de motor DICE POR QUE.
-  3. Que se apagan LOS DOS, no uno.
-  4. Y que la ficha de `comprobar_equipo` da la respuesta sin preguntar nada.
+    §3    los dos botones se apagan juntos   -> prueba_interfaz, preguntando
+    §3bis las nueve pulsaciones mudas        -> prueba_interfaz, sin ventana
+    §4    la ficha de comprobar_equipo       -> prueba_equipo, cero ventanas
+
+Y lo que queda NO SE PUEDE MUDAR: estos tres bloques DOBLAN `preparar_motor` y
+`cargar_corpus` ANTES de construir la ventana, porque el fallo esta en el
+arranque. Necesitan una ventana que nazca rota, y eso no se puede hacer con la
+ventana ya construida de otra suite. Meterlos alli no quitaria ni una ventana:
+las mudaria de fichero y mezclaria «lo que se ve cuando funciona» con «lo que
+se ve cuando no arranca», que son dos preguntas distintas.
+
+Menos suites es un medio, no el objetivo. El objetivo era menos ventanas y
+menos acoplamiento a los widgets, y las dos cosas se consiguen aqui: de OCHO
+ventanas Tk en la suite vieja a SEIS, y leyendo la pantalla con
+`cintas_visibles()` en vez de hurgando en `aviso_motor`.
 """
-import io
 import contextlib
+import io
 import sys
-import tkinter as tk
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
 
-import interfaz                                  # noqa: E402
+import tkinter as tk  # noqa: E402
+
+import interfaz  # noqa: E402
 
 fallos = []
 
 
 def comprobar(que, ok, obtenido=""):
     print(f"  {'OK  ' if ok else 'FALLO'} {que}"
-          + (f"   -> {str(obtenido)[:110]}" if not ok else ""))
+          + (f"   -> {str(obtenido)[:104]}" if not ok else ""))
     if not ok:
         fallos.append(que)
 
@@ -64,6 +80,40 @@ def ventana(preparar=None):
 
 
 # ============================== 0. LO QUE SE DICE, ¿SE VE?
+print("\n=== 0. LA EXPLICACION TIENE QUE ESTAR EN LA PANTALLA QUE SE MIRA ===")
+print("  ESTA SUITE DABA VERDE Y EL FALLO SEGUIA. Leia `v.texto` a pelo, y")
+print("  `self.texto` vive en la vista de RESPUESTA. Al arrancar la ventana")
+print("  esta en la de CONSULTA -es donde se escribe la duda- y la otra esta")
+print("  quitada del grid: el mensaje se escribia entero, correcto, EN UNA")
+print("  PANTALLA QUE NO SE VE. Delante quedaba el formulario con la duda, el")
+print("  año, la comunidad y los dos botones en gris, sin una palabra.")
+print("  Es el mismo error que dar por buena una comprobacion que en realidad")
+print("  lee el comentario que explica por que algo NO se hace.\n")
+
+
+def lo_que_se_ve(v) -> str:
+    """Solo lo de la vista PUESTA. Lo de la otra no lo lee nadie.
+
+    SE PREGUNTA A LA VENTANA, NO A UNA ETIQUETA: desde que la cinta apila
+    -veinte sitios escriben en ella y al arrancar puede haber cinco cosas que
+    decir-, `aviso_motor` es solo la fila de «ahora».
+    """
+    if v.vista_consulta.grid_info():
+        return "  ".join(v.cintas_visibles())
+    return (v.estado_en_pantalla()["rotulo"] + " " + v.lo_que_se_lee()).strip()
+
+
+def con_gestor_escribiendo(v, raiz):
+    """Rellena duda, año y comunidad: la situacion que se reporto."""
+    v.caja.insert("1.0", "una duda cualquiera del departamento")
+    v.ejercicio.set("2023")
+    v.comunidad.set("Cataluña")
+    with contextlib.redirect_stdout(io.StringIO()):
+        v._revisar_boton()
+    raiz.update()
+    raiz.update_idletasks()
+
+
 print("\n=== 0. LA EXPLICACION TIENE QUE ESTAR EN LA PANTALLA QUE SE MIRA ===")
 print("  ESTA SUITE DABA VERDE Y EL FALLO SEGUIA. Leia `v.texto` a pelo, y")
 print("  `self.texto` vive en la vista de RESPUESTA. Al arrancar la ventana")
@@ -238,135 +288,7 @@ finally:
     raiz3.destroy()
 
 
-# ============ 3bis. LOS BOTONES NUEVOS NO AÑADEN OTRO CAMINO MUDO
-print("\n=== 3bis. CONTINUAR Y ESCRIBIR PARA EL CLIENTE ===")
-print("  Los dos son nuevos, y los dos pueden no hacer nada al pulsarlos.")
-print("  Un boton que se puede pulsar y se queda quieto es PEOR que uno")
-print("  apagado: apagado al menos se ve que no toca.\n")
 
-raiz3 = tk.Tk()
-raiz3.withdraw()
-try:
-    import time as _t3
-    with contextlib.redirect_stderr(io.StringIO()):
-        v3 = interfaz.Ventana(raiz3, "ensayo")
-        fin = _t3.time() + 4
-        while _t3.time() < fin:
-            raiz3.update()
-            raiz3.update_idletasks()
-            _t3.sleep(0.02)
-
-    def pulsar(f, *a):
-        """Pulsa y devuelve lo que se ve DESPUES. La cinta se limpia antes
-        para no dar por bueno un mensaje que ya estaba puesto."""
-        v3.limpiar_cintas()
-        with contextlib.redirect_stdout(io.StringIO()):
-            f(*a)
-        raiz3.update()
-        return "  ".join(v3.cintas_visibles())
-
-    # A · SEGUIR sin nada escrito.
-    v3.traza_actual = "/una/traza"
-    v3.trabajando = False
-    dicho = pulsar(v3._seguir)
-    comprobar("seguir con la caja vacia lo DICE", bool(dicho), "no dice nada")
-    comprobar("  y manda a escribir algo", "Escribe primero" in dicho, dicho[:80])
-
-    # B · SEGUIR mientras hay una consulta en marcha.
-    v3.caja_seguir.insert("1.0", "y si fuera una furgoneta")
-    v3.trabajando = True
-    dicho = pulsar(v3._seguir)
-    comprobar("seguir con una consulta en marcha lo DICE", bool(dicho),
-              "no dice nada")
-    v3.trabajando = False
-
-    # C · SEGUIR sin expediente: el disco lleno.
-    v3.traza_actual = ""
-    dicho = pulsar(v3._seguir)
-    comprobar("seguir sin expediente lo DICE", bool(dicho), "no dice nada")
-    comprobar("  y dice la causa probable", "disco lleno" in dicho, dicho[:90])
-
-    # D · SEGUIR con la ventana bloqueada.
-    v3.traza_actual = "/una/traza"
-    v3.bloqueada = True
-    dicho = pulsar(v3._seguir)
-    comprobar("seguir con el agente sin preparar lo DICE", bool(dicho),
-              "no dice nada")
-    comprobar("  y manda al diagnostico, que deja un fichero que se envia",
-              "diagnostico" in dicho, dicho[:90])
-    v3.bloqueada = False
-
-    # E · ESCRIBIR PARA EL CLIENTE, los mismos.
-    v3.traza_actual = ""
-    dicho = pulsar(v3._escribir_para_cliente)
-    comprobar("reescribir sin expediente lo DICE", bool(dicho), "no dice nada")
-    v3.traza_actual = "/una/traza"
-    v3.trabajando = True
-    dicho = pulsar(v3._escribir_para_cliente)
-    comprobar("reescribir con algo en marcha lo DICE", bool(dicho),
-              "no dice nada")
-    v3.trabajando = False
-    v3.motor = None
-    dicho = pulsar(v3._escribir_para_cliente)
-    comprobar("reescribir sin motor lo DICE", bool(dicho), "no dice nada")
-    comprobar("  y manda al diagnostico, que deja un fichero que se envia",
-              "diagnostico" in dicho, dicho[:90])
-
-    # F · UNA RESPUESTA BUENA SIN EXPEDIENTE. El disco lleno: la respuesta
-    # vale, pero no hay carpeta de donde reescribir.
-    v3.motor = object()
-    v3.limpiar_cintas()
-    with contextlib.redirect_stdout(io.StringIO()):
-        v3.avisos.put(("hecho", {
-            "estado": "CRITERIO CLARO", "respuesta": "un texto cualquiera",
-            "traza": "", "expediente": False, "preceptos": [],
-            "preceptos_enviados": [], "analisis": {}, "senales": [],
-            "cobertura": [], "consumo": {}, "con_criterio": False,
-            # EL MOTOR, «anthropic» Y NO «ensayo». Cambiado el 30/08/2026.
-            # Este caso prueba EL DISCO LLENO -una respuesta buena que no se ha
-            # podido guardar- y el motor estaba puesto a «ensayo» de pasada,
-            # porque es con el que corre la ventana en las suites. Desde que un
-            # texto del motor de ensayo se marca como fabricado y no se puede
-            # copiar, ese valor incidental cambiaba el caso que se prueba: ya
-            # no era «respuesta buena sin expediente» sino «texto de prueba».
-            "codigo": 0, "motor": "anthropic", "ejercicio": 2023,
-            "preceptos_descartados": [], "aporte": {}, "estructural": "",
-            "recuperado": {}, "intentos": 1, "reintentos": 0,
-            "cobertura_territorial": "", "comunidad": "", "pregunta": "x",
-            "sin_copia_local": False, "aviso_expediente": ""}))
-        v3._vaciar_avisos()
-    raiz3.update()
-    comprobar("con respuesta pero SIN expediente, reescribir queda apagado",
-              str(v3.boton_cliente.cget("state")) == "disabled",
-              v3.boton_cliente.cget("state"))
-    visible3 = "  ".join(v3.cintas_visibles())
-    comprobar("  y se explica en vez de quedarse gris en silencio",
-              "expediente" in visible3, visible3[:110])
-    comprobar("  diciendo que la respuesta de arriba SI vale",
-              "válida" in visible3, visible3[:110])
-finally:
-    raiz3.destroy()
-
-
-# ==================================== 4. LA FICHA CONTESTA SOLA
-print("\n=== 4. LA FICHA DE comprobar_equipo DICE POR QUE, SIN PREGUNTAR ===")
-
-import comprobar_equipo as CE                    # noqa: E402
-
-salida = io.StringIO()
-with contextlib.redirect_stdout(salida):
-    CE.ficha()
-f = salida.getvalue()
-for que, marca in (("el commit del equipo", "version"),
-                   ("cuantas normas tiene", "normas"),
-                   ("si los sellos cuadran", "sellos"),
-                   ("si la credencial vale", "credencial"),
-                   ("y POR QUE esta el boton apagado", "BOTON")):
-    comprobar(f"la ficha dice {que}", marca in f, f[:80])
-comprobar("avisa si el pull se quedo a medias",
-          "sin guardar" in f or "version" in f)
-comprobar("y NO gasta: la credencial se mira, no se usa",
-          "NO se usa" in f)
 
 print("\n" + "=" * 62)
 print(f"COMPROBACIONES: {len(fallos)} fallos")
