@@ -6188,3 +6188,82 @@ bloqueada, y `avisos_en_pantalla` reconocía un aviso por el «•» —que lo p
 quien llama—, de modo que un aviso sin viñeta se le colaba. **Dos de las tres
 roturas de control no se cazaban**, y una tercera comprobación mía partía de un
 estado que la hacía pasar sin probar nada.
+
+
+---
+
+# FASE 45 · SE CAMBIA DE TECNOLOGÍA, Y ÉSTA ES LA FRASE QUE LO DECIDE
+
+> **El techo estético de tkinter no se mueve con esfuerzo, y es la segunda vez
+> que llega la misma petición.**
+
+## Lo que NO decidió el cambio
+
+Medí tkinter esperando descartarlo por lento, y no pude. En este equipo, Tk
+9.0.4:
+
+```
+animacion de 60 barras en Canvas:  1.644 fps
+40 lineas de texto moviendose:       853 fps
+```
+
+La animación del menú principal —«con qué está alimentado el agente»— **cabe de
+sobra**: a 60 fps sobran 27 veces. Tkinter puede hacer barra lateral, chats,
+burbujas y esa animación. **La estructura no era el problema.**
+
+## Lo que sí lo decidió
+
+Lo que no tiene, y no se consigue dedicándole más horas:
+
+| | tkinter 9.0.4 |
+|---|---|
+| Esquinas redondeadas | se dibujan a mano con arcos |
+| Sombras | no existen; se imitan con marcos grises |
+| Degradados | se emulan pintando N líneas |
+| Suavizado de bordes | Canvas dibuja por CPU y sin él |
+| Scroll suave | va a saltos de unidad |
+| Transparencia por elemento | sólo la ventana entera |
+
+Eso es exactamente lo que hace que una ventana **parezca de 2003** aunque la
+paleta y el espaciado estén bien. En la fase 22 la conclusión fue que el
+problema era el espacio; con el espacio ya arreglado, el techo que queda es del
+motor de dibujo.
+
+**Y es la segunda vez que llega la petición.** Si construimos el chat en tkinter
+y en seis meses sigue sin gustar, habremos gastado el esfuerzo dos veces para
+estar en el mismo sitio — que es literalmente lo que pasó con el modo oscuro.
+
+## Lo que cuesta, medido
+
+- Se tiran **2.553 líneas de código efectivo** de `interfaz.py` (de 4.782; el
+  47 % son comentarios).
+- El motor —**17.839 líneas**— no se toca. **40 de las 52 suites**, tampoco.
+- El coste de suites está concentrado: `prueba_interfaz` tiene 176 líneas de
+  ventana y `prueba_historial` 53; las otras diez pierden **entre 1 y 6 cada
+  una**.
+- **Cero dependencias nuevas**: `http.server`, `socket`, `webbrowser`,
+  `secrets` vienen con Python. `requisitos.txt` sigue diciendo sólo
+  `anthropic`.
+- Y tkinter **no desaparece**: `dialogo_clave.py` pide la credencial en el
+  primer arranque, antes de que exista servidor.
+
+## Y lo que hay que vigilar, que es nuevo
+
+**Una clase de riesgo que hoy no existe.** Comprobado ejecutándolo:
+
+```
+bind 127.0.0.1  ->  localhost: RESPONDE    IP de red: no (URLError)
+bind 0.0.0.0    ->  localhost: RESPONDE    IP de red: RESPONDE
+```
+
+Atado a loopback el socket **no existe fuera de la máquina** — no es un filtro
+que se pueda saltar. Pero la diferencia entre privado y publicado son **doce
+caracteres**, y en tkinter ese error no puede cometerse porque no hay puerto.
+Por eso `prueba_servidor` lo comprueba de las dos formas: conectándose de verdad
+desde la IP de red y exigiendo que falle, y leyendo el fuente para exigir el
+literal.
+
+**Y el cierre, que es el problema que una ventana no tiene.** Ver la nota larga
+en `servidor.py`: la ausencia de noticias no es una noticia, así que hay **dos
+señales** —irse se dice; el silencio sólo se sospecha— y por encima de las dos,
+una consulta en marcha no se corta nunca.

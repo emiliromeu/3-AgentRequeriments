@@ -191,9 +191,22 @@ for f in sorted(RAIZ.glob("*.bat")):
     comprobar(f"  {f.name}: ninguna tilde en un echo", not no_ascii, no_ascii)
     comprobar(f"  {f.name}: acaba en un pause, nunca en blanco",
               "pause" in texto)
-    # `abrir_agente.bat` USA pythonw A PROPOSITO: es el unico que quiere
+    # LOS LANZADORES USAN pythonw A PROPOSITO: son los unicos que quieren
     # esconder la consola. Los demas tienen que enseñarla, que es lo que se lee.
-    if f.name != "abrir_agente.bat":
+    #
+    # LA LISTA CRECIO EL 31/08/2026 y la suite lo cazo, que es lo que tenia que
+    # hacer: `abrir_web.bat` -el lanzador de la version web- tambien esconde la
+    # consola, y por el mismo motivo. Se amplia la EXCEPCION, no se relaja la
+    # regla: cualquier `.bat` que no sea uno de estos dos sigue teniendo que
+    # usar `python.exe`.
+    #
+    # Y aqui hay una diferencia que conviene dejar escrita: la ventana de
+    # tkinter no necesita consola porque ELLA es la interfaz. El servidor web
+    # tampoco, pero por otro motivo -la interfaz esta en el navegador-, y por
+    # eso `abrir_web.bat` SI deja una ventana con la direccion: si el navegador
+    # no abre solo, es lo unico que queda para llegar al agente.
+    LANZADORES = ("abrir_agente.bat", "abrir_web.bat")
+    if f.name not in LANZADORES:
         comprobar(f"  {f.name}: usa python.exe y no pythonw, que no tiene "
                   f"consola", not pythonw, pythonw)
 
