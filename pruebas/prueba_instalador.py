@@ -24,6 +24,7 @@ Lo que SI se ejecuta de verdad: el lanzador entero, la creacion del venv y el
 """
 import os
 import shutil
+import re
 import subprocess
 import sys
 import tempfile
@@ -179,9 +180,33 @@ def lanzar(destino: Path, entrada: str = "", entorno=None) -> tuple:
     e = entorno if entorno is not None else dict(os.environ)
     e.pop("ANTHROPIC_API_KEY", None)
     e.pop("VIRTUAL_ENV", None)
+    # ────────────────────────────────────────────────────────────────────
+    # SIN TERMINAL DE CONTROL, Y CON UN TOPE CORTO. 01/09/2026.
+    # ────────────────────────────────────────────────────────────────────
+    #
+    # EL CUELGUE: `getpass` NO lee de stdin. Abre `/dev/tty` y habla con el
+    # terminal directamente —es su motivo de existir, para que la clave no se
+    # pueda redirigir— asi que el `input=` de aqui no le llegaba nunca: el
+    # instalador se quedaba esperando a que alguien TECLEARA la clave, y con
+    # `timeout=600` eso son DIEZ MINUTOS de suite parada antes de reventar.
+    #
+    # Corriendo a mano no se veia: sin terminal de control `getpass` cae a
+    # stdin y lee la clave del pipe. Se veia en cuanto la suite corria dentro
+    # de una terminal de verdad, que es como la ejecuta una persona.
+    #
+    # `start_new_session=True` desvincula al hijo del terminal de control:
+    # `/dev/tty` deja de poder abrirse, `getpass` cae a stdin —que es donde
+    # esta la clave que le pasamos— y ademas NO PUEDE volver a colgarse
+    # esperando un teclado que no existe.
+    #
+    # Y EL TOPE BAJA DE 600 A 90 SEGUNDOS. Diez minutos no es un tope: es una
+    # suite parada. El escenario mas lento de este banco -crear un entorno
+    # virtual e instalar- tarda menos de un minuto en este equipo; si algo pasa
+    # de 90 s es que se ha colgado, y eso hay que verlo enseguida, no despues
+    # de comer.
     r = subprocess.run(["/bin/bash", "abrir_agente.command"], cwd=str(destino),
                        input=entrada, capture_output=True, text=True,
-                       timeout=600, env=e)
+                       timeout=90, env=e, start_new_session=True)
     return r.returncode, (r.stdout or "") + (r.stderr or "")
 
 
@@ -354,6 +379,25 @@ print(f"    lanzador roto: ¿abrio la ventana? {abrio}")
 comprobar("con el lanzador roto NO se abre (y el escenario 1 lo cazaria)",
           not abrio)
 shutil.rmtree(d, ignore_errors=True)
+
+# ==================================================================
+# QUE ESTA SUITE NO PUEDA VOLVER A ESPERAR A UN TECLADO
+# ==================================================================
+print("\n### UNA SUITE NO PUEDE ESPERAR A QUE ALGUIEN TECLEE ###\n")
+_FUENTE = Path(__file__).read_text(encoding="utf-8")
+comprobar("los subprocesos van sin terminal de control",
+          "start_new_session=True" in _FUENTE)
+comprobar("  para que `getpass` no pueda abrir /dev/tty y quedarse esperando",
+          "/dev/tty" in _FUENTE)
+# SE MIRA EL CODIGO, NO LA PROSA. Al escribir esto salio en rojo por un «600»
+# que estaba en el COMENTARIO que explica el arreglo: la comprobacion tenia
+# razon en el fondo y estaba leyendo mal. Es el mismo error que `prueba_version`
+# buscando la palabra «rev-parse» en vez de los argumentos.
+_codigo = "\n".join(l for l in _FUENTE.splitlines()
+                    if not l.lstrip().startswith("#"))
+_topes = [int(x) for x in re.findall(r"timeout=(\d+)", _codigo)]
+comprobar("y ningun tope pasa de dos minutos: diez es una suite parada",
+          bool(_topes) and max(_topes) <= 120, _topes)
 
 print("\n" + "=" * 72)
 print(f"FALLOS: {len(fallos)}")

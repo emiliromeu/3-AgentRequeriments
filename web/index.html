@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consulta fiscal</title>
+<!-- LAS TIPOGRAFIAS SE SIRVEN DE AQUI, NO DE INTERNET.
+     El PC de la oficina puede no tener salida, y una pagina que espera a
+     fonts.googleapis.com tarda en pintar o no pinta. Se cae a las del
+     sistema, que es lo que hacia la ventana con `elegir_fuente`. -->
+<!-- EL TESTIGO VA EN LA RUTA, Y NO ES OPCIONAL.
+     El navegador pide un subrecurso con la ruta que pone aqui: NO arrastra la
+     query de la pagina. Sin `?t=` estos dos llegan sin testigo y el servidor
+     contesta 404 —que es lo que paso el 01/09/2026: la pagina salio en crudo—.
+     `{{T}}` lo sustituye el servidor al servir esta pagina. -->
+<link rel="stylesheet" href="/estilo.css?t={{T}}">
+</head>
+<body>
+<div class="marco">
+  <aside class="lateral">
+    <header>
+      <p class="marca">Departamento fiscal</p>
+      <button class="nuevo" id="nuevo">+&nbsp;&nbsp;Nueva consulta</button>
+    </header>
+    <input class="buscar" id="buscar" placeholder="Buscar en las preguntas…"
+           autocomplete="off">
+    <div class="chats" id="chats"></div>
+    <footer><button id="dentro">Qué hay dentro · mantenimiento</button></footer>
+  </aside>
+  <main class="panel">
+    <div class="hilo" id="hilo">
+      <div class="centro entrada" id="entrada">
+        <h1>Consulta fiscal</h1>
+        <p class="bajada">Abriendo…</p>
+      </div>
+    </div>
+    <div class="preguntar">
+      <div class="centro">
+        <div class="campos" id="campos">
+          <label for="ejercicio">Ejercicio</label>
+          <input id="ejercicio" size="5" inputmode="numeric">
+          <span class="marca-campo" id="marca-ejercicio"></span>
+          <label for="comunidad">Comunidad</label>
+          <select id="comunidad"></select>
+        </div>
+        <textarea class="caja" id="duda" rows="2"
+                  placeholder="Escribe tu duda…"></textarea>
+        <div class="fila-preguntar">
+          <button class="enviar" id="preguntar" disabled>Preguntar</button>
+          <span class="nota-preguntar" id="nota">Si el año no es el del caso,
+          la respuesta sale igual de bien citada — pero de otra ley.</span>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/agente.js?t={{T}}"></script>
+</body>
+</html>

@@ -1,0 +1,372 @@
+/* LA PALETA ES LA MISMA QUE LA DE LA VENTANA, Y NO POR COMODIDAD.
+ *
+ * Los quince pares de contraste estan medidos en `prueba_interfaz` con la
+ * formula de la norma, sobre estos hex. Inventar aqui una paleta parecida
+ * seria tener DOS paletas que se parecen, y la que se mide no seria la que
+ * se ve. Cuando la ventana desaparezca, la medicion se muda; hasta entonces,
+ * el mismo hex en los dos sitios.
+ *
+ * Y AQUI SI HAY LO QUE TKINTER NO TENIA: esquinas redondeadas, sombras,
+ * transiciones y suavizado. Es la mitad de por que se cambio de tecnologia.
+ */
+:root {
+  --papel:      #FAF9FB;
+  --papel2:     #FFFFFF;
+  --elevado:    #F2F0F6;
+  --tinta:      #1A1822;
+  --tinta2:     #56516A;
+  --tinta3:     #6B6580;
+  --filete:     #CFCAD9;
+  --filete2:    #E4E0EC;
+  --lila:       #5B3FBF;
+  --lila-vivo:  #4A32A8;
+  --lila-flojo: #EDE8FB;
+  --sobre-lila: #FFFFFF;
+  --seleccion:  #DCD3F5;
+  /* Los tres estados: MISMA CLARIDAD, CROMA DECRECIENTE. Ni un rojo, ni un
+   * ambar, ni un verde: «NO ENCONTRADO» es una respuesta legitima y pintarla
+   * de rojo la convierte en una averia. */
+  --est-claro:       #5B3FBF;
+  --est-discutido:   #6E6690;
+  --est-noencontrado:#6B6878;
+  --aviso:      #7A5A1E;
+  --aviso-flojo:#F8F1E2;
+  --sombra: 0 1px 2px rgba(26,24,34,.05), 0 8px 24px -12px rgba(26,24,34,.14);
+  --radio: 10px;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: "Public Sans", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ═══════════════════════════ LA ARMAZON ═══════════════════════════ */
+.marco { display: grid; grid-template-columns: 264px 1fr; height: 100vh; }
+
+/* ── la barra lateral ────────────────────────────────────────────── */
+.lateral {
+  background: var(--elevado);
+  border-right: 1px solid var(--filete2);
+  display: flex; flex-direction: column;
+  min-height: 0;
+}
+.lateral > header { padding: 16px 14px 10px; }
+.marca {
+  font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--tinta3); font-weight: 600; margin: 0 0 12px;
+}
+.nuevo {
+  display: block; width: 100%; text-align: left;
+  background: var(--lila); color: var(--sobre-lila);
+  border: 0; border-radius: var(--radio); padding: 10px 14px;
+  font: inherit; font-weight: 600; font-size: 14px; cursor: pointer;
+  transition: background .12s ease;
+}
+.nuevo:hover { background: var(--lila-vivo); }
+.nuevo:focus-visible { outline: 2px solid var(--lila); outline-offset: 2px; }
+
+.buscar {
+  margin: 10px 14px 4px; width: calc(100% - 28px);
+  background: var(--papel2); border: 1px solid var(--filete);
+  border-radius: 8px; padding: 7px 11px; font: inherit; font-size: 13.5px;
+  color: var(--tinta);
+}
+.buscar::placeholder { color: var(--tinta3); }
+.buscar:focus { outline: none; border-color: var(--lila); }
+
+.chats { overflow-y: auto; padding: 6px 8px 14px; flex: 1; min-height: 0; }
+.dia {
+  font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--tinta3); font-weight: 700; padding: 12px 6px 5px;
+}
+.chat {
+  display: block; width: 100%; text-align: left; border: 0; background: none;
+  font: inherit; cursor: pointer; color: var(--tinta2);
+  padding: 8px 10px; border-radius: 8px; line-height: 1.35;
+  border-left: 2px solid transparent;
+  transition: background .1s ease, color .1s ease;
+}
+.chat:hover { background: rgba(91,63,191,.06); color: var(--tinta); }
+.chat[aria-current="true"] {
+  background: var(--papel2); color: var(--tinta); font-weight: 600;
+  border-left-color: var(--lila); box-shadow: var(--sombra);
+}
+.chat .q {
+  display: block; font-size: 13.5px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.chat .meta {
+  display: block; font-size: 10.5px; color: var(--tinta3);
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  margin-top: 2px; font-weight: 400;
+}
+.lateral > footer {
+  padding: 10px 14px; border-top: 1px solid var(--filete2);
+  font-size: 12px;
+}
+.lateral > footer button {
+  background: none; border: 0; color: var(--tinta3); font: inherit;
+  font-size: 12px; cursor: pointer; padding: 0;
+}
+.lateral > footer button:hover { color: var(--lila); }
+
+/* ── el panel derecho ────────────────────────────────────────────── */
+.panel { display: flex; flex-direction: column; min-height: 0; }
+.hilo { overflow-y: auto; flex: 1; min-height: 0; padding: 0 0 20px; }
+.centro { max-width: 780px; margin: 0 auto; padding: 0 28px; }
+
+/* ═══════════════════════ EL MENU DE ENTRADA ═══════════════════════ */
+.entrada { padding: 56px 0 40px; }
+.entrada h1 {
+  font-family: "Newsreader", Georgia, serif; font-weight: 400;
+  font-size: 40px; line-height: 1.1; letter-spacing: -.015em;
+  margin: 0 0 14px; text-wrap: balance;
+}
+.entrada .bajada { font-size: 17px; color: var(--tinta2); margin: 0 0 34px; max-width: 60ch; }
+
+.bloques { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+.bloque {
+  background: var(--papel2); border: 1px solid var(--filete2);
+  border-radius: var(--radio); padding: 18px 20px;
+}
+.bloque h2 {
+  font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--tinta3); font-weight: 700; margin: 0 0 12px;
+}
+.bloque p { margin: 0; font-size: 14px; color: var(--tinta2); line-height: 1.5; }
+
+/* --- el flujo de los seis pasos, como sello de «como trabaja» --- */
+.flujo { display: flex; flex-wrap: wrap; gap: 6px; }
+.flujo span {
+  font-size: 12px; background: var(--elevado); border: 1px solid var(--filete2);
+  border-radius: 999px; padding: 4px 11px; color: var(--tinta2);
+}
+
+/* --- LA ANIMACION: DE QUE ESTA ALIMENTADO -------------------------
+ *
+ * Las barras crecen desde cero al abrir. NO es decoracion: la longitud es
+ * proporcional a lo que hay de verdad, contado del corpus, y por eso se
+ * entiende de un vistazo que de IVA hay el doble que de Sociedades.
+ *
+ * SIN NUMEROS INVENTADOS Y SIN ESCALA OCULTA: la cifra va al lado.
+ */
+.barras { display: flex; flex-direction: column; gap: 9px; margin-top: 4px; }
+.barra { display: grid; grid-template-columns: 128px 1fr 58px; gap: 10px; align-items: center; }
+.barra .n { font-size: 12.5px; color: var(--tinta2); }
+.barra .v {
+  height: 8px; background: var(--lila-flojo); border-radius: 999px; overflow: hidden;
+}
+.barra .v i {
+  display: block; height: 100%; background: var(--lila); border-radius: 999px;
+  width: 0; transition: width .9s cubic-bezier(.22,1,.36,1);
+}
+.barra .c {
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px; color: var(--tinta3); text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: reduce) {
+  .barra .v i { transition: none; }
+}
+
+.limite {
+  margin-top: 14px; border-left: 3px solid var(--aviso);
+  background: var(--aviso-flojo); border-radius: 0 8px 8px 0;
+  padding: 13px 16px; font-size: 13.5px; color: var(--tinta);
+}
+.limite b { color: var(--aviso); display: block; margin-bottom: 4px; font-size: 12px;
+  letter-spacing: .08em; text-transform: uppercase; }
+
+/* ═══════════════════════ LA CONVERSACION ═══════════════════════ */
+.cabecera {
+  position: sticky; top: 0; z-index: 5;
+  background: color-mix(in srgb, var(--papel) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--filete2);
+}
+.cabecera .centro {
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  padding-top: 12px; padding-bottom: 12px;
+}
+.cabecera .titulo {
+  font-weight: 600; font-size: 15px; flex: 1; min-width: 180px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pastilla {
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px; color: var(--tinta2); background: var(--papel2);
+  border: 1px solid var(--filete); border-radius: 999px;
+  padding: 3px 11px; cursor: pointer;
+}
+.pastilla:hover { border-color: var(--lila); color: var(--lila); }
+.pastilla:focus-visible { outline: 2px solid var(--lila); outline-offset: 2px; }
+
+.vuelta { padding-top: 26px; }
+.mia {
+  margin-left: auto; max-width: 76%; width: fit-content;
+  background: var(--elevado); border: 1px solid var(--filete2);
+  border-radius: var(--radio) var(--radio) 3px var(--radio);
+  padding: 11px 15px; font-size: 15px;
+}
+.suya { margin-top: 16px; }
+
+/* --- EL ESTADO: ARRIBA DE LA RESPUESTA Y CON SU FILETE ---
+ * Es lo que no se puede perder de vista al leer: una respuesta de CRITERIO
+ * DISCUTIDO se lee de otra manera que una de CRITERIO CLARO. */
+.estado {
+  display: flex; gap: 10px; align-items: baseline;
+  border-left: 3px solid var(--est-claro); padding-left: 12px; margin-bottom: 12px;
+}
+.estado[data-estado="CRITERIO DISCUTIDO"] { border-left-color: var(--est-discutido); }
+.estado[data-estado="NO ENCONTRADO"]      { border-left-color: var(--est-noencontrado); }
+.estado .rot {
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 11.5px; font-weight: 600; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--est-claro); white-space: nowrap;
+}
+.estado[data-estado="CRITERIO DISCUTIDO"] .rot { color: var(--est-discutido); }
+.estado[data-estado="NO ENCONTRADO"] .rot      { color: var(--est-noencontrado); }
+.estado .con { font-size: 12.5px; color: var(--tinta3); }
+.estado details { font-size: 12.5px; color: var(--tinta3); }
+.estado summary { cursor: pointer; color: var(--lila); }
+.estado details p { margin: 8px 0 0; color: var(--tinta2); max-width: 62ch; }
+
+.cuerpo { font-size: 15.5px; line-height: 1.68; }
+.cuerpo p { margin: 0 0 14px; }
+.cuerpo h3 { font-size: 15px; margin: 22px 0 8px; }
+
+/* --- LA CITA ES EL PRODUCTO: en serif, mayor que el parrafo, con aire.
+ * Y su referencia es un ENLACE DE VERDAD al BOE, no un tag con un bind. --- */
+blockquote.cita {
+  font-family: "Newsreader", Georgia, serif; font-size: 17px; line-height: 1.5;
+  margin: 18px 0 8px; padding-left: 16px; border-left: 2px solid var(--filete);
+  color: var(--tinta);
+}
+.ref {
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12.5px; margin: 0 0 18px;
+}
+.ref a { color: var(--lila); text-decoration: none; border-bottom: 1px solid var(--filete); }
+.ref a:hover { border-bottom-color: var(--lila); }
+.ref a:focus-visible { outline: 2px solid var(--lila); outline-offset: 2px; }
+
+/* --- LOS AVISOS: solo cuando los hay. En 73 de 79 respuestas reales no hay
+ * ninguno, y un bloque que casi siempre dice «nada» deja de leerse. --- */
+.avisos {
+  border-left: 3px solid var(--aviso); background: var(--aviso-flojo);
+  border-radius: 0 8px 8px 0; padding: 12px 16px; margin: 16px 0;
+  font-size: 13.5px;
+}
+.avisos h4 {
+  margin: 0 0 6px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--aviso); font-weight: 700;
+}
+.avisos h4 + h4 { margin-top: 12px; }
+.avisos ul { margin: 0; padding-left: 18px; color: var(--tinta); }
+.avisos li { margin-bottom: 4px; }
+
+.pie-vuelta {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--filete2);
+}
+.pie-vuelta .cuando {
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 11.5px; color: var(--tinta3); margin-left: auto;
+}
+.chico {
+  background: none; border: 1px solid var(--filete); border-radius: 999px;
+  padding: 4px 12px; font: inherit; font-size: 12.5px; color: var(--tinta2);
+  cursor: pointer;
+}
+.chico:hover:not(:disabled) { border-color: var(--lila); color: var(--lila); }
+.chico:disabled { opacity: .45; cursor: default; }
+
+/* Una vuelta que ha quedado atras: se atenua y se explica. NO se borra. */
+.vuelta.desfasada .suya { opacity: .62; }
+.desfase {
+  border-left: 3px solid var(--aviso); background: var(--aviso-flojo);
+  border-radius: 0 8px 8px 0; padding: 9px 14px; margin: 10px 0 0;
+  font-size: 12.5px; color: var(--tinta);
+}
+
+/* ═══════════════════ LA ESPERA, EN SEIS PASOS ═══════════════════
+ *
+ * 102 segundos de mediana. Lo que hace tolerable una espera larga no es una
+ * barra que se mueve: es ver LO QUE YA ESTA HECHO y cuanto queda.
+ *
+ * NI UN PORCENTAJE. No hay forma de saber cuanto falta -depende de cuantos
+ * articulos salgan y de cuanto tarde el modelo- y una barra parada en el 90%
+ * es peor que ninguna. Lo que si se puede decir es que suele tardar cerca de
+ * dos minutos, y eso se dice con palabras.
+ */
+.espera { padding: 22px 0 8px; }
+.pasos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.pasos li {
+  display: grid; grid-template-columns: 20px 1fr; gap: 8px; align-items: baseline;
+  font-size: 14px; color: var(--tinta3);
+}
+.pasos .marca {
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 13px; text-align: center;
+}
+.pasos li[data-estado="hecho"] { color: var(--tinta2); }
+.pasos li[data-estado="hecho"] .marca { color: var(--lila); }
+.pasos li[data-estado="haciendo"] { color: var(--tinta); font-weight: 600; }
+.pasos li[data-estado="haciendo"] .marca { color: var(--lila); }
+/* El punto del paso en curso late: es la unica animacion de la espera, y dice
+ * lo unico que se sabe -que sigue vivo-, sin fingir que sabe cuanto falta. */
+.pasos li[data-estado="haciendo"] .marca { animation: latido 1.4s ease-in-out infinite; }
+@keyframes latido { 0%,100% { opacity: 1 } 50% { opacity: .28 } }
+@media (prefers-reduced-motion: reduce) {
+  .pasos li[data-estado="haciendo"] .marca { animation: none; }
+}
+.pasos li[data-estado="pendiente"] { opacity: .55; }
+.espera .detalle { font-size: 13px; color: var(--tinta3); margin: 12px 0 0; }
+.espera .cuanto { font-size: 13px; color: var(--tinta3); margin: 4px 0 0; }
+
+/* UNA CLAVE QUE LA PAGINA NO CONOCE SE VE. No se queda quieta: si el motor
+ * crece y esta lista no se entera, callarse seria dejar la espera muerta en
+ * silencio, que es justo lo que se decidio evitar mandando claves. */
+.paso-raro {
+  margin-top: 10px; border-left: 3px solid var(--aviso);
+  background: var(--aviso-flojo); border-radius: 0 8px 8px 0;
+  padding: 9px 14px; font-size: 12.5px;
+}
+
+/* ═══════════════════ LA CAJA DE PREGUNTAR ═══════════════════ */
+.preguntar { border-top: 1px solid var(--filete2); background: var(--papel); }
+.preguntar .centro { padding-top: 14px; padding-bottom: 18px; }
+.caja {
+  width: 100%; resize: none; font: inherit; font-size: 15px;
+  background: var(--papel2); color: var(--tinta);
+  border: 1px solid var(--filete); border-radius: var(--radio);
+  padding: 12px 14px; line-height: 1.5; min-height: 52px;
+}
+.caja:focus { outline: none; border-color: var(--lila); box-shadow: 0 0 0 3px var(--lila-flojo); }
+.caja::placeholder { color: var(--tinta3); }
+.fila-preguntar { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+.enviar {
+  background: var(--lila); color: var(--sobre-lila); border: 0;
+  border-radius: var(--radio); padding: 10px 22px; font: inherit;
+  font-weight: 600; font-size: 14.5px; cursor: pointer;
+  transition: background .12s ease;
+}
+.enviar:hover:not(:disabled) { background: var(--lila-vivo); }
+.enviar:disabled { background: var(--elevado); color: var(--tinta3); cursor: default; }
+.enviar:focus-visible { outline: 2px solid var(--lila); outline-offset: 2px; }
+.nota-preguntar { font-size: 12.5px; color: var(--tinta3); }
+.campos { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.campos label { font-size: 13px; color: var(--tinta2); }
+.campos input, .campos select {
+  font: inherit; font-size: 13.5px; background: var(--papel2); color: var(--tinta);
+  border: 1px solid var(--filete); border-radius: 8px; padding: 5px 10px;
+}
+.campos input:focus, .campos select:focus { outline: none; border-color: var(--lila); }
+.marca-campo { font-size: 12px; color: var(--lila); }

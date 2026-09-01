@@ -232,7 +232,87 @@ def ficha_viva() -> dict | None:
     return None
 
 
+# ------------------------------------------------------- el corpus, una vez
+#
+# SE CARGA UNA SOLA VEZ Y SE COMPARTE. Son 2.504 preceptos y tarda un segundo:
+# cargarlo por peticion dejaria el menu tardando un segundo cada vez que se
+# abre. Va en un hilo al arrancar, como en la ventana.
+_IX = None
+_GRAFO = None
+_MOTOR = None
+_CARGA = threading.Lock()
+
+
+def _corpus():
+    """El indice, o `None` si todavia se esta cargando."""
+    return _IX
+
+
+def cargar_por_detras(motor_nombre: str = "anthropic") -> None:
+    """Carga corpus y motor sin bloquear el arranque del servidor.
+
+    LA PAGINA TIENE QUE PODER PINTARSE ANTES. Si se cargara aqui, el navegador
+    se abriria contra un servidor que no responde durante un segundo largo, y
+    eso se lee como que no ha arrancado.
+    """
+    def trabajo():
+        global _IX, _GRAFO, _MOTOR
+        with _CARGA:
+            try:
+                import fase4
+                _IX, _GRAFO = fase4.cargar_corpus()
+                motor, _err = fase4.preparar_motor(motor_nombre,
+                                                   silencioso=True)
+                _MOTOR = motor
+            except Exception:                    # noqa: BLE001
+                import traceback
+                try:
+                    (RAIZ / "datos" / "servidor_fallo.txt").write_text(
+                        traceback.format_exc(), encoding="utf-8")
+                except OSError:
+                    pass
+    threading.Thread(target=trabajo, daemon=True).start()
+
+
 # ------------------------------------------------------------- el servidor
+
+# ══════════════════════════════════════════════════════════════════════════
+# COPIAR EN UNA VUELTA DESFASADA: SE PUEDE, Y LO COPIADO LO DICE.
+# ══════════════════════════════════════════════════════════════════════════
+#
+# Decidido el 01/09/2026. Las tres salidas se miraron:
+#
+#   APAGARLO ............. es lo que hace la ventana hoy con «escribirlo para
+#                          el cliente» cuando falta el expediente, y aqui
+#                          seria un error: una vuelta desfasada NO ES FALSA.
+#                          Se comprobo, se verifico cita a cita, y sigue
+#                          contestando lo que preguntaba. Apagar el boton
+#                          obligaria a copiar a mano -seleccionar y Ctrl+C-,
+#                          que da el mismo texto SIN la cabecera. Se pierde
+#                          justo lo que protege.
+#   DEJARLO IGUAL ........ es lo de hoy, y es el fallo silencioso del año por
+#                          el camino de salida: la vuelta 1 pegada en un
+#                          correo despues de que la 3 la corrigiera.
+#   DEJARLO Y ESTAMPARLO . lo que se hace.
+#
+# LO COPIADO YA LLEVA ejercicio, comunidad y «comprobada el ...». Lo que se
+# añade cuando la vuelta esta desfasada es UNA LINEA MAS, la primera, que dice
+# en que quedo atras. Va delante del texto y no al pie: quien pega esto en un
+# correo lo lee antes que la respuesta.
+#
+# Y «ESCRIBIRLO PARA EL CLIENTE» SI SE APAGA, que es otra cosa: eso llama al
+# modelo para producir un texto NUEVO con la firma del despacho detras, sobre
+# una base que ya se sabe superada. Copiar es enseñar lo que hubo; reescribir
+# es fabricar algo que nadie comprobo.
+AVISO_AL_COPIAR = {
+    "otra ley": ("ATENCION: esta respuesta se contesto ANTES de que la "
+                 "consulta cambiara de ejercicio o de comunidad. Es de otra "
+                 "redaccion de la norma."),
+    "otra base": ("ATENCION: una vuelta posterior de esta consulta se apoya "
+                  "en otros articulos. Esto sigue valiendo para lo que se "
+                  "preguntaba, pero no es la respuesta al caso completo."),
+}
+
 
 PAGINA_MINIMA = """<!doctype html>
 <meta charset="utf-8">
@@ -319,6 +399,11 @@ class Manejador(http.server.BaseHTTPRequestHandler):
 
     # ------------------------------------------------------------- caminos
 
+    def _json(self, datos, codigo=200):
+        self._responder(codigo,
+                        json.dumps(datos, ensure_ascii=False).encode("utf-8"),
+                        "application/json")
+
     def do_GET(self):
         ruta = self.path.split("?")[0]
         if not self._autorizado():
@@ -326,11 +411,97 @@ class Manejador(http.server.BaseHTTPRequestHandler):
             # prueba que ha acertado el camino.
             return self._responder(404, b"no")
         if ruta == "/":
-            pagina = PAGINA_MINIMA % {"latido": int(LATIDO * 1000)}
+            # ────────────────────────────────────────────────────────────
+            # EL TESTIGO SE LE PONE A LOS SUBRECURSOS AQUI. 01/09/2026.
+            # ────────────────────────────────────────────────────────────
+            #
+            # EL FALLO: el HTML declaraba `href="/estilo.css"` y
+            # `src="/agente.js"` a secas. El navegador pide un subrecurso CON
+            # LA RUTA QUE PONE EL ATRIBUTO, no con la de la pagina: no arrastra
+            # la query. Asi que llegaban sin `?t=`, `_autorizado` devolvia
+            # False y el servidor contestaba 404 a los dos. La pagina salia en
+            # crudo -sin estilo y sin JavaScript- y se quedaba en «Abriendo…».
+            #
+            # Y LA SUITE ESTABA EN VERDE, porque pedia `/estilo.css?t=...`: se
+            # comprobaba que el servidor RESPONDE a una ruta, no que la pagina
+            # PIDE esa ruta. Son las dos mitades y solo habia una. Ahora la
+            # suite saca las rutas DEL PROPIO HTML y las pide tal cual.
+            #
+            # SE RESUELVE SUSTITUYENDO EL MARCADOR, no con una cookie: una
+            # cookie en 127.0.0.1 se comparte por HOST y no por puerto, asi que
+            # dos agentes a la vez se pisarian el testigo. Sustituir es
+            # explicito y no deja estado en el navegador.
+            try:
+                pagina = (RAIZ / "web" / "index.html").read_text(
+                    encoding="utf-8")
+            except OSError:
+                return self._responder(404, b"no")
+            from urllib.parse import quote
+            pagina = pagina.replace("{{T}}", quote(self.testigo, safe=""))
             return self._responder(200, pagina.encode("utf-8"))
+        if ruta in ("/estilo.css", "/agente.js"):
+            tipo = ("text/css" if ruta.endswith(".css")
+                    else "application/javascript")
+            return self._servir_fichero(ruta.lstrip("/"), tipo)
         if ruta == "/api/vivo":
-            return self._responder(200, b'{"vivo":true}', "application/json")
+            return self._json({"vivo": True})
+        # LOS SEIS PASOS, TAL COMO LOS DEFINE `fase4`. La pagina no los escribe:
+        # los pide. Es lo mismo que hace la ventana, y por el mismo motivo —si
+        # el motor crece, la lista se entera sola—.
+        if ruta == "/api/pasos":
+            import fase4
+            return self._json({
+                "pasos": [{"clave": c, "rotulo": r} for c, r in fase4.PASOS],
+                "solo_con_criterio": fase4.PASO_SOLO_CON_CRITERIO,
+            })
+        if ruta == "/api/menu":
+            return self._json(self._menu())
+        if ruta == "/api/chats":
+            from agente_fiscal import expedientes as EX, chat as CH
+            filas, _aviso = EX.filas()
+            visibles = [f for f in filas if not EX.es_de_prueba(f)]
+            chats = CH.de_expedientes(visibles)
+            return self._json({"dias": [
+                {"dia": dia, "chats": [{
+                    "sello": c["sello"], "titulo": c["titulo"],
+                    "vueltas": len(c["vueltas"]), "ejercicio": c["ejercicio"],
+                    "comunidad": c["comunidad"], "estado": c["estado"],
+                } for c in cs]}
+                for dia, cs in CH.por_dia(chats)]})
         return self._responder(404, b"no")
+
+    def _servir_fichero(self, nombre: str, tipo: str):
+        """Solo de `web/`, y solo por nombre.
+
+        NADA DE RUTAS QUE VENGAN DE FUERA. Se sirve una lista corta de ficheros
+        conocidos: un servidor que compone la ruta con lo que pide el navegador
+        es un servidor al que se le pide `../../.env`.
+        """
+        ruta = RAIZ / "web" / nombre
+        try:
+            cuerpo = ruta.read_bytes()
+        except OSError:
+            return self._responder(404, b"no")
+        self._responder(200, cuerpo, tipo)
+
+    def _menu(self) -> dict:
+        """Lo que se enseña al entrar. TODO CONTADO DEL CORPUS, nada escrito."""
+        import fase4
+        from agente_fiscal import cobertura as C
+        ix = _corpus()
+        if ix is None:
+            return {"cargando": True}
+        return {
+            "titulo": C.titulo(ix),
+            "articulos": len(ix.docs),
+            "normas": len(ix.rutas),
+            # LA BARRA ES PROPORCION, NO VOLUMEN. Ver la nota larga en
+            # `cobertura.cubierto_por_impuesto`: por volumen, Patrimonio sale
+            # el ultimo y es el MEJOR cubierto de todos.
+            "cobertura": [{"nombre": n, "articulos": a, "con_criterio": c,
+                           "porcentaje": p}
+                          for n, a, c, p in C.cubierto_por_impuesto(ix)],
+        }
 
     def do_POST(self):
         ruta = self.path.split("?")[0]
@@ -405,6 +576,7 @@ def arrancar(motor_nombre: str = "anthropic", abrir=True, vida=None,
     # depender de que nadie lo escriba mal un martes.
     servidor = http.server.ThreadingHTTPServer(("127.0.0.1", puerto), manejador)
     servidor.daemon_threads = True
+    cargar_por_detras(motor_nombre)
 
     url = f"http://127.0.0.1:{puerto}/?t={testigo}"
     threading.Thread(target=servidor.serve_forever, daemon=True).start()

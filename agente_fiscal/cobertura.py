@@ -47,6 +47,13 @@ EN_CRISTIANO = {
 GENERAL = "normas generales"
 
 
+# CUANTOS ARTICULOS HACEN FALTA PARA QUE UNA BARRA SIGNIFIQUE ALGO. Con uno,
+# la proporcion solo puede ser 0% o 100%, y las dos cifras enseñan un impuesto
+# «cubierto» o «vacio» que en realidad es un articulo suelto colado de otra
+# norma. Hay dos asi en el corpus.
+MINIMO_PARA_BARRA = 5
+
+
 def resumen(ix) -> dict:
     """{codigo de impuesto: {"dgt": n, "teac": m}}, contado del disco.
 
@@ -137,6 +144,88 @@ def por_impuesto(ix) -> list:
         filas.append((EN_CRISTIANO.get(codigo, codigo), total, codigo))
     filas.sort(key=lambda f: (f[2] == GENERAL, -f[1]))
     return [(nombre, total) for nombre, total, _c in filas]
+
+
+def cubierto_por_impuesto(ix) -> list:
+    """[(nombre, articulos, con_criterio, porcentaje)], de mas a menos cubierto.
+
+    ────────────────────────────────────────────────────────────────────────
+    PROPORCION, NO VOLUMEN. Y EL ORDEN CAMBIA.
+    ────────────────────────────────────────────────────────────────────────
+
+    `por_impuesto` cuenta DOCUMENTOS: cuantas consultas y resoluciones hablan
+    de cada impuesto. Sirve para el pie del boton -«cuanto criterio hay»- pero
+    NO sirve para una barra, porque una barra se lee como cobertura.
+
+    Medido el 01/09/2026, y la diferencia no es de matiz:
+
+        impuesto            articulos  con criterio  % cubierto   volumen
+        Patrimonio                 51            33        65%        159
+        IVA                       387           235        61%      1.392
+        normas generales          878           468        53%      1.885
+        Renta                     407           208        51%      1.359
+        Sociedades                298           126        42%        502
+        Transmisiones y AJD       238            96        40%        360
+        Sucesiones y Donaciones   243            98        40%        358
+
+    PATRIMONIO ES EL ULTIMO POR VOLUMEN Y EL PRIMERO POR COBERTURA. Con 159
+    documentos cubre el 65% de sus 51 articulos; el IVA, con 1.392, cubre el
+    61% de 387. En una barra de volumen, Patrimonio sale el mas corto de
+    todos, y quien tenga una duda de Patrimonio decide que aqui no hay nada
+    justo cuando es lo mejor cubierto.
+
+    Es el mismo error que la tabla que decia «IVA 653»: una cifra cierta que
+    se lee como otra cosa. La barra dice PROPORCION; el volumen va al lado,
+    con su numero, para quien lo quiera.
+    """
+    normas = ix.normas
+    articulos: dict = {}
+    for d in ix.docs:
+        codigo = normas.impuesto_de_precepto(d.registro) or GENERAL
+        articulos.setdefault(codigo, set()).add(d.clave)
+
+    cache: dict = {}
+
+    def de(cuerpo: str, numero: str):
+        clave = f"{cuerpo}#articulo {numero}"
+        if clave not in cache:
+            doc = ix.por_clave.get(clave)
+            cache[clave] = (
+                (normas.impuesto_de_precepto(doc.registro) if doc else None),
+                clave)
+        return cache[clave]
+
+    con: dict = {}
+    for c in _D.CacheDGT().todas():
+        for p in c.preceptos(normas):
+            if not p.cuerpo:
+                continue
+            codigo, clave = de(p.cuerpo, p.numero)
+            if codigo is None:
+                continue
+            con.setdefault(codigo or GENERAL, set()).add(clave)
+    for r in _T.CacheTEAC().todas():
+        for cuerpo, numero in r.preceptos(normas):
+            if not cuerpo:
+                continue
+            codigo, clave = de(cuerpo, numero)
+            if codigo is None:
+                continue
+            con.setdefault(codigo or GENERAL, set()).add(clave)
+
+    filas = []
+    for codigo, claves in articulos.items():
+        # UN IMPUESTO DE UN SOLO ARTICULO NO ES UNA BARRA. En el corpus hay dos
+        # -IEDMT, IDREDCIC- que entran por un articulo suelto de otra norma:
+        # con 1 articulo, la barra sale al 0% o al 100% y las dos mienten.
+        if len(claves) < MINIMO_PARA_BARRA:
+            continue
+        n_art = len(claves)
+        n_cub = len(con.get(codigo, ()))
+        filas.append((EN_CRISTIANO.get(codigo, codigo), n_art, n_cub,
+                      round(100 * n_cub / n_art)))
+    filas.sort(key=lambda f: -f[3])
+    return filas
 
 
 def frase(ix) -> str:

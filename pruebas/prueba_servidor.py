@@ -353,6 +353,169 @@ sin_guarda = not v.clientes and v.trabajando > 0
 comprobar("sin la guarda del trabajo, un adios cerraria a mitad de consulta",
           sin_guarda, "la guarda es lo unico que lo impide")
 
+# ============================================ 11. LA PAGINA Y SU API
+print("\n=== 11. LO QUE SIRVE, Y LO QUE NO ===")
+srv3, vida3, url3 = SV.arrancar("ensayo", abrir=False)
+P = f"http://127.0.0.1:{srv3.server_address[1]}"
+t3 = url3.split("t=")[1]
+
+
+def get(camino):
+    sep = "&" if "?" in camino else "?"
+    r = urllib.request.urlopen(f"{P}{camino}{sep}t={t3}", timeout=25)
+    return r.status, r.headers.get("Content-Type", ""), r.read()
+
+
+try:
+    # ────────────────────────────────────────────────────────────────────
+    # SE PIDE LO QUE EL HTML DECLARA, NO UNA LISTA ESCRITA AQUI.
+    # ────────────────────────────────────────────────────────────────────
+    #
+    # AQUI HABIA UNA LISTA A MANO -«/estilo.css», «/agente.js»- pedida CON el
+    # testigo. Estaba en verde el dia que la pagina salio en crudo: el HTML
+    # declaraba `href="/estilo.css"` a secas, el navegador la pedia SIN
+    # testigo y el servidor contestaba 404 a los dos.
+    #
+    # COMPROBAR QUE EL SERVIDOR RESPONDE A UNA RUTA NO ES COMPROBAR QUE LA
+    # PAGINA PIDE ESA RUTA. Son las dos mitades, y solo estaba una: la lista
+    # escrita al lado no podia descuadrarse del HTML porque no lo miraba.
+    #
+    # Ahora se sirve la pagina, se le SACAN los `href` y los `src`, y se piden
+    # EXACTAMENTE como los pediria un navegador: con la ruta que pone el
+    # atributo y sin añadirle nada.
+    codigo, tipo_html, html = get("/")
+    html = html.decode("utf-8")
+    comprobar("la pagina se sirve", codigo == 200 and len(html) > 400, codigo)
+    comprobar("  como HTML", tipo_html.startswith("text/html"), tipo_html)
+    comprobar("y no queda ningun marcador sin sustituir",
+              "{{" not in html, [l for l in html.splitlines() if "{{" in l][:1])
+
+    subrecursos = [r for r in re.findall(r'(?:href|src)="([^"]+)"', html)
+                   if not r.startswith(("http://", "https://", "//", "data:"))]
+    comprobar("la pagina declara sus subrecursos", bool(subrecursos),
+              subrecursos)
+    for r in subrecursos:
+        try:
+            # SIN AÑADIR NADA: tal cual lo pediria el navegador.
+            with urllib.request.urlopen(P + r, timeout=10) as resp:
+                c, ct, cuerpo = resp.status, resp.headers.get("Content-Type", ""), resp.read()
+        except urllib.error.HTTPError as e:
+            c, ct, cuerpo = e.code, "", b""
+        comprobar(f"«{r[:34]}» responde tal como lo pide el navegador",
+                  c == 200 and len(cuerpo) > 100, c)
+        esperado = ("text/css" if ".css" in r else
+                    "application/javascript" if ".js" in r else "text/")
+        comprobar(f"  con su tipo ({esperado})", ct.startswith(esperado), ct)
+    comprobar("  y son los dos que hacen falta: sin estilo y sin JS la pagina "
+              "sale en crudo",
+              any(".css" in r for r in subrecursos)
+              and any(".js" in r for r in subrecursos), subrecursos)
+
+    # LA PUERTA DE FICHEROS: solo una lista corta de nombres conocidos. Un
+    # servidor que compone la ruta con lo que pide el navegador es un servidor
+    # al que se le pide `../../.env`.
+    for intento in ("/../.env", "/../../etc/passwd", "/datos/servidor.json",
+                    "/interfaz.py"):
+        try:
+            codigo = get(intento)[0]
+        except urllib.error.HTTPError as e:
+            codigo = e.code
+        except Exception:                        # noqa: BLE001
+            codigo = 404
+        comprobar(f"no se sirve «{intento}»", codigo == 404, codigo)
+
+    # LOS SEIS PASOS SALEN DE `fase4`, NO DE LA PAGINA.
+    import fase4 as _F4                          # noqa: E402
+    pasos = json.loads(get("/api/pasos")[2])
+    comprobar("los pasos los da el servidor, sacados de fase4.PASOS",
+              [p["clave"] for p in pasos["pasos"]]
+              == list(_F4.CLAVES_DE_PASO), pasos)
+    comprobar("  con su rotulo, para no escribirlo en la pagina",
+              all(p["rotulo"] for p in pasos["pasos"]))
+    comprobar("  y se dice cual es el que solo va con criterio",
+              pasos["solo_con_criterio"] == _F4.PASO_SOLO_CON_CRITERIO)
+    # Y LA PAGINA NO LOS ESCRIBE. Si los llevara dentro, reescribir una frase
+    # en fase4 dejaria la lista muerta en silencio.
+    JS = (RAIZ / "web" / "agente.js").read_text("utf-8")
+    escritos = [p["rotulo"] for p in pasos["pasos"] if p["rotulo"] in JS]
+    comprobar("la pagina NO lleva los rotulos escritos: los pide",
+              not escritos, escritos)
+    comprobar("  ni empareja por texto en ningun sitio",
+              "dataset.clave" in JS and ".rotulo ===" not in JS)
+    # UNA CLAVE DESCONOCIDA SE VE. Y SE MIRA LA RAMA, NO EL FICHERO.
+    #
+    # Aqui ponia `"paso-raro" in JS`, y eso NO probaba nada: rompiendo la rama
+    # a proposito -metiendo un `return` al principio- los dos textos seguian en
+    # el fichero y la comprobacion pasaba en verde. Se busca DENTRO del bloque
+    # que atiende la clave desconocida.
+    #
+    # SIN NAVEGADOR NO SE PUEDE EJECUTAR ESTE JS, asi que esto es una
+    # comprobacion de fuente y es mas debil que una funcional. Lo que puede
+    # garantizar es que la rama no este vacia; que lo que pinta se vea bien es
+    # cosa de mirarlo.
+    i = JS.find("if (cual < 0)")
+    rama = JS[i:JS.find("return;", i)] if i >= 0 else ""
+    comprobar("hay una rama para la clave que la pagina no conoce", bool(rama))
+    comprobar("  y NO esta vacia: pinta un aviso",
+              "paso-raro" in rama and "appendChild" in rama,
+              rama[:80])
+    comprobar("  que dice cual es la clave rara, para poder buscarla",
+              "${clave}" in rama, rama[-120:])
+
+    # EL MENU: contado del corpus, y la barra es PROPORCION.
+    for _ in range(60):
+        menu = json.loads(get("/api/menu")[2])
+        if not menu.get("cargando"):
+            break
+        time.sleep(0.5)
+    comprobar("el menu llega con el corpus cargado",
+              not menu.get("cargando"), menu)
+    if not menu.get("cargando"):
+        comprobar("  y trae la cobertura por impuesto",
+                  bool(menu.get("cobertura")), menu.get("cobertura"))
+        # LA QUE IMPORTA: proporcion, no volumen. Medido el 01/09/2026,
+        # Patrimonio es el ULTIMO por volumen y el PRIMERO por cobertura.
+        cob = menu["cobertura"]
+        comprobar("  la barra es un PORCENTAJE, no un recuento",
+                  all(0 <= c["porcentaje"] <= 100 for c in cob), cob[:2])
+        comprobar("  ordenada de mas a menos cubierto",
+                  [c["porcentaje"] for c in cob]
+                  == sorted([c["porcentaje"] for c in cob], reverse=True),
+                  [c["porcentaje"] for c in cob])
+        comprobar("  y cada una dice de cuantos articulos sale",
+                  all(c["articulos"] >= 5 and c["con_criterio"] <= c["articulos"]
+                      for c in cob), cob[:2])
+        # UN IMPUESTO DE UN ARTICULO NO ES UNA BARRA: al 0% o al 100%, y las
+        # dos cifras mienten.
+        comprobar("  ningun impuesto de menos de 5 articulos hace barra",
+                  all(c["articulos"] >= 5 for c in cob),
+                  [c for c in cob if c["articulos"] < 5])
+
+    chats = json.loads(get("/api/chats")[2])
+    comprobar("los chats llegan agrupados por dia",
+              bool(chats.get("dias")) and "chats" in chats["dias"][0])
+finally:
+    srv3.shutdown()
+    time.sleep(0.3)
+
+# ============================================ 12. COPIAR UNA VUELTA ATRAS
+print("\n=== 12. COPIAR UNA VUELTA DESFASADA: SE PUEDE, Y SE DICE ===")
+print("  Una vuelta desfasada NO es falsa: se comprobo cita a cita y sigue")
+print("  contestando lo que preguntaba. Apagar el boton empujaria a copiar a")
+print("  mano, que da el mismo texto SIN la cabecera que avisa.\n")
+comprobar("hay un aviso escrito para cada clase de desfase",
+          set(SV.AVISO_AL_COPIAR) == {"otra ley", "otra base"},
+          sorted(SV.AVISO_AL_COPIAR))
+comprobar("el de «otra ley» dice que es de otra redaccion de la norma",
+          "otra" in SV.AVISO_AL_COPIAR["otra ley"].lower()
+          and "redaccion" in SV.AVISO_AL_COPIAR["otra ley"].lower(),
+          SV.AVISO_AL_COPIAR["otra ley"])
+comprobar("el de «otra base» dice que sigue valiendo para lo que se preguntaba",
+          "sigue valiendo" in SV.AVISO_AL_COPIAR["otra base"],
+          SV.AVISO_AL_COPIAR["otra base"])
+comprobar("los dos empiezan por ATENCION: van delante del texto, no al pie",
+          all(v.startswith("ATENCION") for v in SV.AVISO_AL_COPIAR.values()))
+
 print("\n" + "=" * 62)
 print(f"COMPROBACIONES: {len(fallos)} fallos")
 for f in fallos:
