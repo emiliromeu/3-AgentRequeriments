@@ -132,6 +132,32 @@ LA CADENA, QUE NO TENIA NINGUNA (13/08/2026)
                          le pida, y cuenta cuantas tandas llega a hacer. Cero
                          red: nada de esto toca PETETE.
 
+LAS SUITES MIDEN COMPORTAMIENTO, NO PROSA (01/09/2026)
+------------------------------------------------------
+  prueba_suites.py       Vigila a las demas. El mismo error ha salido TRES
+                         veces -«rev-parse», el «600» de un comentario y el
+                         «resumelo» que vivia en la explicacion de por que NO
+                         se hizo- y las tres se descubrieron por casualidad,
+                         rompiendo el codigo a proposito.
+
+                         LA REGLA: se pregunta al arbol de sintaxis o se
+                         ejecuta el camino. No se busca texto. Buscar una
+                         palabra falla en las DOS direcciones: roja por un
+                         comentario, y verde sobre un fallo vivo escrito de
+                         otra forma.
+
+                         NO EXIGE CERO. Habia CUARENTA casos en catorce
+                         suites; una suite roja de salida se ignora. Lleva
+                         linea base generada -`--guardar`-, como las rojas
+                         conocidas del banco, y lo que impide es que aparezcan
+                         NUEVAS.
+
+                             .venv/bin/python pruebas/prueba_suites.py --guardar
+
+                         Y ella misma pregunta al `ast`: hacerlo con un grep
+                         daria los mismos falsos positivos que existe para
+                         cazar.
+
 EL CHAT, PRIMERA PIEZA (31/08/2026)
 -----------------------------------
   prueba_chat.py         Una consulta es una CONVERSACION, y cada vuelta sigue

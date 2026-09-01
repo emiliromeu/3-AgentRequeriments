@@ -6267,3 +6267,85 @@ literal.
 en `servidor.py`: la ausencia de noticias no es una noticia, así que hay **dos
 señales** —irse se dice; el silencio sólo se sospecha— y por encima de las dos,
 una consulta en marcha no se corta nunca.
+
+
+---
+
+# FASE 46 · UNA COMPROBACIÓN QUE BUSCA UNA PALABRA MIDE LA PROSA
+
+Van **tres veces** el mismo error, y las tres se descubrieron por casualidad —al
+romper el código a propósito y ver que la comprobación seguía en verde—:
+
+| | Buscaba | Y pasó |
+|---|---|---|
+| `prueba_version` | la palabra **«rev-parse»** para saber si alguien leía el commit a mano | `reparar.py` la usa para preguntar la **rama**. Roja durante días por algo que no era el fallo — y sin cazar la forma que sí usamos, `git log --format=%h`, que no lleva esa palabra |
+| `prueba_otraforma` | **«resúmelo»**, para exigir que no hubiera un menú de tres opciones | La palabra estaba **en el comentario que explica por qué no se hicieron tres opciones**. La prueba fallaba por su propia explicación |
+| `prueba_instalador` | **«600»**, para que el tope no volviera a crecer | El 600 estaba en **el comentario que explicaba el arreglo**. Tenía razón en el fondo y leía mal |
+
+> **La regla: se pregunta al árbol de sintaxis o se ejecuta el camino. No se
+> busca texto.**
+
+## Por qué es tan mal método: falla en las dos direcciones
+
+- **Falso positivo** — la palabra está en un comentario, en una docstring o en
+  el propio razonamiento de por qué algo *no* se hace. La suite se pone roja sin
+  que nada esté mal, y **una roja que se sabe falsa es una que dentro de un mes
+  nadie mira**; con ella pasa la roja de verdad.
+- **Falso negativo** — el comportamiento existe escrito de otra forma. La suite
+  se queda en verde sobre un fallo vivo, que es lo que pasó las tres veces.
+
+Lo segundo es lo grave: una prueba que busca texto **no protege**, tranquiliza.
+
+## Qué hacer en su lugar
+
+1. **Ejecutar el camino y mirar el resultado**, siempre que se pueda.
+2. **Preguntar al `ast`**: qué argumentos lleva una llamada, qué se le pasa a
+   qué función. Es lo que hace hoy `prueba_version` con `rev-parse` — mira los
+   *flags*, no la palabra.
+3. Y si no queda otra que leer el fuente, **quitar los comentarios antes**. Es
+   el mínimo, y convierte el falso positivo en imposible.
+
+Un ejemplo hecho al escribir esto, en `prueba_servidor` §9: buscaba
+`"servidor_fallo.txt" in FUENTE` y `"Avisa a Emili" in FUENTE`. Ahora **provoca
+un fallo real** en el manejador y comprueba lo que llega al navegador — que no
+lleva `Traceback`, ni `.py`, ni el nombre de la excepción; que sí lleva la frase
+de persona; que el detalle queda en disco; y que el servidor sigue en pie. Seis
+comprobaciones que antes eran cinco lecturas de prosa.
+
+## Y un vigilante, con línea base
+
+`prueba_suites.py` recorre las demás con `ast` y busca el patrón completo —se
+lee un fichero de **código** y se busca texto dentro de un `comprobar`—.
+
+**No exige cero, y es deliberado:** al escribirlo había **cuarenta** casos en
+catorce suites. Una suite roja de salida no se arregla, se ignora. Así que lleva
+línea base generada (`--guardar`), igual que las rojas conocidas del banco, y lo
+que impide es que **aparezcan nuevas**. Arreglando `prueba_servidor` bajó a 35;
+las demás se irán arreglando cuando se toque cada suite por otra cosa.
+
+## Y el vigilante cayó dos veces en su propio error
+
+Escribirlo costó tres intentos, y los tres fallos son **la misma familia**:
+
+1. **Identificaba por `fichero:línea`.** La primera edición que desplazó un
+   fichero convirtió en «nuevas» a las de siempre. El número de línea es *dónde
+   está escrito*, no *qué se comprueba*: una coordenada volátil, igual que una
+   palabra en un comentario. Ahora identifica por **la etiqueta del
+   `comprobar`**, que es lo que da identidad — si alguien la reescribe, es otra
+   comprobación y tiene que verse.
+2. **Truncaba la etiqueta a 70 y podía dejar un espacio final** que el fichero
+   perdía al releerse. La línea base **no casaba consigo misma** y salía roja
+   en cada pasada.
+3. Y la comprobación que añadí para vigilar eso miraba **lo leído del fichero**
+   —que ya viene con `strip()` puesto por el lector—, así que no podía fallar
+   nunca. Mira el censo, que es donde nace el espacio.
+
+Ninguno de los tres es un descuido distinto: los tres son **medir una
+coordenada volátil en vez de la identidad de lo que se comprueba**. Que le pase
+a la propia suite que caza ese error dice lo fácil que es, y por eso está aquí
+escrito y no sólo arreglado.
+
+Su control negativo comprueba las dos direcciones: que **caza** una que busca
+texto en un `.py`, y que **deja pasar** una que ejecuta el camino, una que quita
+los comentarios antes, y una que lee un `.bat` —donde no hay comentarios de
+código que confundan—.

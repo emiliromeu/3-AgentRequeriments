@@ -298,16 +298,71 @@ print("\n=== 9. NINGUNA TRAZA DE PYTHON LLEGA AL NAVEGADOR ===")
 print("  Es la regla 3 de la ventana, y en web hay que decirla otra vez: un")
 print("  servidor que revienta devuelve por defecto un 500 con el fichero, la")
 print("  linea y el codigo dentro.\n")
-comprobar("el manejador envuelve cada peticion",
-          "def handle_one_request" in FUENTE)
-comprobar("  y el detalle va al disco, no al navegador",
-          "servidor_fallo.txt" in FUENTE)
-comprobar("  con una frase de persona",
-          "Avisa a Emili" in FUENTE)
-comprobar("y el log de http.server se calla: con pythonw no hay stderr",
-          "def log_message" in FUENTE)
-comprobar("nada de lo servido se guarda en la cache del navegador",
-          "no-store" in FUENTE)
+# SE PROVOCA UN FALLO DE VERDAD Y SE MIRA LO QUE LLEGA. Antes esto buscaba
+# «servidor_fallo.txt» y «Avisa a Emili» DENTRO DEL FUENTE, que es medir la
+# prosa: la frase podia estar en un comentario y la comprobacion pasaba igual.
+# Ver `prueba_suites`, que existe porque este error ha salido tres veces.
+# UN SERVIDOR MAS, Y ES EL ULTIMO DE LA SUITE. Cada uno cuesta un puerto y
+# un hilo vigilante; crearlos por comodidad fue lo que destapo la recarga del
+# corpus, y eso estuvo bien —pero no hace falta repetirlo en cada bloque—.
+srv4, vida4, url4 = SV.arrancar("ensayo", abrir=False)
+P4 = f"http://127.0.0.1:{srv4.server_address[1]}"
+t4 = url4.split("t=")[1]
+rastro = RAIZ / "datos" / "servidor_fallo.txt"
+antes_rastro = rastro.read_text("utf-8") if rastro.exists() else None
+try:
+    # Se rompe el manejador POR DENTRO: la siguiente peticion revienta.
+    def revienta(self):
+        raise RuntimeError("fallo de mentira, a proposito")
+
+    original = SV.Manejador._menu
+    SV.Manejador._menu = revienta
+    try:
+        cuerpo, codigo = b"", 0
+        try:
+            with urllib.request.urlopen(f"{P4}/api/menu?t={t4}", timeout=10) as r:
+                codigo, cuerpo = r.status, r.read()
+        except urllib.error.HTTPError as e:
+            codigo, cuerpo = e.code, e.read()
+        texto = cuerpo.decode("utf-8", "replace")
+        comprobar("un fallo del servidor NO tumba la conexion: contesta",
+                  codigo in (200, 500), codigo)
+        comprobar("y lo que llega al navegador NO lleva una traza de Python",
+                  "Traceback" not in texto and "File \"" not in texto
+                  and ".py" not in texto, texto[:120])
+        comprobar("  ni el nombre de la excepcion",
+                  "RuntimeError" not in texto, texto[:120])
+        comprobar("  sino una frase de persona",
+                  "Avisa a Emili" in texto, texto[:120])
+        comprobar("y el detalle SI queda en disco, que es lo unico legible "
+                  "sin consola",
+                  rastro.exists()
+                  and "RuntimeError" in rastro.read_text("utf-8"),
+                  rastro.exists())
+    finally:
+        SV.Manejador._menu = original
+
+    # EL SERVIDOR SIGUE EN PIE despues del fallo: una peticion rota no puede
+    # llevarse por delante la sesion entera.
+    with urllib.request.urlopen(f"{P4}/api/vivo?t={t4}", timeout=5) as r:
+        comprobar("y el servidor sigue vivo despues del fallo", r.status == 200)
+
+    # LA CACHE: nada de lo servido se guarda en el disco del navegador.
+    with urllib.request.urlopen(f"{P4}/?t={t4}", timeout=10) as r:
+        comprobar("nada de lo servido se guarda en la cache del navegador",
+                  "no-store" in (r.headers.get("Cache-Control") or ""),
+                  r.headers.get("Cache-Control"))
+finally:
+    srv4.shutdown()
+    time.sleep(0.2)
+    # Se deja el rastro como estaba: es un fichero de diagnostico de verdad.
+    try:
+        if antes_rastro is None:
+            rastro.unlink(missing_ok=True)
+        else:
+            rastro.write_text(antes_rastro, encoding="utf-8")
+    except OSError:
+        pass
 
 # ============================================ 10. CONTROL NEGATIVO
 print("\n=== 10. CONTROL NEGATIVO: ¿CAZA LO QUE DICE CAZAR? ===")
@@ -494,6 +549,28 @@ try:
     chats = json.loads(get("/api/chats")[2])
     comprobar("los chats llegan agrupados por dia",
               bool(chats.get("dias")) and "chats" in chats["dias"][0])
+
+    # ────────────────────────────────────────────────────────────────────
+    # EL CORPUS SE CARGA UNA VEZ POR PROCESO, Y EL MENU SE CALCULA UNA VEZ.
+    # ────────────────────────────────────────────────────────────────────
+    #
+    # Los dos salieron de que esta suite empezara a dar `TimeoutError`. NO era
+    # cosa de la suite:
+    #
+    #   · cada `arrancar` lanzaba SU carga del corpus. Con cuatro servidores
+    #     en el mismo proceso eran cuatro cargas en serie sobre el mismo lock,
+    #     y el proceso DEJABA DE RESPONDER mas de 25 segundos.
+    #   · y `cubierto_por_impuesto` recorre las caches enteras de la DGT y del
+    #     TEAC: 2,4 SEGUNDOS MEDIDOS en CADA peticion al menu. Eso lo pagaba
+    #     entero quien abriera la pagina, y otra vez al recargar.
+    comprobar("el corpus no se recarga por cada servidor",
+              SV._YA_CARGANDO is True, SV._YA_CARGANDO)
+    t_menu = time.monotonic()
+    for _ in range(5):
+        get("/api/menu")
+    tardo = time.monotonic() - t_menu
+    comprobar(f"cinco menus seguidos son instantaneos ({tardo:.2f}s)",
+              tardo < 1.0, f"{tardo:.2f}s para 5: se recalcula cada vez")
 finally:
     srv3.shutdown()
     time.sleep(0.3)

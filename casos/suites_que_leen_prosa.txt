@@ -1,0 +1,40 @@
+# COMPROBACIONES QUE BUSCAN TEXTO EN UN FUENTE, Y QUE YA ESTABAN.
+# Generado por `prueba_suites.py --guardar`. NO se escribe a mano.
+# Lo que vigila la suite es que NO APAREZCAN NUEVAS; estas se iran
+# arreglando cuando se toque cada una por otra cosa. Ver la cabecera
+# de `prueba_suites.py` para por que hay linea base y no se exige 0.
+prueba_caducan.py  ·  con las funciones del instalador para guardar y comprobar
+prueba_caducan.py  ·  la ventana lo consulta de verdad
+prueba_caducan.py  ·  la ventana ofrece volver a pedirla
+prueba_caducan.py  ·  y no revienta si no hay red: se calla
+prueba_caducan.py  ·  y usa EL MISMO dialogo del primer arranque, no uno nuevo
+prueba_catalogo.py  ·  `fase1.py ingerir` la regenera al terminar
+prueba_catalogo.py  ·  el boton re-ingiere LA LISTA, no lo que haya en local
+prueba_catalogo.py  ·  el instalador pregunta al catalogo
+prueba_catalogo.py  ·  y la ventana TAMBIEN, para el boton de actualizar
+prueba_catalogo.py  ·  y ya no recorre `self.ix.rutas` como unica fuente
+prueba_cola.py  ·  `fase4` dice QUE apunto, para que la ventana no lo recalcule
+prueba_cola.py  ·  en la consulta, el apunte va dentro de un try que se traga todo
+prueba_cola.py  ·  la ventana enseña UN aviso, y el de la fuente manda
+prueba_cola.py  ·  y en la ventana el vaciado va EN UN HILO
+prueba_cola.py  ·  y en modo ENSAYO la ventana NO sale a la fuente
+prueba_cola.py  ·  y la ventana lo dice al abrir
+prueba_dialogo.py  ·  la instalacion usa `dialogo_clave.pedir_clave`
+prueba_dialogo.py  ·  y la ventana TAMBIEN, no una copia suya
+prueba_dialogo.py  ·  y la ventana usa el guardar/comprobar DEL INSTALADOR, no los suyos
+prueba_goteo.py  ·  el avance se guarda renombrando, no escribiendo encima
+prueba_goteo.py  ·  el ensayo sigue sin abrir fila de sesion
+prueba_goteo.py  ·  el goteo escribe en `consultas/`, que es lo que viaja
+prueba_goteo.py  ·  el goteo pregunta a `cola._toca_reintentar`
+prueba_goteo.py  ·  el tiempo se mira ANTES de empezar cada articulo, no en mitad
+prueba_goteo.py  ·  la sesion se mide en minutos
+prueba_goteo.py  ·  la ventana NO lanza el goteo: no es cosa de la oficina
+prueba_goteo.py  ·  y `--estado` marca las cortadas
+prueba_goteo.py  ·  y no reescribe los plazos por su cuenta
+prueba_interfaz.py  ·  el manejador mira `num` antes que `delta` (Linux no trae delta)
+prueba_interfaz.py  ·  y divide el delta de Windows entre 120
+prueba_pull.py  ·  la cola construye la cache apuntando a `demanda/`
+prueba_remisiones.py  ·  la contencion del mismo documento esta en `normas.py`
+prueba_sellos.py  ·  la exigencia esta en `que_falta`, que es donde se decide si abre
+prueba_servidor.py  ·  ni empareja por texto en ningun sitio
+prueba_topes.py  ·  los totales de la pasada salen de `consumo`, no de `llamadas`: si no,

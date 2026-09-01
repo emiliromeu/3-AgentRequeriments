@@ -241,6 +241,9 @@ _IX = None
 _GRAFO = None
 _MOTOR = None
 _CARGA = threading.Lock()
+_YA_CARGANDO = False
+# El menu, calculado una vez. Ver `_menu`.
+_MENU = None
 
 
 def _corpus():
@@ -254,23 +257,46 @@ def cargar_por_detras(motor_nombre: str = "anthropic") -> None:
     LA PAGINA TIENE QUE PODER PINTARSE ANTES. Si se cargara aqui, el navegador
     se abriria contra un servidor que no responde durante un segundo largo, y
     eso se lee como que no ha arrancado.
+
+    ────────────────────────────────────────────────────────────────────────
+    UNA SOLA VEZ POR PROCESO. ARREGLADO EL 01/09/2026.
+    ────────────────────────────────────────────────────────────────────────
+
+    Antes, cada `arrancar` lanzaba SU carga. Con cuatro servidores en el mismo
+    proceso -que es lo que hace la suite- eran cuatro cargas del corpus entero
+    en serie sobre el mismo lock, y el proceso DEJABA DE RESPONDER: una
+    peticion a `/api/menu` se colgaba mas de 25 segundos.
+
+    Se descubrio porque `prueba_servidor` empezo a dar `TimeoutError` en
+    `comprobar_todo` — y NO era cosa de la suite: es que el corpus se recarga
+    por cada `arrancar`, y eso es un fallo del servidor. En la oficina hoy no
+    se ve porque `main()` no levanta un segundo servidor si ya hay uno vivo,
+    pero eso es una guarda de OTRA capa: aqui dentro nada lo impedia.
+
+    `_YA_CARGANDO` corta en seco. No basta con mirar `_IX`: entre que un hilo
+    empieza y termina hay segundos, y en esos segundos entrarian todos los
+    demas.
     """
+    global _YA_CARGANDO
+    with _CARGA:
+        if _YA_CARGANDO:
+            return
+        _YA_CARGANDO = True
+
     def trabajo():
         global _IX, _GRAFO, _MOTOR
-        with _CARGA:
+        try:
+            import fase4
+            _IX, _GRAFO = fase4.cargar_corpus()
+            motor, _err = fase4.preparar_motor(motor_nombre, silencioso=True)
+            _MOTOR = motor
+        except Exception:                        # noqa: BLE001
+            import traceback
             try:
-                import fase4
-                _IX, _GRAFO = fase4.cargar_corpus()
-                motor, _err = fase4.preparar_motor(motor_nombre,
-                                                   silencioso=True)
-                _MOTOR = motor
-            except Exception:                    # noqa: BLE001
-                import traceback
-                try:
-                    (RAIZ / "datos" / "servidor_fallo.txt").write_text(
-                        traceback.format_exc(), encoding="utf-8")
-                except OSError:
-                    pass
+                (RAIZ / "datos" / "servidor_fallo.txt").write_text(
+                    traceback.format_exc(), encoding="utf-8")
+            except OSError:
+                pass
     threading.Thread(target=trabajo, daemon=True).start()
 
 
@@ -485,13 +511,21 @@ class Manejador(http.server.BaseHTTPRequestHandler):
         self._responder(200, cuerpo, tipo)
 
     def _menu(self) -> dict:
-        """Lo que se enseña al entrar. TODO CONTADO DEL CORPUS, nada escrito."""
-        import fase4
+        """Lo que se enseña al entrar. TODO CONTADO DEL CORPUS, nada escrito.
+
+        SE CALCULA UNA VEZ Y SE GUARDA. `cubierto_por_impuesto` recorre las
+        caches enteras de la DGT y del TEAC: 2,4 SEGUNDOS MEDIDOS, en cada
+        peticion. El menu se pide al abrir la pagina, asi que eso lo pagaria
+        entero quien la abre —y otra vez si recarga—.
+        """
+        global _MENU
         from agente_fiscal import cobertura as C
         ix = _corpus()
         if ix is None:
             return {"cargando": True}
-        return {
+        if _MENU is not None:
+            return _MENU
+        _MENU = {
             "titulo": C.titulo(ix),
             "articulos": len(ix.docs),
             "normas": len(ix.rutas),
@@ -502,6 +536,7 @@ class Manejador(http.server.BaseHTTPRequestHandler):
                            "porcentaje": p}
                           for n, a, c, p in C.cubierto_por_impuesto(ix)],
         }
+        return _MENU
 
     def do_POST(self):
         ruta = self.path.split("?")[0]
